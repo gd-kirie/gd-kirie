@@ -136,13 +136,14 @@ async function installStagedProject(
     await fs.rename(target, previousTarget);
   }
 
+  let installed = false;
   try {
     await fs.rename(stagedProject, target);
-  } catch (error) {
-    if (existingTarget) {
+    installed = true;
+  } finally {
+    if (!installed && existingTarget) {
       await fs.rename(previousTarget, target);
     }
-    throw error;
   }
 }
 

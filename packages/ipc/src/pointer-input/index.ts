@@ -60,21 +60,7 @@ export function createPointerEventsHandler(
   // A sequence is claimed only when its down event reaches the document bubble phase.
   const claimedPointers = new Map<number, PointerEvent>();
 
-  /**
-   * Completes events for pointer sequences previously claimed during bubbling.
-   *
-   * Triggering workflow:
-   *
-   * {@link EventTarget.addEventListener}
-   *   -> `pointermove|pointerup|pointercancel`
-   *     -> {@link capture}
-   *
-   * Upstream:
-   * - {@link EventTarget.addEventListener}
-   *
-   * Downstream:
-   * - {@link sendPointerEvent}
-   */
+  /** Forwards move, up, and cancel events for pointer sequences claimed by `bubble`. */
   const capture = (event: PointerEvent): void => {
     if (
       !claimedPointers.has(event.pointerId) ||
@@ -92,21 +78,7 @@ export function createPointerEventsHandler(
     claimedPointers.set(event.pointerId, event);
   };
 
-  /**
-   * Claims bubbled pointer downs and forwards unpressed mouse hover.
-   *
-   * Triggering workflow:
-   *
-   * {@link EventTarget.addEventListener}
-   *   -> `pointerdown|pointermove`
-   *     -> {@link bubble}
-   *
-   * Upstream:
-   * - {@link EventTarget.addEventListener}
-   *
-   * Downstream:
-   * - {@link sendPointerEvent}
-   */
+  /** Claims bubbled pointer downs and forwards unpressed mouse hover. */
   const bubble = (event: PointerEvent): void => {
     if (event.type === "pointerdown") {
       sendPointer(event);
@@ -126,20 +98,7 @@ export function createPointerEventsHandler(
     sendPointer(event);
   };
 
-  /**
-   * Cancels every pointer sequence currently claimed by this handler.
-   *
-   * Triggering workflow:
-   *
-   * {@link createPointerEventsHandler}
-   *   -> {@link PointerEventsHandler.cancel}
-   *
-   * Upstream:
-   * - caller of {@link PointerEventsHandler.cancel}
-   *
-   * Downstream:
-   * - {@link sendPointerEvent}
-   */
+  /** Cancels every pointer sequence currently claimed by this handler. */
   const cancel = (): void => {
     for (const pointerEvent of claimedPointers.values()) {
       sendPointer(pointerEvent, "cancel");

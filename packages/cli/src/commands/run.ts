@@ -351,16 +351,12 @@ export async function isIosSimulatorDevice(device: string, cwd?: string): Promis
     cwd,
     timeout: simulatorLookupTimeoutMs,
   });
-  try {
-    const devices = JSON.parse(result.stdout) as {
-      devices?: Record<string, Array<{ udid?: string }>>;
-    };
-    return Object.values(devices.devices ?? {}).some((runtimeDevices) =>
-      runtimeDevices.some((simulator) => simulator.udid === device),
-    );
-  } catch {
-    return false;
-  }
+  const devices = JSON.parse(result.stdout) as {
+    devices?: Record<string, Array<{ udid?: string }>>;
+  };
+  return Object.values(devices.devices ?? {}).some((runtimeDevices) =>
+    runtimeDevices.some((simulator) => simulator.udid === device),
+  );
 }
 
 function readAndroidPackageName(projectDir: string, preset = "Android"): string {

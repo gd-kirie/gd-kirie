@@ -59,16 +59,19 @@ export function createContext(): KirieEventaContextHandle {
   );
 
   const offInbound = onTextReceived((message) => {
+    let parsed: KirieEventaMessage;
     try {
-      const parsed = JSON.parse(message) as KirieEventaMessage;
-      context.emit(defineInboundEventa(parsed.type), parsed.payload.body, {
-        raw: {
-          message,
-        },
-      });
+      parsed = JSON.parse(message) as KirieEventaMessage;
     } catch (error) {
       console.error("Failed to parse Kirie Eventa message:", error);
+      return;
     }
+
+    context.emit(defineInboundEventa(parsed.type), parsed.payload.body, {
+      raw: {
+        message,
+      },
+    });
   });
 
   return {

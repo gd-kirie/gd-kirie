@@ -1,4 +1,5 @@
 import type { KiriePlugin } from "../../plugin/index.ts";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -305,19 +306,7 @@ export async function checkGodotExportTemplates(
   });
   const missingMessage = `missing templates for Godot ${options.version} at ${templatesDir}`;
 
-  let templates: string[];
-  try {
-    templates = await fs.readdir(templatesDir);
-  } catch (error) {
-    return {
-      error: new Error(missingMessage, { cause: error }),
-      message: missingMessage,
-      name: "Godot export templates",
-      status: DoctorCheckStatus.Fail,
-    };
-  }
-
-  if (templates.length === 0) {
+  if (!existsSync(templatesDir) || readdirSync(templatesDir).length === 0) {
     return {
       message: missingMessage,
       name: "Godot export templates",
@@ -344,20 +333,8 @@ export async function checkAndroidSdk(
     };
   }
   const invalidSdkMessage = `${sdk} does not exist or is not a directory`;
-
-  let sdkStat: Awaited<ReturnType<typeof fs.stat>>;
-  try {
-    sdkStat = await fs.stat(sdk);
-  } catch (error) {
-    return {
-      error: new Error(invalidSdkMessage, { cause: error }),
-      message: invalidSdkMessage,
-      name: "Android SDK",
-      status: DoctorCheckStatus.Fail,
-    };
-  }
-
-  if (!sdkStat.isDirectory()) {
+  const sdkStat = statSync(sdk, { throwIfNoEntry: false });
+  if (!sdkStat?.isDirectory()) {
     return {
       message: invalidSdkMessage,
       name: "Android SDK",

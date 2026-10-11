@@ -240,13 +240,14 @@ export function createPlatformClient(context: KirieEventaContext): PlatformClien
 
         globalShortcutRegistrations.set(key, onKeyEvent);
 
+        let registered = false;
         try {
           await invokes.registerGlobalShortcut(shortcut);
-        } catch (error) {
-          if (globalShortcutRegistrations.get(key) === onKeyEvent) {
+          registered = true;
+        } finally {
+          if (!registered && globalShortcutRegistrations.get(key) === onKeyEvent) {
             globalShortcutRegistrations.delete(key);
           }
-          throw error;
         }
       },
       async unregister(shortcut) {
