@@ -28,6 +28,16 @@
 
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+    <None
+      Include="native/artifacts/*/*"
+      Pack="true"
+      PackagePath="runtimes/%(RecursiveDir)native/%(Filename)%(Extension)"
+    />
+    <None
+      Update="native/artifacts/$(NETCoreSdkRuntimeIdentifier)/*"
+      CopyToOutputDirectory="PreserveNewest"
+      TargetPath="%(Filename)%(Extension)"
+    />
   </ItemGroup>
 
 </Project>

@@ -1,7 +1,8 @@
 # GdKirie.Tray
 
-`GdKirie.Tray` supplies the Godot host for `@gd-kirie/tray`. It borrows the
-application's existing Kirie Eventa registry and context.
+`GdKirie.Tray` is the Godot host for the optional `@gd-kirie/tray` plugin. It
+borrows the application's Eventa context and delegates native behavior to
+[`tray-icon`](https://github.com/tauri-apps/tray-icon).
 
 ```csharp
 var registry = GdKirieTray.Register(new KirieEventaJsonRegistry());
@@ -9,31 +10,16 @@ var eventa = kirie.CreateEventaContext(registry);
 var tray = GdKirieTray.Attach(eventa.Context, GetWindow());
 ```
 
-`Register` must run before creating the Eventa context. `Attach` must run on
-Godot's main thread with a window already inside the scene tree. Disposing the
-returned host removes only Tray handlers and resources.
+Call `Register` before creating the Eventa context. Call `Attach` on Godot's
+main thread after the host window enters the scene tree. `Attach` registers
+handlers but does not create the Tray; the browser calls `create`. Disposing
+the returned host removes its handlers and the process Tray.
 
-The returned host also exposes its `TrayController` for direct C# calls:
+The host loads `res://` textures as RGBA pixels, forwards menu JSON and scalar
+values to a private Rust dynamic library, and emits activated menu IDs. It does
+not expose a second C# Tray API.
 
-```csharp
-tray.Tray.Configure(new TrayConfiguration(
-    "res://tray-template.svg",
-    "Kirie")
-{
-    IconAsTemplate = true,
-});
-tray.Tray.SetMenu([
-    new("show", "Show Kirie"),
-    new("enabled", "Enabled", "check", Checked: true),
-]);
-```
-
-IDs are unique across the menu tree. `SetMenu` replaces the tree and
-`UpdateItem` changes an item by ID. C# may pass a `Texture2D` directly or set
-`Texture` on a menu item.
-
-On macOS, template artwork should use black and transparency as described by
-Apple [`NSImage.isTemplate`](https://developer.apple.com/documentation/appkit/nsimage/istemplate).
-Passing `IconAsTemplate: true` outside macOS fails with
-`PlatformNotSupportedException`. Other hosts use Godot's status-indicator
-support and fail when the active display server does not provide it.
+macOS supports `iconAsTemplate`. Linux uses the KSNI backend and requires a
+StatusNotifierItem host. Source checkouts must run `mise run build:tray-native`
+before starting the example or packing NuGet. Published native libraries use
+the standard `runtimes/<rid>/native/` layout.

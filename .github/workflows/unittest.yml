@@ -73,6 +73,28 @@ jobs:
       - name: Run .NET tests
         run: mise run test:dotnet
 
+  tray-native-unit-tests:
+    name: Tray native tests
+    runs-on: ubuntu-latest
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+      MISE_NOT_FOUND_AUTO_INSTALL: "false"
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: jdx/mise-action@v3
+        with:
+          install: true
+          install_args: --locked rust
+          cache: true
+
+      - name: Run Tray native tests
+        run: mise run test:tray-native
+
   swift-unit-tests:
     name: Swift unit tests
     runs-on: macos-latest

@@ -96,9 +96,11 @@ The adapter invokes `kirie run desktop`. The CLI starts Godot with the ViDot
 runner and `--headless`.
 
 The headless suite cannot validate a visible system tray or native menu. Run
-the `tray` example on Windows or macOS for tray creation, updates, activation,
-and cleanup acceptance. On macOS, confirm that the template icon remains
-legible in light and dark menu-bar appearances and while its menu is open.
+the `tray` example on Windows, macOS, and a Linux desktop with a
+StatusNotifierItem host for icon and menu replacement, tooltip, visibility,
+activation, and cleanup acceptance. Follow the
+[`tray` example README](../examples/tray/README.md). On macOS, also confirm the
+template icon in light and dark menu-bar appearances.
 
 ## Android
 

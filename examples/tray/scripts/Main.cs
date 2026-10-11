@@ -6,7 +6,7 @@ public partial class Main : Node
 {
     private KirieClient? _kirie;
     private KirieEventaContextHandle? _eventa;
-    private GdKirieTrayHost? _tray;
+    private IDisposable? _tray;
 
     public override void _Ready()
     {
@@ -20,13 +20,6 @@ public partial class Main : Node
         var registry = GdKirieTray.Register(new KirieEventaJsonRegistry());
         _eventa = _kirie.CreateEventaContext(registry);
         _tray = GdKirieTray.Attach(_eventa.Context, GetWindow());
-        var isMacOS = OS.GetName() == "macOS";
-        _tray.Tray.Configure(new TrayConfiguration(
-            isMacOS ? "res://tray-template.svg" : "res://icon.svg",
-            "Kirie Tray Editor")
-        {
-            IconAsTemplate = isMacOS,
-        });
         _kirie.IpcError += GD.PushError;
 
         var initialUrl = _kirie.GetLaunchOption("kirie-web-url").Trim();

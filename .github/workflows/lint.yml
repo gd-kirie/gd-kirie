@@ -30,7 +30,7 @@ jobs:
         uses: jdx/mise-action@v3
         with:
           install: true
-          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet
+          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet rust
           cache: true
 
       - name: Get pnpm store path
@@ -69,7 +69,7 @@ jobs:
         uses: jdx/mise-action@v3
         with:
           install: true
-          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet
+          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet rust
           cache: true
 
       - name: Get pnpm store path

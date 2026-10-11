@@ -1,9 +1,11 @@
 # `@gd-kirie/tray`
 
-`@gd-kirie/tray` exposes system tray and native menu capabilities over an
-existing Kirie Eventa context.
+`@gd-kirie/tray` is the browser client and plugin descriptor for Kirie's
+optional [`tray-icon`](https://github.com/tauri-apps/tray-icon) integration. It
+uses the application's existing Eventa context.
 
-Install the plugin explicitly in `kirie.config.ts`:
+Add the plugin to `kirie.config.ts`, then run
+`pnpm kirie doctor --fix plugin:tray`:
 
 ```ts
 import tray from "@gd-kirie/tray/plugin";
@@ -15,34 +17,50 @@ export default defineKirieConfig({
 });
 ```
 
-Create the browser client from the same context used by the application:
+Create the browser client only on a desktop Kirie host:
 
 ```ts
+import type { TrayMenuItem } from "@gd-kirie/tray";
 import { createContext } from "@gd-kirie/ipc-eventa";
 import { createTrayClient, trayMenuItemActivated } from "@gd-kirie/tray";
 
-const eventa = createContext();
-const tray = createTrayClient(eventa.context);
+const os = window.kirie?.platform.os;
+if (os === "macos" || os === "windows" || os === "linux") {
+  const eventa = createContext();
+  const tray = createTrayClient(eventa.context);
+  const menu: TrayMenuItem[] = [
+    { type: "item", id: "show", text: "Show Kirie" },
+    { type: "check", id: "enabled", text: "Enabled", checked: true },
+    { type: "separator" },
+    {
+      type: "submenu",
+      text: "More",
+      children: [{ type: "item", id: "quit", text: "Quit" }],
+    },
+  ];
 
-await tray.configure({
-  icon: "res://tray-template.svg",
-  iconAsTemplate: true,
-  tooltip: "Kirie",
-});
-await tray.setMenu([
-  { id: "show", text: "Show Kirie" },
-  { id: "enabled", text: "Enabled", type: "check", checked: true },
-]);
-const stop = eventa.context.on(trayMenuItemActivated, ({ body }) => console.log(body?.id));
-await tray.updateItem({ id: "enabled", checked: false });
+  eventa.context.on(trayMenuItemActivated, ({ body: id }) => console.log(id));
+
+  await tray.create({
+    icon: os === "macos" ? "res://tray-template.svg" : "res://icon.svg",
+    iconAsTemplate: os === "macos",
+  });
+  await tray.setMenu(menu);
+  await tray.setTooltip("Kirie");
+  await tray.setVisible(true);
+}
 ```
 
-Browser icons are imported Godot resources referenced by `res://` paths. Use
-black artwork with transparency when `iconAsTemplate` is enabled. The option is
-supported only on macOS; other platforms reject `true`. See Apple's
-[`NSImage.isTemplate`](https://developer.apple.com/documentation/appkit/nsimage/istemplate)
-documentation for the native rendering behavior.
+The client exposes `create`, `setIcon`, `setMenu`, `setTooltip`, `setVisible`,
+and `destroy`. Call `create` before the setters; a second `create` fails until
+the Tray is destroyed. `setMenu` replaces the complete menu. `setTooltip(null)`
+clears the tooltip, and `destroy` is idempotent.
 
-Menu types are `item`, `check`, `radio`, `multistate`, `separator`, and
-`submenu`. IDs must be non-empty and unique across the menu tree. The tray
-survives browser reloads and is destroyed explicitly or with its C# host.
+Plain and check items should use unique, non-empty IDs. Activation events carry
+that ID directly. The application owns check state and should update it before
+the next complete menu replacement. Template icons are macOS-only. Linux uses
+the KSNI backend and requires a StatusNotifierItem host.
+
+The Tray survives browser reloads and is released when the .NET host exits.
+See [`examples/tray`](../../examples/tray/README.md) for every operation and
+menu type.

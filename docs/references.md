@@ -169,6 +169,17 @@ packaging, or platform WebView bridge details.
   Upstream C# Eventa project that `GdKirie.EventaAdapter` should integrate with
   rather than modify.
 
+## Tray
+
+- [`tray-icon`](https://github.com/tauri-apps/tray-icon)
+  Upstream native tray implementation used by the optional Tray plugin.
+- [`tray-icon` Cargo manifest](https://github.com/tauri-apps/tray-icon/blob/17e3196a15aa6174a21588ac4c5a52e322878479/Cargo.toml)
+  Reference for the pinned `0.26.1` features and platform dependencies.
+- [`muda` menu items](https://github.com/tauri-apps/muda/blob/88e0c3658a85668872c621f77d6aad1616f42780/src/items/mod.rs)
+  Upstream menu types exposed through `tray-icon`.
+- [NuGet native runtime assets](https://learn.microsoft.com/nuget/create-packages/native-files-in-net-packages)
+  Reference for RID-specific native libraries under `runtimes/<rid>/native/`.
+
 ## .NET
 
 - [.NET support policy](https://dotnet.microsoft.com/en-us/platform/support/policy)
@@ -186,6 +197,12 @@ packaging, or platform WebView bridge details.
   function pointers.
 - [System.Text.Json source generation](https://learn.microsoft.com/en-us/dotnet/standard/serialization/system-text-json/source-generation)
   Reference for AOT-friendly JSON metadata generation.
+- [Godot .NET assembly loading](https://github.com/godotengine/godot/blob/master/modules/mono/mono_gd/gd_mono.cpp)
+  Reference for editor-time loading of project assemblies from Godot's managed
+  assembly directory and in-memory images.
+- [Godot .NET export packaging](https://github.com/godotengine/godot/blob/master/modules/mono/editor/GodotTools/GodotTools/Export/ExportPlugin.cs)
+  Reference for publishing and placing .NET runtime and native files in Godot
+  desktop exports.
 - [Microsoft.Testing.Platform migration to v2](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-migration-from-v1-to-v2)
   Reference for the .NET 10 `dotnet test` opt-in through `global.json`.
 - [NuGet contentFiles](https://learn.microsoft.com/en-us/nuget/reference/nuspec#including-content-files)
@@ -288,6 +305,8 @@ packaging, or platform WebView bridge details.
 - When changing the Eventa adapter or NuGet packaging, start with .NET Native
   AOT, System.Text.Json source generation, the upstream Eventa repositories,
   NuGet contentFiles, `dotnet pack`, and `dotnet nuget push`.
+- When changing the Tray plugin, start with `tray-icon`, `muda`, and NuGet
+  native runtime asset guidance.
 - When changing npm package publishing, start with npm trusted publishing,
   GitHub Actions OIDC, bumpp, and pnpm publish behavior.
 - When changing native artifact orchestration, start with Node.js TypeScript

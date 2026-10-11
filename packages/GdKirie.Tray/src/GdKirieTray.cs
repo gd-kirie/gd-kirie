@@ -14,34 +14,49 @@ public static class GdKirieTray
 
         return registry
             .RegisterInvoke(
-                TrayEvents.Configure,
+                TrayEvents.Create,
                 TrayJsonContext.Default.EmptyPayload,
-                TrayJsonContext.Default.TrayConfiguration)
+                TrayJsonContext.Default.TrayIconPayload)
+            .RegisterInvoke(
+                TrayEvents.SetIcon,
+                TrayJsonContext.Default.EmptyPayload,
+                TrayJsonContext.Default.TrayIconPayload)
             .RegisterInvoke(
                 TrayEvents.SetMenu,
                 TrayJsonContext.Default.EmptyPayload,
-                TrayJsonContext.Default.TrayMenuItemArray)
+                TrayJsonContext.Default.JsonElement)
             .RegisterInvoke(
-                TrayEvents.UpdateItem,
+                TrayEvents.SetTooltip,
                 TrayJsonContext.Default.EmptyPayload,
-                TrayJsonContext.Default.TrayMenuItemUpdate)
+                TrayJsonContext.Default.String)
+            .RegisterInvoke(
+                TrayEvents.SetVisible,
+                TrayJsonContext.Default.EmptyPayload,
+                TrayJsonContext.Default.Boolean)
             .RegisterInvoke(
                 TrayEvents.Destroy,
                 TrayJsonContext.Default.EmptyPayload,
                 TrayJsonContext.Default.EmptyPayload)
             .RegisterEvent(
                 TrayEvents.MenuItemActivated,
-                TrayJsonContext.Default.TrayMenuItemActivatedPayload);
+                TrayJsonContext.Default.String);
     }
 
     /// <summary>Attaches Tray handlers to an existing Eventa context and Godot window.</summary>
-    public static GdKirieTrayHost Attach(IEventContext context, Window hostWindow)
+    public static IDisposable Attach(IEventContext context, Window hostWindow)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(hostWindow);
         if (!GodotThread.IsMainThread())
         {
             throw new InvalidOperationException("GdKirieTray.Attach must run on Godot's main thread.");
+        }
+
+        if (!OperatingSystem.IsMacOS() &&
+            !OperatingSystem.IsWindows() &&
+            !OperatingSystem.IsLinux())
+        {
+            throw new PlatformNotSupportedException("System trays are supported only on desktop platforms.");
         }
 
         if (!hostWindow.IsInsideTree())
