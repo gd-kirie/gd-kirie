@@ -12,7 +12,7 @@ python = "3.13.13"
 uv = "0.11.7"
 java = "temurin-21.0.10+7.0.LTS"
 dotnet = "10.0.300"
-rust = "1.90.0"
+rust = { version = "1.90.0", components = ["clippy", "rustfmt"] }
 ktlint = "1.8.0"
 swiftlint = { version = "0.62.2", os = ["macos", "linux"] }
 pnpm = "12"
