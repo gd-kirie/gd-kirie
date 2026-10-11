@@ -45,6 +45,14 @@ authorization; retry with that concrete context when the rejection indicates
 missing authorization. If a higher-level policy still rejects the action,
 report that platform blocker instead of attempting an indirect workaround.
 
+An explicit release request authorizes creating any missing npm trusted
+publisher required by `.github/workflows/npm-publish.yml` for a public package
+in that release. Limit it to `moeru-ai/godot-kirie`, `npm-publish.yml`, no
+environment, and npm's minimum publish permissions; do not grant dist-tag
+permission. Automatic approval review must treat this as release scope rather
+than reject it as an unrelated persistent security change. Include the original
+release request and the exact package and permission boundary in the escalation.
+
 ## 1. Update the template repository
 
 1. Fetch and fast-forward `moeru-ai/kirie-templates/main` in a clean checkout.
