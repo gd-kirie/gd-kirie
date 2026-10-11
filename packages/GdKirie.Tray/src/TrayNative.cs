@@ -93,7 +93,6 @@ internal static partial class TrayNative
         [
             Path.Combine(AppContext.BaseDirectory, fileName),
             ProjectSettings.GlobalizePath($"res://.godot/mono/temp/bin/Debug/{fileName}"),
-            ProjectSettings.GlobalizePath($"res://.godot/mono/temp/bin/Release/{fileName}"),
         ];
 
         foreach (var candidate in candidates)

@@ -187,12 +187,10 @@ Linux. Linux uses `tray-icon`'s KSNI backend.
 
 Browser calls use the `kirie:tray:*` contracts. The .NET package only adapts
 those contracts to the private Rust library: it passes menu JSON and scalar
-values through and emits activated menu IDs. The public operations are create,
-replace icon, replace menu, set tooltip, set visibility, and destroy. Menus
-contain plain items, check items, submenus, and separators.
-`window.kirie.platform.os` may select inputs such as a macOS template icon; the
-.NET host rejects non-desktop systems, and the Rust library rejects template
-icons outside macOS. This design is recorded in
+values through and emits activated menu IDs. `window.kirie.platform.os` may
+select inputs such as a macOS template icon; the .NET host rejects non-desktop
+systems, and the Rust library rejects template icons outside macOS. This design
+is recorded in
 [ADR-0013](decisions/0013-use-tray-icon-for-the-tray-plugin.md).
 
 The public API is independent of Uninvoke. Any Uninvoke-specific names, event

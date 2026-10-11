@@ -8,7 +8,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 interface MenuNode {
   key: string;
   type: TrayMenuItem["type"];
-  id: string;
   text: string;
   enabled: boolean;
   checked: boolean;
@@ -29,7 +28,6 @@ const menuItems = ref<MenuNode[]>([
   {
     key: "open",
     type: "item",
-    id: "open",
     text: "Open Kirie",
     enabled: true,
     checked: false,
@@ -38,7 +36,6 @@ const menuItems = ref<MenuNode[]>([
   {
     key: "enabled",
     type: "check",
-    id: "enabled",
     text: "Enabled",
     enabled: true,
     checked: true,
@@ -47,7 +44,6 @@ const menuItems = ref<MenuNode[]>([
   {
     key: "separator-main",
     type: "separator",
-    id: "",
     text: "",
     enabled: true,
     checked: false,
@@ -56,7 +52,6 @@ const menuItems = ref<MenuNode[]>([
   {
     key: "tools",
     type: "submenu",
-    id: "tools",
     text: "Tools",
     enabled: true,
     checked: false,
@@ -64,7 +59,6 @@ const menuItems = ref<MenuNode[]>([
       {
         key: "refresh",
         type: "item",
-        id: "refresh",
         text: "Refresh",
         enabled: true,
         checked: false,
@@ -73,7 +67,6 @@ const menuItems = ref<MenuNode[]>([
       {
         key: "settings",
         type: "item",
-        id: "settings",
         text: "Settings",
         enabled: false,
         checked: false,
@@ -84,7 +77,6 @@ const menuItems = ref<MenuNode[]>([
   {
     key: "quit",
     type: "item",
-    id: "quit",
     text: "Quit",
     enabled: true,
     checked: false,
@@ -119,11 +111,10 @@ function flatten(nodes: MenuNode[], parentPath: number[] = [], depth = 0): TreeR
 const rows = computed(() => flatten(menuItems.value));
 
 function createNode(): MenuNode {
-  const id = `item-${Date.now()}-${nextId++}`;
+  const key = `item-${Date.now()}-${nextId++}`;
   return {
-    key: id,
+    key,
     type: "item",
-    id,
     text: "New item",
     enabled: true,
     checked: false,
@@ -223,7 +214,7 @@ function toTrayItem(node: MenuNode): TrayMenuItem {
   if (node.type === "check") {
     return {
       type: "check",
-      id: node.id,
+      id: node.key,
       text,
       enabled: node.enabled,
       checked: node.checked,
@@ -232,7 +223,7 @@ function toTrayItem(node: MenuNode): TrayMenuItem {
 
   return {
     type: "item",
-    id: node.id,
+    id: node.key,
     text,
     enabled: node.enabled,
   };
@@ -240,7 +231,7 @@ function toTrayItem(node: MenuNode): TrayMenuItem {
 
 function findMenuItem(nodes: MenuNode[], id: string): MenuNode | undefined {
   for (const node of nodes) {
-    if (node.id === id && (node.type === "item" || node.type === "check"))
+    if (node.key === id && (node.type === "item" || node.type === "check"))
       return node;
 
     const child = findMenuItem(node.children, id);
@@ -519,7 +510,7 @@ onBeforeUnmount(() => {
                 Checked
               </label>
               <span
-                v-if="row.node.id && row.node.id === lastClickedId"
+                v-if="row.node.key === lastClickedId"
                 class="shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
               >
                 Last clicked

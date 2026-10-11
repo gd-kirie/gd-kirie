@@ -127,6 +127,7 @@ example, and regression-test areas:
 - `tests/integration`: exported-app platform integration tests
 - `scripts/build.ts`: mise task entrypoint and example run tasks
 - `scripts/build-kirie.ts`: Kirie addon artifact and packaging tasks
+- `scripts/build-tray-native.ts`: Tray native library build task
 - `scripts/build-shared.ts`: repo-local task glue around CLI and package build
   primitives
 - `docs`: project notes and design decisions
