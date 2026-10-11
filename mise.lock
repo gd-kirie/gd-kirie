@@ -218,6 +218,9 @@ provenance = "github-attestations"
 version = "1.90.0"
 backend = "core:rust"
 
+[tools.rust.options]
+components = "clippy,rustfmt"
+
 [[tools.swiftlint]]
 version = "0.62.2"
 backend = "aqua:realm/SwiftLint"
