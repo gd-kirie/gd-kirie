@@ -332,7 +332,7 @@ internal sealed class WindowsGlobalShortcutRuntime
 
     private void DispatchKeyEvent(WindowsKeycode keycode, uint virtualKey, bool pressed)
     {
-        List<Delivery>? deliveries = null;
+        List<(Registration Registration, string State)>? deliveries = null;
         lock (_registrationsGate)
         {
             foreach (var transition in _matcher.Handle(keycode, virtualKey, pressed))
@@ -341,7 +341,7 @@ internal sealed class WindowsGlobalShortcutRuntime
                     && registration.Active)
                 {
                     deliveries ??= [];
-                    deliveries.Add(new Delivery(this, registration, transition.State));
+                    deliveries.Add((registration, transition.State));
                 }
             }
         }
@@ -351,11 +351,9 @@ internal sealed class WindowsGlobalShortcutRuntime
             return;
         }
 
-        foreach (var delivery in deliveries)
+        foreach (var (registration, state) in deliveries)
         {
-            delivery.Registration.SynchronizationContext?.Post(
-                static state => ((Delivery)state!).Invoke(),
-                delivery);
+            registration.SynchronizationContext?.Post(_ => Deliver(registration, state), null);
         }
     }
 
@@ -425,17 +423,6 @@ internal sealed class WindowsGlobalShortcutRuntime
 
             owner.Unregister(this);
             _disposed = true;
-        }
-    }
-
-    private readonly record struct Delivery(
-        WindowsGlobalShortcutRuntime Owner,
-        Registration Registration,
-        string State)
-    {
-        public void Invoke()
-        {
-            Owner.Deliver(Registration, State);
         }
     }
 }

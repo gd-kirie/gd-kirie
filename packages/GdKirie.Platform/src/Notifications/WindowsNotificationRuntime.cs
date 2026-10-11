@@ -173,13 +173,7 @@ internal static unsafe class WindowsNotificationRuntime
 
     private static void DeleteTree(string name)
     {
-        using var existing = Registry.CurrentUser.OpenSubKey(name);
-        if (existing is null)
-        {
-            return;
-        }
-
-        Registry.CurrentUser.DeleteSubKeyTree(name);
+        Registry.CurrentUser.DeleteSubKeyTree(name, throwOnMissingSubKey: false);
     }
 
     private static void StartActivator(Guid activatorId)

@@ -48,38 +48,13 @@ internal sealed class GlobalShortcutManager(
 
         _disposed = true;
 
-        List<Exception> cleanupErrors = [];
         foreach (var nativeRegistration in _registrations.Values)
         {
-            try
-            {
-                nativeRegistration.Dispose();
-            }
-            catch (Exception error)
-            {
-                cleanupErrors.Add(error);
-            }
+            nativeRegistration.Dispose();
         }
 
         _registrations.Clear();
-        try
-        {
-            _backend?.Dispose();
-        }
-        catch (Exception error)
-        {
-            cleanupErrors.Add(error);
-        }
-
-        if (cleanupErrors.Count == 1)
-        {
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupErrors[0]).Throw();
-        }
-
-        if (cleanupErrors.Count > 1)
-        {
-            throw new AggregateException("Failed to unregister one or more global shortcuts.", cleanupErrors);
-        }
+        _backend?.Dispose();
     }
 
     private IGlobalShortcutBackend GetBackend()

@@ -148,59 +148,19 @@ public sealed class GdKiriePlatformHost : IDisposable
         _sceneTree.ProcessFrame -= RefreshObservedState;
         _window.TreeExiting -= Dispose;
 
-        List<Exception> cleanupErrors = [];
-        try
+        if (_windowsPointerPassthrough && OperatingSystem.IsWindowsVersionAtLeast(5))
         {
-            if (_windowsPointerPassthrough && OperatingSystem.IsWindowsVersionAtLeast(5))
-            {
-                WindowsMousePassthrough.Set(_window, false);
-            }
-        }
-        catch (Exception error)
-        {
-            cleanupErrors.Add(error);
+            WindowsMousePassthrough.Set(_window, false);
         }
 
-        try
-        {
-            _globalShortcuts.Dispose();
-        }
-        catch (Exception error)
-        {
-            cleanupErrors.Add(error);
-        }
-
-        try
-        {
-            Notifications.Detach(_notificationHostId);
-        }
-        catch (Exception error)
-        {
-            cleanupErrors.Add(error);
-        }
-
+        _globalShortcuts.Dispose();
+        Notifications.Detach(_notificationHostId);
         foreach (var registration in _registrations)
         {
-            try
-            {
-                registration.Dispose();
-            }
-            catch (Exception error)
-            {
-                cleanupErrors.Add(error);
-            }
+            registration.Dispose();
         }
 
         _registrations.Clear();
-        if (cleanupErrors.Count == 1)
-        {
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupErrors[0]).Throw();
-        }
-
-        if (cleanupErrors.Count > 1)
-        {
-            throw new AggregateException("Failed to release one or more Platform resources.", cleanupErrors);
-        }
     }
 
     private PointerPositionPayload CapturePointerPosition()
