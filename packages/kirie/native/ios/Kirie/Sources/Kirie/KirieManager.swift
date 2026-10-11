@@ -4,7 +4,6 @@ import WebKit
 
 private extension Notification.Name {
     static let kirieWebViewReady = Notification.Name("KirieWebViewReady")
-    static let kirieIpcMessageReceived = Notification.Name("KirieIpcMessageReceived")
     static let kirieTextReceived = Notification.Name("KirieTextReceived")
     static let kirieBinaryReceived = Notification.Name("KirieBinaryReceived")
     static let kirieDataReceived = Notification.Name("KirieDataReceived")
@@ -201,10 +200,6 @@ final class KirieManager: NSObject {
         }
 
         webView.loadHTMLString(html, baseURL: baseURL)
-    }
-
-    func sendIpcMessage(_ messageJSON: String, viewID: Int64) {
-        sendText(messageJSON, viewID: viewID)
     }
 
     func sendText(_ message: String, viewID: Int64) {
@@ -422,26 +417,19 @@ extension KirieManager {
             return
         }
 
-        if let messageJSON = message.body as? String {
-            handleWebPacketMessage(messageJSON, viewID: viewID)
+        guard let messageJSON = message.body as? String else {
+            emitIpcError("Received unsupported IPC message from JavaScript", viewID: viewID)
             return
         }
 
-        if JSONSerialization.isValidJSONObject(message.body),
-           let data = try? JSONSerialization.data(withJSONObject: message.body),
-           let messageJSON = String(data: data, encoding: .utf8) {
-            post(.kirieIpcMessageReceived, object: messageJSON, viewID: viewID)
-            return
-        }
-
-        emitIpcError("Received unsupported IPC message from JavaScript", viewID: viewID)
+        handleWebPacketMessage(messageJSON, viewID: viewID)
     }
 
     private func handleWebPacketMessage(_ messageJSON: String, viewID: Int64) {
         guard let messageData = messageJSON.data(using: .utf8),
               let message = try? JSONDecoder().decode(KirieWebPacketMessage.self, from: messageData),
               let packet = Data(base64Encoded: message.packet) else {
-            post(.kirieIpcMessageReceived, object: messageJSON, viewID: viewID)
+            emitIpcError("Received malformed Kirie IPC packet from JavaScript", viewID: viewID)
             return
         }
 

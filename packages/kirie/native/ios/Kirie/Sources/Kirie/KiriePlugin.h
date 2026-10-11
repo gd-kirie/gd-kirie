@@ -11,7 +11,6 @@ class KiriePlugin : public Object {
 	GDCLASS(KiriePlugin, Object);
 
 	void *webview_ready_observer = nullptr;
-	void *ipc_message_received_observer = nullptr;
 	void *text_received_observer = nullptr;
 	void *binary_received_observer = nullptr;
 	void *data_received_observer = nullptr;
@@ -27,7 +26,6 @@ public:
 	void destroyWebView(int64_t view_id);
 	void loadUrl(int64_t view_id, String url);
 	void loadHtmlString(int64_t view_id, String html, String base_url);
-	void sendIpcMessage(int64_t view_id, String message_json);
 	void sendText(int64_t view_id, String message);
 	void sendBinary(int64_t view_id, PackedByteArray bytes);
 	void sendData(int64_t view_id, Variant value);
