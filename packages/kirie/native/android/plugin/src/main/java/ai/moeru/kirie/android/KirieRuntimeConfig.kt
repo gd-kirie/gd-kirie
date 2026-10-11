@@ -22,13 +22,7 @@ data class KirieRuntimeConfig(
             )
         }
 
-        private fun Bundle?.booleanValue(key: String): Boolean {
-            if (this == null || !containsKey(key)) {
-                return false
-            }
-
-            return getBoolean(key, false)
-        }
+        private fun Bundle?.booleanValue(key: String): Boolean = this?.getBoolean(key, false) ?: false
 
         private fun Activity.applicationMetadata() =
             try {

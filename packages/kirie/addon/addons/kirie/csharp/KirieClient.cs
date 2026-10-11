@@ -340,28 +340,18 @@ public partial class KirieClient : GodotObject
         }
 
         _signalsDisconnected = true;
-        if (_sceneNode is not null)
-        {
-            DisconnectSignal(_sceneNode, "webview_ready", _webViewReadyCallable);
-            DisconnectSignal(_sceneNode, "text_received", _textReceivedCallable);
-            DisconnectSignal(_sceneNode, "binary_received", _binaryReceivedCallable);
-            DisconnectSignal(_sceneNode, "data_received", _dataReceivedCallable);
-            DisconnectSignal(_sceneNode, "permission_requested", _permissionRequestedCallable);
-            DisconnectSignal(_sceneNode, "ipc_error", _ipcErrorCallable);
-            return;
-        }
-
-        if (_pluginSingleton is null)
+        var source = _sceneNode ?? _pluginSingleton;
+        if (source is null)
         {
             return;
         }
 
-        DisconnectSignal(_pluginSingleton, "webview_ready", _webViewReadyCallable);
-        DisconnectSignal(_pluginSingleton, "text_received", _textReceivedCallable);
-        DisconnectSignal(_pluginSingleton, "binary_received", _binaryReceivedCallable);
-        DisconnectSignal(_pluginSingleton, "data_received", _dataReceivedCallable);
-        DisconnectSignal(_pluginSingleton, "permission_requested", _permissionRequestedCallable);
-        DisconnectSignal(_pluginSingleton, "ipc_error", _ipcErrorCallable);
+        DisconnectSignal(source, "webview_ready", _webViewReadyCallable);
+        DisconnectSignal(source, "text_received", _textReceivedCallable);
+        DisconnectSignal(source, "binary_received", _binaryReceivedCallable);
+        DisconnectSignal(source, "data_received", _dataReceivedCallable);
+        DisconnectSignal(source, "permission_requested", _permissionRequestedCallable);
+        DisconnectSignal(source, "ipc_error", _ipcErrorCallable);
     }
 
     private bool ResolvePermission(long requestId, bool grant)

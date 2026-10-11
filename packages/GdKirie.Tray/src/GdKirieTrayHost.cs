@@ -50,38 +50,13 @@ public sealed class GdKirieTrayHost : IDisposable
         _disposed = true;
         _window.TreeExiting -= Dispose;
 
-        List<Exception> cleanupErrors = [];
-        try
-        {
-            Tray.Dispose();
-        }
-        catch (Exception error)
-        {
-            cleanupErrors.Add(error);
-        }
-
+        Tray.Dispose();
         foreach (var registration in _registrations)
         {
-            try
-            {
-                registration.Dispose();
-            }
-            catch (Exception error)
-            {
-                cleanupErrors.Add(error);
-            }
+            registration.Dispose();
         }
 
         _registrations.Clear();
-        if (cleanupErrors.Count == 1)
-        {
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupErrors[0]).Throw();
-        }
-
-        if (cleanupErrors.Count > 1)
-        {
-            throw new AggregateException("Failed to release one or more Tray resources.", cleanupErrors);
-        }
     }
 
     private static Task<EmptyPayload> Complete(Action action)

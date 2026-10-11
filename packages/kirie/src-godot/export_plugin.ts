@@ -73,13 +73,6 @@ export class _ExportPlugin extends EditorExportPlugin {
     ]);
   }
 
-  _get_android_dependencies_maven_repos(
-    _platform: EditorExportPlatform | null,
-    _debug: boolean,
-  ): PackedStringArray {
-    return PackedStringArray();
-  }
-
   _get_android_libraries(
     _platform: EditorExportPlatform | null,
     _debug: boolean,

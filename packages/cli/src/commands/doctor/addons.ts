@@ -1,6 +1,6 @@
 import type { DownloadListenerHandle, DownloadSnapshot } from "takanawa-node";
 import type { KirieGodotAddonDependency } from "../../plugin/index.ts";
-import { lstatSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -43,35 +43,28 @@ export async function checkGodotAddon(
   addon: KirieGodotAddonDependency,
 ): Promise<AddonCheckResult> {
   const installDir = resolveAddonInstallPath(projectDir, addon.path);
-  if (!lstatSync(installDir, { throwIfNoEntry: false })) {
+  const installation = statSync(installDir, { throwIfNoEntry: false });
+  if (!installation) {
     return { installed: false, message: "not installed", valid: false };
   }
 
-  try {
-    const installation = await fs.stat(installDir);
-    const source = addon.source;
-    const versionMatches =
-      !addon.version || source.type === "remote" ||
-      await readAddonVersion(installDir) === addon.version;
-    const checksumMatches =
-      source.type !== "remote" ||
-      (await fs.readFile(resolveAddonChecksumPath(projectDir, addon.id), "utf8")).trim() ===
-      source.sha256;
-    if (
-      installation.isDirectory() &&
-      versionMatches &&
-      checksumMatches
-    ) {
-      return {
-        installed: true,
-        message: `${addon.version ?? "installed"} at ${installDir}`,
-        valid: true,
-      };
-    }
-  } catch (error) {
-    if (!isNodeError(error) || (error.code !== "ENOENT" && error.code !== "ENOTDIR")) {
-      throw error;
-    }
+  const source = addon.source;
+  const versionMatches =
+    !addon.version || source.type === "remote" ||
+    await readAddonVersion(installDir) === addon.version;
+  const checksumMatches =
+    source.type !== "remote" ||
+    await readAddonChecksum(projectDir, addon.id) === source.sha256;
+  if (
+    installation.isDirectory() &&
+    versionMatches &&
+    checksumMatches
+  ) {
+    return {
+      installed: true,
+      message: `${addon.version ?? "installed"} at ${installDir}`,
+      valid: true,
+    };
   }
 
   return {
@@ -138,13 +131,14 @@ export async function installGodotAddon(options: InstallAddonOptions): Promise<v
     if (current.installed) {
       await renameAddon(installDir, previousAddon);
     }
+    let installed = false;
     try {
       await renameAddon(stagedAddon, installDir);
-    } catch (error) {
-      if (current.installed) {
+      installed = true;
+    } finally {
+      if (!installed && current.installed) {
         await renameAddon(previousAddon, installDir);
       }
-      throw error;
     }
     if (addon.source.type === "remote") {
       const checksumPath = resolveAddonChecksumPath(projectDir, addon.id);
@@ -162,8 +156,22 @@ export async function installGodotAddon(options: InstallAddonOptions): Promise<v
 }
 
 async function readAddonVersion(directory: string): Promise<string | undefined> {
-  const plugin = await fs.readFile(path.join(directory, "plugin.cfg"), "utf8");
+  const pluginPath = path.join(directory, "plugin.cfg");
+  if (!existsSync(pluginPath)) {
+    return undefined;
+  }
+
+  const plugin = await fs.readFile(pluginPath, "utf8");
   return /^\s*version\s*=\s*"([^"]+)"\s*$/m.exec(plugin)?.[1];
+}
+
+async function readAddonChecksum(projectDir: string, addonId: string): Promise<string | undefined> {
+  const checksumPath = resolveAddonChecksumPath(projectDir, addonId);
+  if (!existsSync(checksumPath)) {
+    return undefined;
+  }
+
+  return (await fs.readFile(checksumPath, "utf8")).trim();
 }
 
 function resolveAddonChecksumPath(projectDir: string, addonId: string): string {
@@ -233,6 +241,7 @@ async function downloadFile(options: DownloadFileOptions): Promise<void> {
     rejectCompletion = reject;
   });
 
+  let completed = false;
   try {
     progressListener = await task.addProgressListener((snapshot) => {
       lastProgressLength = writeDownloadProgress(
@@ -274,12 +283,11 @@ async function downloadFile(options: DownloadFileOptions): Promise<void> {
       lastProgressLength,
       true,
     );
-  } catch (error) {
-    if (options.output.isTTY && lastProgressLength > 0) {
+    completed = true;
+  } finally {
+    if (!completed && options.output.isTTY && lastProgressLength > 0) {
       options.output.write("\n");
     }
-    throw error;
-  } finally {
     await Promise.all([progressListener?.remove(), speedListener?.remove(), task.close()]);
   }
 }

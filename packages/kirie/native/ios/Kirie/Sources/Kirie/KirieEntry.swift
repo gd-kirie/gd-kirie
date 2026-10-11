@@ -110,20 +110,6 @@ public func kirie_swift_load_html_string(
     }
 }
 
-@_cdecl("kirie_swift_send_ipc_message")
-public func kirie_swift_send_ipc_message(_ viewID: Int64, _ messageJSONPointer: UnsafePointer<CChar>?) {
-    guard let messageJSONPointer else {
-        kirieLogEntry("kirie_swift_send_ipc_message ignored nil pointer")
-        return
-    }
-
-    let messageJSON = String(cString: messageJSONPointer)
-    kirieLogEntry("kirie_swift_send_ipc_message viewID=\(viewID) message=\(messageJSON)")
-    DispatchQueue.main.async {
-        KirieManager.shared.sendIpcMessage(messageJSON, viewID: viewID)
-    }
-}
-
 @_cdecl("kirie_swift_send_text")
 public func kirie_swift_send_text(_ viewID: Int64, _ messagePointer: UnsafePointer<CChar>?) {
     guard let messagePointer else {

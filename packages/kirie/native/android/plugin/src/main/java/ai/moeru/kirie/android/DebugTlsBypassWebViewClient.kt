@@ -100,22 +100,10 @@ class DebugTlsBypassWebViewClient(
             }
         }
 
-    private fun normalizePort(uri: Uri): Int {
-        val port = uri.port
-        if (port != -1) {
-            return port
-        }
-
-        return when {
-            HTTPS_SCHEME.equals(uri.scheme, ignoreCase = true) -> 443
-            HTTP_SCHEME.equals(uri.scheme, ignoreCase = true) -> 80
-            else -> -1
-        }
-    }
+    private fun normalizePort(uri: Uri): Int = if (uri.port != -1) uri.port else 443
 
     companion object {
         private const val TAG = "Kirie"
-        private const val HTTP_SCHEME = "http"
         private const val HTTPS_SCHEME = "https"
     }
 }

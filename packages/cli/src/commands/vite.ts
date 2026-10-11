@@ -28,11 +28,14 @@ export async function startViteDevServer(
 
   const server = await createServer(createViteConfig(config, options));
 
+  let listening = false;
   try {
     await server.listen();
-  } catch (error) {
-    await server.close();
-    throw error;
+    listening = true;
+  } finally {
+    if (!listening) {
+      await server.close();
+    }
   }
 
   const localUrl = server.resolvedUrls?.local[0];
