@@ -52,9 +52,9 @@ if (os === "macos" || os === "windows" || os === "linux") {
 ```
 
 The client exposes `create`, `setIcon`, `setMenu`, `setTooltip`, `setVisible`,
-and `destroy`. Call `create` before the setters; a second `create` fails until
-the Tray is destroyed. `setMenu` replaces the complete menu. `setTooltip(null)`
-clears the tooltip, and `destroy` is idempotent.
+and `destroy`. Call `create` before the setters; calling it again replaces the
+current Tray. `setMenu` replaces the complete menu. `setTooltip(null)` clears
+the tooltip, and `destroy` is idempotent.
 
 Plain and check items should use unique, non-empty IDs. Activation events carry
 that ID directly. The application owns check state and should update it before

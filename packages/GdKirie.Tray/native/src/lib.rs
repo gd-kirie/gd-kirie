@@ -59,10 +59,6 @@ pub unsafe extern "C" fn kirie_tray_create(
     icon_as_template: bool,
 ) -> bool {
     ffi_bool(|| {
-        if TRAY.with_borrow(Option::is_some) {
-            return Err("a tray icon already exists".into());
-        }
-
         let icon = read_icon(rgba, rgba_len, width, height)?;
         let builder = TrayIconBuilder::new();
 
@@ -83,7 +79,9 @@ pub unsafe extern "C" fn kirie_tray_create(
         };
 
         let tray = builder.build().map_err(|error| error.to_string())?;
-        TRAY.with_borrow_mut(|slot| *slot = Some(tray));
+        // A page reload calls create again while the .NET host keeps running,
+        // so an existing Tray is replaced instead of rejected.
+        drop(TRAY.with_borrow_mut(|slot| slot.replace(tray)));
 
         Ok(())
     })
