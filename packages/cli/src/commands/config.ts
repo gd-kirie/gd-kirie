@@ -111,7 +111,7 @@ export function resolveKirieConfig(
     plugins,
     godot: {
       args: godot.args ?? [],
-      command: godot.command ?? "godot",
+      command: godot.command ?? process.env.GODOT ?? "godot",
       csproj: godot.csproj ? path.resolve(project, godot.csproj) : undefined,
       project,
     },
