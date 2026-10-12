@@ -38,12 +38,14 @@ main().catch((error: unknown) => {
 
 async function runLaunch(launch: ParsedLaunch): Promise<void> {
   if (launch.target === "desktop") {
+    const godotArgs = process.env.GODOT ? ["--godot", process.env.GODOT] : [];
     await runKirie(
       [
         "run",
         "desktop",
         "--project",
         launch.projectPath,
+        ...godotArgs,
         "--",
         "--headless",
         ...launch.args,

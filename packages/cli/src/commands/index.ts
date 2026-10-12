@@ -77,11 +77,13 @@ const androidRunArgs = {
 
 const desktopRunArgs = {
   ...projectArgs,
+  godot: { description: "Godot executable override.", type: "string" },
 } as const;
 
 const devArgs = {
   ...projectArgs,
   ...devServerArgs,
+  godot: { description: "Godot executable override.", type: "string" },
 } as const;
 
 const androidDevArgs = {
@@ -179,6 +181,7 @@ function runDevCommand(target: DevTarget) {
       force: args.force,
       forceStop: args["force-stop"],
       godotArgs: target === "desktop" ? parseUserArgs(rawArgs) : undefined,
+      godotCommand: args.godot,
       host: args.host,
       logLevel: parseLogLevel(args["log-level"]),
       mode: args.mode,
@@ -401,6 +404,7 @@ export const mainCommand: CommandDef = defineCommand({
             runDesktop({
               cwd: args.project,
               godotArgs: parseUserArgs(rawArgs),
+              godotCommand: args.godot,
             }),
         }),
         ios: defineCommand({
