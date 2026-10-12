@@ -64,24 +64,9 @@ export interface GlobalShortcutsClient {
   unregister: (shortcut: GlobalShortcut) => Promise<void>;
 }
 
-export interface DesktopNotification {
-  id: string;
-  title: string;
-  body: string;
-}
-
-export interface DesktopNotificationActivated {
-  id: string;
-}
-
-export interface NotificationsClient {
-  show: (notification: DesktopNotification) => Promise<void>;
-}
-
 export interface PlatformClient {
   hostWindow: HostWindowClient;
   globalShortcuts: GlobalShortcutsClient;
-  notifications: NotificationsClient;
   openExternalUrl: (url: string) => Promise<void>;
   openApplicationDataDirectory: () => Promise<string>;
 }
@@ -125,9 +110,6 @@ const events = {
   unregisterGlobalShortcut: defineInvokeEventa<EmptyPayload, GlobalShortcut>(
     "kirie:platform:global-shortcut:unregister",
   ),
-  showNotification: defineInvokeEventa<EmptyPayload, DesktopNotification>(
-    "kirie:platform:notification:show",
-  ),
   openExternalUrl: defineInvokeEventa<EmptyPayload, string>("kirie:platform:open-external-url"),
   openApplicationDataDirectory: defineInvokeEventa<string, EmptyPayload>(
     "kirie:platform:open-application-data-directory",
@@ -153,13 +135,6 @@ export const hostWindowPointerPositionChanged: InboundEventa<HostWindowPointerPo
 const globalShortcutStateChanged = defineInboundEventa<GlobalShortcutStateChanged>(
   "kirie:platform:global-shortcut:state-changed",
 );
-
-/**
- * Notification activations reported by the host.
- * Subscribe with `context.on(notificationActivated, ({ body }) => ...)`.
- */
-export const notificationActivated: InboundEventa<DesktopNotificationActivated> =
-  defineInboundEventa<DesktopNotificationActivated>("kirie:platform:notification:activated");
 
 /**
  * System Back requests forwarded by the host.
@@ -263,11 +238,6 @@ export function createPlatformClient(context: KirieEventaContext): PlatformClien
         if (globalShortcutRegistrations.get(key) === onKeyEvent) {
           globalShortcutRegistrations.delete(key);
         }
-      },
-    },
-    notifications: {
-      async show(notification) {
-        await invokes.showNotification(notification);
       },
     },
   };

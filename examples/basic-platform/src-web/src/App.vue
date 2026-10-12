@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { GlobalShortcut, GlobalShortcutKeyEvent, HostWindowState } from "@gd-kirie/platform";
 import { createContext } from "@gd-kirie/ipc-eventa";
-import { backRequested, createPlatformClient, hostWindowPointerPositionChanged, hostWindowStateChanged, notificationActivated } from "@gd-kirie/platform";
+import { backRequested, createPlatformClient, hostWindowPointerPositionChanged, hostWindowStateChanged } from "@gd-kirie/platform";
 import Button from "@proj-airi/ui/src/components/misc/button.vue";
 import { useIntervalFn } from "@vueuse/core";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
@@ -47,7 +47,6 @@ const actionResult = ref("");
 let escapeRegistered = false;
 let stopWindowState: (() => void) | undefined;
 let stopPointerPosition: (() => void) | undefined;
-let stopNotificationActivation: (() => void) | undefined;
 let stopBackRequest: (() => void) | undefined;
 let boundsRequest: Promise<void> | undefined;
 let telemetryActive = true;
@@ -100,10 +99,6 @@ onMounted(async () => {
   }
 
   try {
-    stopNotificationActivation = eventa.context.on(notificationActivated, ({ body }) => {
-      if (body)
-        actionResult.value = `Activated notification ${body.id}`;
-    });
     stopBackRequest = eventa.context.on(backRequested, () => {
       actionResult.value = "System Back requested";
     });
@@ -214,31 +209,9 @@ async function openApplicationDataDirectory(): Promise<void> {
   }
 }
 
-async function showNotification(): Promise<void> {
-  if (!platform) {
-    return;
-  }
-
-  busy.value = "notification";
-  try {
-    await platform.notifications.show({
-      id: "basic-platform",
-      title: "Kirie Platform",
-      body: "Click this notification to send its ID back to the WebView.",
-    });
-    actionResult.value = "Sent notification";
-  } catch (error) {
-    console.error(error);
-    actionResult.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    busy.value = "";
-  }
-}
-
 onBeforeUnmount(async () => {
   telemetryActive = false;
   try {
-    stopNotificationActivation?.();
     stopBackRequest?.();
     stopWindowState?.();
     stopPointerPosition?.();
@@ -329,10 +302,6 @@ onBeforeUnmount(async () => {
           <Button
             block :disabled="!platform || Boolean(busy)" label="Open app data directory" size="sm"
             variant="secondary-muted" @click="openApplicationDataDirectory"
-          />
-          <Button
-            block :disabled="!platform || Boolean(busy)" label="Show desktop notification" size="sm"
-            variant="secondary-muted" @click="showNotification"
           />
         </div>
         <p v-if="actionResult" class="mt-3 font-mono text-xs text-neutral-500">

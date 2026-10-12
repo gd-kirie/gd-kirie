@@ -15,6 +15,8 @@ for .NET adapter packages.
   [`packages/platform`](../packages/platform/README.md).
 - `@gd-kirie/tray` is published from
   [`packages/tray`](../packages/tray/README.md).
+- `@gd-kirie/notifications` is published from
+  [`packages/notifications`](../packages/notifications/README.md).
 - `@gd-kirie/build` is published from `packages/build` as a public
   programmatic build and export API package.
 - `@gd-kirie/vitest` is the ViDot launch adapter for desktop, Android, and iOS
@@ -29,8 +31,9 @@ depend on the CLI.
 
 The npm organization and package scope is `gd-kirie`; public JavaScript
 packages include `@gd-kirie/ipc`, `@gd-kirie/ipc-eventa`,
-`@gd-kirie/platform`, `@gd-kirie/tray`, `@gd-kirie/build`, and
-`@gd-kirie/vitest`. The unscoped `kirie` package publishes the CLI.
+`@gd-kirie/platform`, `@gd-kirie/tray`, `@gd-kirie/notifications`,
+`@gd-kirie/build`, and `@gd-kirie/vitest`. The unscoped `kirie` package
+publishes the CLI.
 
 Configure trusted publishing for each public browser package on npmjs.com. These
 fields identify the GitHub repository that is allowed to publish the package:

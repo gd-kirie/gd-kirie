@@ -10,7 +10,7 @@ using Windows.Win32;
 using Windows.Win32.System.Com;
 using Windows.Win32.System.WinRT;
 
-namespace GdKirie.Platform;
+namespace GdKirie.Notifications;
 
 /// <summary>
 /// One process-wide toast registration. The COM activator stays in this process
@@ -48,7 +48,7 @@ internal static unsafe class WindowsNotificationRuntime
         {
             if (_listener is not null)
             {
-                throw new InvalidOperationException("Only one Platform notification listener can be active per process.");
+                throw new InvalidOperationException("Only one Kirie notification listener can be active per process.");
             }
 
             _listener = onActivated;

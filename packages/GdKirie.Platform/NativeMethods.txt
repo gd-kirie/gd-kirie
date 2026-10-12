@@ -1,5 +1,4 @@
 CallNextHookEx
-CLSCTX
 GetAsyncKeyState
 GetCurrentThreadId
 GetMessage
@@ -9,8 +8,6 @@ HC_ACTION
 KBDLLHOOKSTRUCT
 PeekMessage
 PostThreadMessage
-REGCLS
-RoInitialize
 SetWindowLong
 SetWindowPos
 SetWindowsHookEx

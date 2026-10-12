@@ -88,8 +88,8 @@ unknown permission types and untrusted origins by denying them. This keeps the
 low-level API independent of Godot CEF while avoiding a global allow policy.
 
 Higher-level invocation APIs do not enter Kirie core. Confirmed application
-capabilities are implemented above it through packages such as Platform and
-Tray.
+capabilities are implemented above it through packages such as Platform, Tray,
+and Notifications.
 
 For the current milestone, Kirie should treat `KirieNode` as the public
 scene-tree ownership unit for a platform WebView. A user may place a
@@ -128,7 +128,6 @@ The implemented Platform capabilities are:
 - always-on-top
 - centering on the current display
 - system-wide global shortcuts on macOS and Windows
-- desktop notifications with click activation on [macOS 11 or later](decisions/0004-add-macos-desktop-notifications.md) and [Windows 10 version 1607 or later](decisions/0007-use-winrt-toasts-for-windows-desktop-notifications.md)
 - [Android system Back requests](decisions/0005-add-android-system-back-to-the-platform-layer.md)
 
 Global shortcuts use Godot logical keys and explicit register/unregister
@@ -142,18 +141,6 @@ conflict semantics are recorded in
 [ADR-0003](decisions/0003-use-a-low-level-keyboard-hook-for-windows-global-shortcuts.md).
 Linux global-shortcut backends remain pending work rather than excluded
 platforms.
-
-Desktop notifications return the same caller-owned id and keep the silent-toast
-contract on both implemented desktops. macOS posts through RumpSharp, as recorded in
-[ADR-0004](decisions/0004-add-macos-desktop-notifications.md). Windows posts
-through `Windows.UI.Notifications` for an unpackaged executable and delivers
-the click on Godot's main thread only while the publishing Platform host is alive.
-Platform hosts share one process notification listener. Each host has a unique
-ID in its native notifications. Kirie uses that ID to emit the caller-owned
-ID on the publishing host's Eventa context. A click for a disposed host is ignored.
-Windows registration and its per-executable identity are recorded in
-[ADR-0007](decisions/0007-use-winrt-toasts-for-windows-desktop-notifications.md).
-Linux notification backends remain pending work.
 
 Android system Back is forwarded from the bound window's
 `Window.GoBackRequested` signal. The browser subscribes to the exported
@@ -204,6 +191,23 @@ capability discovery remain outside this milestone.
 with the existing `window.kirie.platform` value and TypeScript
 `KiriePlatform` interface in `@gd-kirie/ipc`; those identify the native OS and
 low-level WebView backend and are not capability objects.
+
+## Notifications plugin
+
+`@gd-kirie/notifications` and `GdKirie.Notifications` borrow the application's
+existing Eventa context and expose immediate notifications with live click
+activation. The fixed dependency direction is
+`@gd-kirie/notifications -> @gd-kirie/ipc-eventa -> @gd-kirie/ipc` and
+`GdKirie.Notifications -> GdKirie.EventaAdapter`.
+
+macOS and Windows use the implementations moved from Platform. Android and iOS
+call the pinned `godot-notification-scheduler` v6.0 native singleton. The
+addon-rooted export adapter injects its AAR or XCFramework and export metadata;
+it does not add a second notification implementation or a project-root
+`ios/plugins` shim. IDs remain caller-owned strings, activations route only to
+the live host that published them, and richer scheduling APIs remain outside
+the current contract. This boundary is recorded in
+[ADR-0014](decisions/0014-extract-notifications-into-a-kirie-plugin.md).
 
 Windows pointer passthrough is the one initial native exception. Godot's current
 Windows hit-test path returns `HTTRANSPARENT`, whose forwarding scope is limited
@@ -769,13 +773,15 @@ iOS plugin and Apple embedded platform export APIs.
 GitHub Release addon publishing is configured through the `Addon Release`
 workflow. Keep it separate from the npm publishing flow, which is only for
 browser-side workspace packages such as `@gd-kirie/ipc`,
-`@gd-kirie/ipc-eventa`, `@gd-kirie/platform`, and `@gd-kirie/tray`.
+`@gd-kirie/ipc-eventa`, `@gd-kirie/platform`, `@gd-kirie/tray`, and
+`@gd-kirie/notifications`.
 
 The release artifact shape and workflow modes live in
 [Addon Release](./addon-release.md).
 
-The .NET Eventa adapter, Platform host, and Tray host use a separate NuGet
-release lane. Keep them separate from addon zip publishing and npm publishing.
+The .NET Eventa adapter, Platform host, Tray host, and Notifications host use a
+separate NuGet release lane. Keep them separate from addon zip publishing and
+npm publishing.
 
 ## IPC and adapter split
 

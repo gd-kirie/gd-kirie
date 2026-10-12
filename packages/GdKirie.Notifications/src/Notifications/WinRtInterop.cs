@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Windows.Win32.Foundation;
 
-namespace GdKirie.Platform;
+namespace GdKirie.Notifications;
 
 /// <summary>
 /// A counted WinRT string handle. The raw entry points below exchange it as a

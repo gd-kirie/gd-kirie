@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Windows.Win32.Foundation;
 
-namespace GdKirie.Platform;
+namespace GdKirie.Notifications;
 
 [SupportedOSPlatform("windows10.0.14393.0")]
 internal static unsafe class WindowsToastApi

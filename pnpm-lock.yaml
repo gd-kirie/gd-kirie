@@ -227,6 +227,34 @@ importers:
         specifier: 'catalog:'
         version: 8.0.16(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.3)
 
+  examples/notifications:
+    dependencies:
+      '@gd-kirie/ipc-eventa':
+        specifier: workspace:*
+        version: link:../../packages/ipc-eventa
+      '@gd-kirie/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
+      vue:
+        specifier: 3.5.41
+        version: 3.5.41(typescript@6.0.3)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: 6.0.8
+        version: 6.0.8(vite@8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))(vue@3.5.41(typescript@6.0.3))
+      kirie:
+        specifier: workspace:*
+        version: link:../../packages/cli
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1)
+      vue-tsc:
+        specifier: 3.3.11
+        version: 3.3.11(typescript@6.0.3)
+
   examples/tray:
     dependencies:
       '@gd-kirie/ipc-eventa':
@@ -391,6 +419,28 @@ importers:
       typescript-to-gdscript:
         specifier: 'catalog:'
         version: https://codeload.github.com/LemonNekoGH/typescript-to-gdscript/tar.gz/7bc9d41986110a7bd2d400fe60b01d77a8cfe178(typescript@6.0.3)
+
+  packages/notifications:
+    dependencies:
+      '@gd-kirie/ipc-eventa':
+        specifier: workspace:*
+        version: link:../ipc-eventa
+      '@moeru/eventa':
+        specifier: 'catalog:'
+        version: 1.0.2(web-worker@1.5.0)
+      kirie:
+        specifier: workspace:*
+        version: link:../cli
+    devDependencies:
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)(unrun@0.2.37)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@26.6.2)(vite@8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/platform:
     dependencies:
@@ -5315,6 +5365,12 @@ snapshots:
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       vite: 8.0.16(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.3)
+      vue: 3.5.41(typescript@6.0.3)
+
+  '@vitejs/plugin-vue@6.0.8(vite@8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))(vue@3.5.41(typescript@6.0.3))':
+    dependencies:
+      '@rolldown/pluginutils': 1.0.1
+      vite: 8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1)
       vue: 3.5.41(typescript@6.0.3)
 
   '@vitest/eslint-plugin@1.6.27(@typescript-eslint/eslint-plugin@8.70.1(@typescript-eslint/parser@8.70.1(eslint@10.11.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0))(typescript@6.0.3))(eslint@10.11.0(jiti@2.7.0))(typescript@6.0.3)(vitest@4.1.6(@types/node@26.6.2)(vite@8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1)))':
