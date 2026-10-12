@@ -384,7 +384,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="flex gap-2">
             <button
-              class="control-action control-action-primary"
+              class="rounded-lg border border-blue-600 bg-blue-600 px-3 py-2 text-xs text-white font-medium enabled:hover:border-blue-700 enabled:hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               :disabled="!tray || trayReady"
               @click="runAction(initializeTray)"
@@ -392,7 +392,7 @@ onBeforeUnmount(() => {
               Create
             </button>
             <button
-              class="control-action control-action-danger"
+              class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs text-red-700 font-medium enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-40"
               type="button"
               :disabled="!trayReady"
               @click="runAction(destroyTray)"
@@ -403,48 +403,48 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="mb-5 grid gap-3 sm:grid-cols-3">
-          <div class="status-card">
-            <span class="status-label">Platform</span>
+          <div class="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+            <span class="text-xs text-neutral-500">Platform</span>
             <strong>{{ os ?? "browser" }}</strong>
           </div>
-          <div class="status-card">
-            <span class="status-label">Lifecycle</span>
+          <div class="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+            <span class="text-xs text-neutral-500">Lifecycle</span>
             <strong>{{ trayReady ? "created" : "not created" }}</strong>
           </div>
-          <div class="status-card">
-            <span class="status-label">Last activation</span>
+          <div class="flex flex-col gap-1 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+            <span class="text-xs text-neutral-500">Last activation</span>
             <strong class="font-mono">{{ lastClickedId || "none" }}</strong>
           </div>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3">
-          <label class="control-field">
+          <label class="flex flex-col gap-2 text-xs text-neutral-600 font-medium">
             <span>Icon</span>
             <select
               v-model="useTemplateIcon"
-              class="control-input"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-neutral-800 outline-none"
               :disabled="!trayReady"
               @change="runAction(updateIcon)"
             >
               <option :value="false">Regular icon</option>
               <option v-if="os === 'macos'" :value="true">macOS template icon</option>
             </select>
-            <code>{{ iconPath }}</code>
+            <code class="text-[11px] text-neutral-500 font-normal">{{ iconPath }}</code>
           </label>
 
-          <label class="control-field">
+          <label class="flex flex-col gap-2 text-xs text-neutral-600 font-medium">
             <span>Tooltip</span>
             <input
               v-model="tooltip"
-              class="control-input"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-2 text-neutral-800 outline-none"
               :disabled="!trayReady"
               placeholder="Clear the field to remove the tooltip"
             >
           </label>
 
-          <label class="control-field">
+          <label class="flex flex-col gap-2 text-xs text-neutral-600 font-medium">
             <span>Visibility</span>
-            <span class="control-toggle">
+            <span class="min-h-9 inline-flex items-center gap-1.5 text-xs text-neutral-600 font-normal">
               <input
                 v-model="visible"
                 type="checkbox"
@@ -474,7 +474,7 @@ onBeforeUnmount(() => {
           <article
             v-for="row in rows"
             :key="row.node.key"
-            class="tree-row rounded-xl border border-neutral-200 bg-white p-3 shadow-sm"
+            class="block gap-3 rounded-xl border border-neutral-200 bg-white p-3 shadow-sm md:flex md:items-center"
             :style="{ marginLeft: `${row.depth * 20}px` }"
           >
             <div class="min-w-0 flex flex-1 flex-wrap items-center gap-2">
@@ -501,11 +501,11 @@ onBeforeUnmount(() => {
               <span v-else class="min-w-32 flex-1 text-sm text-neutral-400">
                 Native separator
               </span>
-              <label v-if="row.node.type !== 'separator'" class="row-toggle">
+              <label v-if="row.node.type !== 'separator'" class="min-h-9 inline-flex items-center gap-1.5 text-xs text-neutral-600 font-normal">
                 <input v-model="row.node.enabled" type="checkbox">
                 Enabled
               </label>
-              <label v-if="row.node.type === 'check'" class="row-toggle">
+              <label v-if="row.node.type === 'check'" class="min-h-9 inline-flex items-center gap-1.5 text-xs text-neutral-600 font-normal">
                 <input v-model="row.node.checked" type="checkbox">
                 Checked
               </label>
@@ -517,25 +517,25 @@ onBeforeUnmount(() => {
               </span>
             </div>
             <div class="mt-2 flex flex-wrap justify-end gap-1.5 md:mt-0 md:w-96 md:shrink-0">
-              <button class="tree-action" type="button" @click="addAfter(row.path)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-neutral-600 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-35" type="button" @click="addAfter(row.path)">
                 Add after
               </button>
-              <button class="tree-action" type="button" :disabled="row.node.type !== 'submenu'" @click="addChild(row.path)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-neutral-600 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-35" type="button" :disabled="row.node.type !== 'submenu'" @click="addChild(row.path)">
                 Add child
               </button>
-              <button class="tree-action" type="button" :disabled="!canMove(row.path, -1)" @click="moveItem(row.path, -1)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-neutral-600 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-35" type="button" :disabled="!canMove(row.path, -1)" @click="moveItem(row.path, -1)">
                 Up
               </button>
-              <button class="tree-action" type="button" :disabled="!canMove(row.path, 1)" @click="moveItem(row.path, 1)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-neutral-600 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-35" type="button" :disabled="!canMove(row.path, 1)" @click="moveItem(row.path, 1)">
                 Down
               </button>
-              <button class="tree-action" type="button" :disabled="!canIndent(row.path)" @click="indentItem(row.path)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-neutral-600 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-35" type="button" :disabled="!canIndent(row.path)" @click="indentItem(row.path)">
                 Indent
               </button>
-              <button class="tree-action" type="button" :disabled="row.depth === 0" @click="outdentItem(row.path)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-neutral-600 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-35" type="button" :disabled="row.depth === 0" @click="outdentItem(row.path)">
                 Outdent
               </button>
-              <button class="tree-action tree-action-danger" type="button" @click="removeItem(row.path)">
+              <button class="rounded-lg border border-neutral-200 px-2.5 py-1.5 text-xs leading-4 text-red-700 transition-colors enabled:hover:border-neutral-400 enabled:hover:bg-neutral-100" type="button" @click="removeItem(row.path)">
                 Delete
               </button>
             </div>
@@ -554,129 +554,3 @@ onBeforeUnmount(() => {
     </div>
   </main>
 </template>
-
-<style scoped>
-.status-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  border: 1px solid rgb(229 229 229);
-  border-radius: 0.75rem;
-  padding: 0.75rem;
-  background: rgb(250 250 250);
-  font-size: 0.875rem;
-}
-
-.status-label {
-  color: rgb(115 115 115);
-  font-size: 0.75rem;
-}
-
-.control-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  color: rgb(82 82 82);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.control-field code {
-  color: rgb(115 115 115);
-  font-size: 0.6875rem;
-  font-weight: 400;
-}
-
-.control-input {
-  border: 1px solid rgb(229 229 229);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.625rem;
-  background: rgb(250 250 250);
-  color: rgb(38 38 38);
-  outline: none;
-}
-
-.control-toggle,
-.row-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  min-height: 2.25rem;
-  color: rgb(82 82 82);
-  font-size: 0.75rem;
-  font-weight: 400;
-}
-
-.control-action {
-  border: 1px solid rgb(212 212 212);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: white;
-  color: rgb(64 64 64);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.control-action:hover:not(:disabled) {
-  border-color: rgb(163 163 163);
-  background: rgb(245 245 245);
-}
-
-.control-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.control-action-primary {
-  border-color: rgb(37 99 235);
-  background: rgb(37 99 235);
-  color: white;
-}
-
-.control-action-primary:hover:not(:disabled) {
-  border-color: rgb(29 78 216);
-  background: rgb(29 78 216);
-}
-
-.control-action-danger {
-  color: rgb(185 28 28);
-}
-
-.tree-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.tree-action {
-  border: 1px solid rgb(229 229 229);
-  border-radius: 0.5rem;
-  padding: 0.375rem 0.625rem;
-  color: rgb(82 82 82);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  transition:
-    background-color 120ms,
-    border-color 120ms;
-}
-
-.tree-action:hover:not(:disabled) {
-  border-color: rgb(163 163 163);
-  background: rgb(245 245 245);
-}
-
-.tree-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-}
-
-.tree-action-danger {
-  color: rgb(185 28 28);
-}
-
-@media (max-width: 767px) {
-  .tree-row {
-    display: block;
-  }
-}
-</style>
