@@ -8,4 +8,11 @@ export {
   readExportPresetValue,
   type ReadExportPresetValueOptions,
 } from "./presets.ts";
-export { buildViteWeb, type BuildViteWebOptions, createViteBuildConfig } from "./vite.ts";
+export {
+  assertViteWebOutput,
+  buildViteWeb,
+  type BuildViteWebOptions,
+  copyViteWebOutput,
+  type CopyViteWebOutputOptions,
+  createViteBuildConfig,
+} from "./vite.ts";

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { resolveAndroidReverseWebUrl, runDev } from "./dev.ts";
+import { createWebDevHostUrl, resolveAndroidReverseWebUrl, runDev } from "./dev.ts";
 import { createKirieDevLaunchOptions, runIosSimulator } from "./run.ts";
 import {
   createBasicKirieCliProjectTracker,
@@ -81,6 +81,51 @@ describe("runDev", () => {
       port: 5173,
       url: "http://127.0.0.1:5173/nested/?x=1",
     });
+  });
+
+  it("exports and serves the Godot Web host beside the Vite app", async () => {
+    const project = await projects.copy();
+    let hostUrl = "";
+
+    await installProjectFixture(project, "fake-godot.js");
+    await installKirieConfigFixture(project, "dev-fake-godot.kirie.config.ts");
+
+    await runDev({
+      cwd: project,
+      target: "web",
+      waitForWebExit: async (url) => {
+        hostUrl = url;
+        const response = await fetch(url);
+        expect(response.status).toBe(200);
+        expect(response.headers.get("cross-origin-embedder-policy")).toBe("require-corp");
+        expect(response.headers.get("cross-origin-opener-policy")).toBe("same-origin");
+      },
+    });
+
+    const [exportRun] = await readFakeGodotInvocations(project, 1);
+    expect(exportRun.argv.slice(0, 5)).toEqual([
+      "--headless",
+      "--path",
+      project,
+      "--export-debug",
+      "Web",
+    ]);
+    expect(hostUrl).toContain("/@fs/");
+    expect(hostUrl).toContain("kirie-dev=1");
+    expect(new URL(hostUrl).searchParams.get("kirie-web-url")).toMatch(
+      /^http:\/\/127\.0\.0\.1:\d+\/$/,
+    );
+  });
+
+  it("creates a same-origin Godot Web host URL", () => {
+    const url = createWebDevHostUrl(
+      "http://127.0.0.1:5173/",
+      "/workspace/dist/kirie/web/index.html",
+    );
+
+    expect(url).toBe(
+      "http://127.0.0.1:5173/@fs/workspace/dist/kirie/web/index.html?kirie-dev=1&kirie-web-url=http%3A%2F%2F127.0.0.1%3A5173%2F",
+    );
   });
 
   it("requires Android internet permission for Android dev", async () => {
@@ -273,12 +318,13 @@ describe("runDev", () => {
 
 async function readFakeGodotInvocations(
   project: string,
-): Promise<[GodotInvocation, GodotInvocation]> {
+  expectedLength: number = 2,
+): Promise<GodotInvocation[]> {
   const invocationsFile = path.join(project, FAKE_GODOT_INVOCATIONS_FILE);
   const invocations = JSON.parse(await fs.readFile(invocationsFile, "utf8")) as GodotInvocation[];
 
-  expect(invocations).toHaveLength(2);
-  return invocations as [GodotInvocation, GodotInvocation];
+  expect(invocations).toHaveLength(expectedLength);
+  return invocations;
 }
 
 async function installFakeAdb(project: string): Promise<void> {

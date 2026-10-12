@@ -54,6 +54,7 @@ describe("doctor command", () => {
   });
 
   it("parses only one plugin target", () => {
+    expect(parseDoctorTarget("web", ["web"])).toBe("web");
     expect(parseDoctorTarget("plugin:example", ["plugin:example"])).toBe("plugin:example");
     expect(() => parseDoctorTarget("unknown", ["unknown"])).toThrow("Unknown doctor target: unknown");
     expect(() => parseDoctorTarget("plugin:example", ["plugin:example", "extra"]))

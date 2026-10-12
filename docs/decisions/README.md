@@ -54,3 +54,5 @@ architecture documentation.
   — proposed, 2026-10-10
 - [ADR-0015: Load Tray through a GDExtension](0015-load-tray-through-a-gdextension.md)
   — accepted, 2026-10-12
+- [ADR-0016: Add an experimental Godot Web export target](0016-add-an-experimental-godot-web-export-target.md)
+  — proposed, 2026-10-12

@@ -32,6 +32,7 @@ tests/integration/src/_typings/
 tests/integration/tstogd_modules/
 packages/kirie/addon/addons/kirie/*.gd
 packages/notifications/addon/kirie_notifications/*.gd
+packages/kirie/addon/addons/kirie/iframe_host.js
 *.apk
 *.aab
 *.aar

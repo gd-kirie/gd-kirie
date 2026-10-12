@@ -1,13 +1,13 @@
 import type { KiriePlugin } from "../../plugin/index.ts";
 import { existsSync, readdirSync, statSync } from "node:fs";
-import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { execa } from "execa";
 import { loadKirieConfig, type ResolvedKirieConfig } from "../config.ts";
 import { checkGodotAddon, installGodotAddon } from "./addons.ts";
-import { getDotnetDependencyReference, installDotnetPackage } from "./dotnet.ts";
+import { checkDotnetWebToolchain, installDotnetWebToolchain } from "./dotnet-web.ts";
+import { getDotnetDependencyReference, hasDotnetProject, installDotnetPackage } from "./dotnet.ts";
 
 export const DoctorCheckStatus = {
   Fail: "fail",
@@ -16,7 +16,7 @@ export const DoctorCheckStatus = {
 } as const;
 export type DoctorCheckStatus = (typeof DoctorCheckStatus)[keyof typeof DoctorCheckStatus];
 
-export type DoctorTarget = `plugin:${string}`;
+export type DoctorTarget = "web" | `plugin:${string}`;
 
 export interface DoctorCheckResult {
   error?: Error;
@@ -26,6 +26,7 @@ export interface DoctorCheckResult {
 }
 
 export interface DoctorOptions {
+  arch?: NodeJS.Architecture;
   config?: ResolvedKirieConfig;
   cwd?: string;
   env?: NodeJS.ProcessEnv;
@@ -73,21 +74,35 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
       cwd: options.cwd,
     }));
 
-  const plugins = selectPlugins(config.plugins, options.target);
+  const webTarget = options.target === "web";
+  const plugins = webTarget ? [] : selectPlugins(config.plugins, options.target);
   if (options.fix) {
+    if (webTarget) {
+      await installDotnetWebToolchain({
+        arch: options.arch,
+        godotArgs: config.godot.args,
+        godotCommand: config.godot.command,
+        homeDir: options.homeDir,
+        platform: options.platform,
+        projectDir: config.godot.project,
+      });
+    }
+
     for (const plugin of plugins) {
       await fixPluginDependencies(config, plugin);
     }
   }
 
-  const checks = options.target ?
-      await checkPlugins(config, plugins) :
-      await runDoctorChecks({
-        config,
-        env: options.env,
-        homeDir: options.homeDir,
-        platform: options.platform,
-      });
+  const checks = webTarget ?
+      [await dotnetWebDoctorCheck(options)] :
+    options.target ?
+        await checkPlugins(config, plugins) :
+        await runDoctorChecks({
+          config,
+          env: options.env,
+          homeDir: options.homeDir,
+          platform: options.platform,
+        });
 
   for (const check of checks) {
     console.log(`${check.status} ${check.name}: ${check.message}`);
@@ -168,7 +183,7 @@ async function checkPluginDependencies(
   }
 
   const dotnetPackages = plugin.dotnetPackages ?? [];
-  if (dotnetPackages.length === 0 || !(await hasDotnetProject(config))) {
+  if (dotnetPackages.length === 0 || !(await projectUsesDotnet(config))) {
     return checks;
   }
 
@@ -206,7 +221,7 @@ async function fixPluginDependencies(
   }
 
   const dotnetPackages = plugin.dotnetPackages ?? [];
-  if (dotnetPackages.length === 0 || !(await hasDotnetProject(config))) {
+  if (dotnetPackages.length === 0 || !(await projectUsesDotnet(config))) {
     return;
   }
 
@@ -223,15 +238,24 @@ async function fixPluginDependencies(
   }
 }
 
-async function hasDotnetProject(config: ResolvedKirieConfig): Promise<boolean> {
-  if (config.godot.csproj) {
-    return true;
-  }
+async function projectUsesDotnet(config: ResolvedKirieConfig): Promise<boolean> {
+  return hasDotnetProject({
+    csproj: config.godot.csproj,
+    projectDir: config.godot.project,
+  });
+}
 
-  const entries = await fs.readdir(config.godot.project, { withFileTypes: true });
-  return entries.some(
-    (entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === ".csproj",
-  );
+async function dotnetWebDoctorCheck(options: {
+  arch?: NodeJS.Architecture;
+  homeDir?: string;
+  platform?: NodeJS.Platform;
+}): Promise<DoctorCheckResult> {
+  const result = await checkDotnetWebToolchain(options);
+  return {
+    message: result.message,
+    name: "Experimental Godot .NET Web toolchain",
+    status: result.valid ? DoctorCheckStatus.Ok : DoctorCheckStatus.Fail,
+  };
 }
 
 function failedCheck(name: string, error: unknown): DoctorCheckResult {

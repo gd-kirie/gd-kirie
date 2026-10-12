@@ -24,7 +24,7 @@ const projectArgs = {
 const doctorArgs = {
   ...projectArgs,
   target: {
-    description: "Optional configured plugin to check or repair (plugin:<id>).",
+    description: "Optional target: web or plugin:<id>.",
     required: false,
     type: "positional",
   },
@@ -77,13 +77,11 @@ const androidRunArgs = {
 
 const desktopRunArgs = {
   ...projectArgs,
-  godot: { description: "Godot executable override.", type: "string" },
 } as const;
 
 const devArgs = {
   ...projectArgs,
   ...devServerArgs,
-  godot: { description: "Godot executable override.", type: "string" },
 } as const;
 
 const androidDevArgs = {
@@ -138,6 +136,18 @@ function runAndroidExportCommand({
   });
 }
 
+function runWebExportCommand({ args, rawArgs }: CommandContext<typeof exportArgs>): Promise<void> {
+  return runExport({
+    build: args.build !== false,
+    cwd: args.project,
+    output: args.output,
+    platform: "web",
+    preset: args.preset,
+    release: args.release,
+    userArgs: parseUserArgs(rawArgs),
+  });
+}
+
 async function runIosExportCommand({ args }: CommandContext<typeof iosExportArgs>): Promise<void> {
   const targetIsSimulator = !args.device || (await isIosSimulatorDevice(args.device, args.project));
   const configuration = args.release ? "release" : "debug";
@@ -169,7 +179,6 @@ function runDevCommand(target: DevTarget) {
       force: args.force,
       forceStop: args["force-stop"],
       godotArgs: target === "desktop" ? parseUserArgs(rawArgs) : undefined,
-      godotCommand: args.godot,
       host: args.host,
       logLevel: parseLogLevel(args["log-level"]),
       mode: args.mode,
@@ -247,6 +256,9 @@ export function parseDoctorTarget(
   if (!rawTarget) {
     return undefined;
   }
+  if (rawTarget === "web") {
+    return rawTarget;
+  }
   if (rawTarget.startsWith("plugin:") && rawTarget.length > "plugin:".length) {
     return rawTarget as DoctorTarget;
   }
@@ -307,6 +319,14 @@ export const mainCommand: CommandDef = defineCommand({
           },
           run: runDevCommand("ios"),
         }),
+        web: defineCommand({
+          args: devArgs,
+          meta: {
+            description: "Export and serve Godot Web with Vite dev.",
+            name: "web",
+          },
+          run: runDevCommand("web"),
+        }),
       },
     }),
     doctor: defineCommand({
@@ -347,6 +367,11 @@ export const mainCommand: CommandDef = defineCommand({
           meta: { description: "Build an installable iOS app.", name: "ios" },
           run: runIosExportCommand,
         }),
+        web: defineCommand({
+          args: exportArgs,
+          meta: { description: "Export the Web Godot preset and packaged web content.", name: "web" },
+          run: runWebExportCommand,
+        }),
       },
     }),
     run: defineCommand({
@@ -376,7 +401,6 @@ export const mainCommand: CommandDef = defineCommand({
             runDesktop({
               cwd: args.project,
               godotArgs: parseUserArgs(rawArgs),
-              godotCommand: args.godot,
             }),
         }),
         ios: defineCommand({

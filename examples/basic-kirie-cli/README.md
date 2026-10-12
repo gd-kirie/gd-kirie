@@ -114,6 +114,20 @@ mise x -- godot --path ./examples/basic-kirie-cli
 
 ## Running an exported mobile app
 
+For a Godot installation with a compatible Web export preset, the CLI exports
+the Godot app and Vite content together:
+
+```bash
+pnpm kirie export web
+```
+
+The default entry is `dist/kirie/web/index.html`; serve its containing directory
+so the mapped `src-web/dist/index.html` remains on the same origin. Godot 4.7.2
+does not officially support .NET Web export. For C# projects, run
+`pnpm kirie doctor --fix web` before the export. The fixer installs the
+experimental templates, packages, and .NET `wasm-tools` workload. It does not
+install another Godot editor.
+
 Run `pnpm run build:godot` after editing `main.ts` before using the direct
 `pnpm kirie` commands below. The repository's `mise run run:example` workflow
 regenerates the GDScript automatically.

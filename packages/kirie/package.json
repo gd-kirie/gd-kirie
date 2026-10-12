@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "pnpm run generate:godot",
-    "generate:godot": "pnpm run typecheck && tstogd convert --no-check",
+    "generate:godot": "pnpm run typecheck && tstogd convert --no-check && cp src-godot/iframe_host.js addon/addons/kirie/iframe_host.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

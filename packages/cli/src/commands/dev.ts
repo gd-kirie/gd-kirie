@@ -1,14 +1,16 @@
-import { buildDotnet, readExportPresetValue } from "@gd-kirie/build";
+import path from "node:path";
+import { buildDotnet, exportGodotPreset, readExportPresetValue } from "@gd-kirie/build";
 import { execa } from "execa";
 
 import { loadKirieConfig, type ResolvedKirieConfig } from "./config.ts";
 import { checkGodotAddon } from "./doctor/addons.ts";
-import { runExport } from "./export.ts";
+import { tryExportDotnetWeb } from "./doctor/dotnet-web.ts";
+import { resolveExportOutputPath, runExport } from "./export.ts";
 import { exportIosApp } from "./ios.ts";
 import { createKirieDevLaunchOptions, isIosSimulatorDevice, runAndroid, runIos } from "./run.ts";
 import { startViteDevServer, type StartViteDevServerOptions } from "./vite.ts";
 
-export type DevTarget = "desktop" | "android" | "ios";
+export type DevTarget = "desktop" | "android" | "ios" | "web";
 
 export interface DevOptions extends StartViteDevServerOptions {
   appPath?: string;
@@ -22,6 +24,7 @@ export interface DevOptions extends StartViteDevServerOptions {
   mode?: string;
   target?: DevTarget;
   terminateExisting?: boolean;
+  waitForWebExit?: (url: string) => Promise<void>;
 }
 
 export async function runDev(options: DevOptions = {}): Promise<void> {
@@ -68,8 +71,11 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
     }
   }
 
+  const webOutput = target === "web" ? await exportWebDevHost(config, options) : "";
+
   const vite = await startViteDevServer(config, {
     clearScreen: options.clearScreen,
+    crossOriginIsolation: target === "web",
     force: options.force,
     logLevel: options.logLevel,
     port: options.port,
@@ -78,7 +84,9 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
   });
 
   try {
-    console.log(`Kirie dev server: ${vite.url}`);
+    if (target !== "web") {
+      console.log(`Kirie dev server: ${vite.url}`);
+    }
 
     switch (target) {
       case "desktop":
@@ -89,10 +97,83 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
         return;
       case "ios":
         await runIosDev(config, vite.url, options);
+        return;
+      case "web":
+        await runWebDev(vite.url, webOutput, options);
     }
   } finally {
     await vite.server.close();
   }
+}
+
+async function exportWebDevHost(
+  config: ResolvedKirieConfig,
+  options: DevOptions,
+): Promise<string> {
+  const outputPath = resolveExportOutputPath({
+    configCwd: config.cwd,
+    mode: "debug",
+    platform: "web",
+    preset: "Web",
+  });
+  const godotCommand = options.godotCommand ?? config.godot.command;
+
+  if (await tryExportDotnetWeb({
+    build: false,
+    config,
+    godotCommand,
+    includeWebContent: false,
+    outputPath,
+    preset: "Web",
+    release: false,
+  })) {
+    return outputPath;
+  }
+
+  await exportGodotPreset({
+    godotArgs: config.godot.args,
+    godotCommand,
+    mode: "debug",
+    outputPath,
+    preset: "Web",
+    projectDir: config.godot.project,
+  });
+  return outputPath;
+}
+
+async function runWebDev(
+  webUrl: string,
+  outputPath: string,
+  options: DevOptions,
+): Promise<void> {
+  const hostUrl = createWebDevHostUrl(webUrl, outputPath);
+  console.log(`Kirie Godot Web host: ${hostUrl}`);
+
+  if (options.waitForWebExit) {
+    await options.waitForWebExit(hostUrl);
+  } else {
+    await waitForWebExit();
+  }
+}
+
+export function createWebDevHostUrl(webUrl: string, outputPath: string): string {
+  const filePath = path.resolve(outputPath).replaceAll("\\", "/").replace(/^\/+/, "");
+  const url = new URL(`/@fs/${filePath}`, webUrl);
+  url.searchParams.set("kirie-dev", "1");
+  url.searchParams.set("kirie-web-url", webUrl);
+  return url.toString();
+}
+
+function waitForWebExit(): Promise<void> {
+  return new Promise((resolve) => {
+    const done = (): void => {
+      process.off("SIGINT", done);
+      process.off("SIGTERM", done);
+      resolve();
+    };
+    process.once("SIGINT", done);
+    process.once("SIGTERM", done);
+  });
 }
 
 async function runDesktopDev(

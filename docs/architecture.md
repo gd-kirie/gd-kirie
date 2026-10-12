@@ -12,13 +12,15 @@ The low-level plugin and IPC core provide:
 - a thin C# KirieClient wrapper for .NET projects
 - Android and iOS native WebView implementations
 - a desktop Godot CEF backend, starting with macOS
-- packaged `res://` web resource loading for exported apps
+- an iframe backend for Godot Web exports
+- packaged `res://` web resource loading for native exported apps
 - a repo-level platform integration test project
 
 Application-framework behavior such as CLI workflows, host-window
 capabilities, routing, export orchestration, and mobile development sessions
 belongs above that core. The current `@gd-kirie/ipc` package is intentionally
-only a browser-side transport wrapper on top of the raw native bridge. Eventa
+only a browser-side transport wrapper on top of the platform bridge, including
+same-origin iframe messages on Web. Eventa
 adapters and Platform capability packages live above Kirie and use that
 low-level text transport.
 
@@ -54,10 +56,11 @@ These names describe the current low-level transport API. Android implements
 the lane shape with AndroidX WebKit ArrayBuffer message channels and CBOR
 packets. iOS implements the same text, binary, and data lanes with CBOR packets
 carried as base64 strings through WKWebView script messages.
+Web implements these lanes with a transferred `MessagePort` and structured clone.
 
-The Godot-facing `Kirie` script is expected to stay a thin wrapper over the
-platform singleton, keeping naming and serialization concerns on the Godot side
-without duplicating native lifecycle logic.
+The Godot-facing `Kirie` script stays a thin wrapper over the native singleton,
+desktop CEF node, or Web DOM session.
+Each backend owns its platform lifecycle and serialization behavior.
 
 The C# `KirieClient` wrapper follows the same low-level surface. Its default
 constructor forwards to the platform singleton, while `FromNode(...)` borrows
@@ -311,11 +314,13 @@ kirie dev
 kirie dev desktop
 kirie dev android
 kirie dev ios
+kirie dev web
 kirie build
 kirie build web
 kirie build dotnet
 kirie export android
 kirie export ios
+kirie export web
 kirie doctor
 kirie run
 kirie run desktop
@@ -427,7 +432,10 @@ android` requires the Android export preset to enable
 `permissions/internet=true`; runtime commands must fail on a wrong preset rather
 than rewriting it. iOS development currently targets the simulator path: it
 exports the Xcode project, builds a simulator `.app`, installs and launches it
-through `simctl`, and passes the same keys as process arguments.
+through `simctl`, and passes the same keys as process arguments. Web development
+exports the Godot host once, serves it from the Vite origin, and passes the Vite
+URL through the same launch options. C# Web development requires the
+experimental toolchain installed by `kirie doctor --fix web`.
 
 Before launching the development session, `kirie dev` runs Godot in headless
 import mode for the project. Use Godot's `--import` command-line option for this
@@ -454,6 +462,10 @@ command.
 
 `kirie export` means a complete platform export workflow: build local inputs
 first, then call Godot's export flow for the selected platform or preset.
+For Web, it verifies `src-web/dist/index.html`, exports Godot, and replaces the
+sibling `src-web/dist` tree with the current Vite build. The copy occurs only
+after Godot export succeeds. `--no-build` requires an existing Vite build and
+fails before Godot starts when the entry file is missing.
 `kirie run` should build local inputs first, then directly run the scene or
 deploy the built outputs by default. For Android exports, deploy means
 installing the default `kirie export android` output before launching the Godot
@@ -541,7 +553,6 @@ entire Vite CLI surface. The current `kirie dev` flags are:
 
 ```text
 --project <dir>       Godot project directory, defaulting to the current project.
---godot <path>        Godot executable override.
 --host <host>         Vite dev server host override.
 --port <number>       Vite dev server port override.
 --strict-port         Fail if the requested Vite port is unavailable.
@@ -594,7 +605,9 @@ rewriting those URLs.
 The Kirie CLI app layout uses `res://src-web/dist/index.html` as the default
 production entry. The addon export plugin packages `res://src-web/dist` for
 Android and iOS exports and fails export when `res://src-web/dist/index.html` is
-missing. The previous `res://web` behavior is not preserved as a compatibility
+missing. For Web exports, `kirie export web` copies that build beside the Godot
+HTML output at `src-web/dist`; the iframe backend maps only this resource root
+to the sibling same-origin tree. The previous `res://web` behavior is not preserved as a compatibility
 layer. Users should continue to use Godot's official export preset flow by
 default. Kirie may diagnose export preset issues, and explicit setup or repair
 commands may write supported preset changes through Godot, but normal run,
@@ -801,6 +814,32 @@ over byte-oriented CBOR packets:
 Godot objects, nodes, callables, RIDs, symbols, functions, custom classes,
 cycles, dates, regular expressions, and other engine-local or JavaScript-local
 values are out of scope for the data lane.
+
+### Godot Web iframe backend
+
+Web exports keep the same `KirieNode` owner and lane API. C# borrows that owner
+through `KirieClient.FromNode()`.
+
+The DOM adapter creates, sizes, navigates, and destroys a same-origin iframe.
+It transfers a private `MessagePort` after each document load. It must not grow
+container APIs, serialization, application protocols, or another JavaScript
+runtime. Those responsibilities stay in their existing packages.
+
+The Godot backend uses official
+[JavaScriptBridge](https://docs.godotengine.org/en/stable/classes/class_javascriptbridge.html)
+APIs. It performs the one required recursive conversion between Godot Variant
+containers and native JavaScript containers. Web lane traffic uses structured
+clone through the transferred port. Eventa remains an adapter above Kirie IPC.
+
+The Web backend supports same-origin content only. It maps
+`res://src-web/dist` to the Vite build beside the exported Godot page. Other
+`res://` roots are unavailable to the browser.
+
+C# Web support uses the experimental templates from
+`moeru-ai/godot-dotnet-web-templates`. `kirie doctor --fix web` installs and
+validates them without installing another Godot editor or writing machine-local
+paths into the project. The template
+repository owns their build and release workflow.
 
 ### Data lane type mapping
 

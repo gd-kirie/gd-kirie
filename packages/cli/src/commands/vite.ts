@@ -12,6 +12,7 @@ export interface StartedViteServer {
 
 export interface StartViteDevServerOptions {
   clearScreen?: boolean;
+  crossOriginIsolation?: boolean;
   force?: boolean;
   host?: string;
   logLevel?: "info" | "warn" | "error" | "silent";
@@ -62,12 +63,20 @@ function createViteConfig(
     viteConfig: config.web.vite,
     webRoot: config.web.root,
   });
+  let headers;
+  if (options.crossOriginIsolation) {
+    headers = {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    };
+  }
 
   return mergeConfig(buildConfig, {
     clearScreen: options.clearScreen,
     force: options.force,
     logLevel: options.logLevel,
     server: {
+      headers,
       host: options.host ?? "127.0.0.1",
       open: false,
       port: options.port ?? 5173,

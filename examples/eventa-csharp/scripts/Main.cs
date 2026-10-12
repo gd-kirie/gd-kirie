@@ -10,8 +10,8 @@ public partial class Main : Control
     private readonly EventDefinition<WebReadyPayload> _webReady = new("web:ready");
     private readonly InvokeEventDefinition<EchoResponse, EchoRequest> _godotEcho = new("godot:echo");
     private readonly InvokeEventDefinition<EchoResponse, EchoRequest> _webEcho = new("web:echo");
-    private readonly KirieClient _kirie = new();
     private readonly Godot.Collections.Array<string> _logLines = [];
+    private KirieClient _kirie = null!;
     private KirieEventaContextHandle? _eventa;
     private InvokeClient<EchoResponse, EchoRequest>? _webEchoClient;
     private bool _webViewIsReady;
@@ -22,6 +22,7 @@ public partial class Main : Control
 
     public override void _Ready()
     {
+        _kirie = KirieClient.FromNode(GetNode<Node>("KirieNode"));
         _statusLabel = GetNode<Label>("VBoxContainer/StatusLabel");
         _logLabel = GetNode<Label>("VBoxContainer/LogLabel");
         var createButton = GetNode<Button>("VBoxContainer/CreateButton");
@@ -74,7 +75,8 @@ public partial class Main : Control
 
         SetStatus("Status: creating WebView");
         AppendLog("create_webview");
-        _kirie.CreateWebView();
+        var devPageUrl = _kirie.GetLaunchOption("kirie-web-url").Trim();
+        _kirie.CreateWebView(devPageUrl.Length == 0 ? PageUrl : devPageUrl);
     }
 
     private async void OnInvokeButtonPressed()
@@ -100,7 +102,6 @@ public partial class Main : Control
         _webViewIsReady = true;
         SetStatus("Status: WebView ready");
         AppendLog("signal webview_ready");
-        _kirie.LoadUrl(PageUrl);
     }
 
     private void OnIpcError(string error)

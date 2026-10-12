@@ -1,10 +1,16 @@
 import { decode, encode } from "cborg";
 
+import { createIframeTransport, iframeConfig } from "./iframe";
+
+export { createIframeTransport } from "./iframe";
+export type { KirieIframeConfig } from "./iframe";
+
 const READY_MESSAGE = new ArrayBuffer(0);
 const ENCODE_OPTIONS = { float64: true } as const;
+let iframeTransport: KirieTransport | undefined;
 
-export type KiriePlatformOs = "android" | "ios" | "macos" | "windows" | "linux";
-export type KiriePlatformBackend = "webview" | "wkwebview" | "godot-cef";
+export type KiriePlatformOs = "android" | "ios" | "macos" | "windows" | "linux" | "web";
+export type KiriePlatformBackend = "webview" | "wkwebview" | "godot-cef" | "iframe";
 
 export interface KiriePlatform {
   os: KiriePlatformOs;
@@ -67,7 +73,7 @@ export type KirieData =
 
 export type KirieMessageHandler<TMessage> = (message: TMessage) => void;
 
-interface KirieTransport {
+export interface KirieTransport {
   sendText(message: string): void;
   sendBinary(bytes: Uint8Array): void;
   sendData(value: KirieData): void;
@@ -117,7 +123,22 @@ function decodeBinary(value: unknown): Uint8Array {
 }
 
 function currentTransport(): KirieTransport {
+  if (!window.kirie) {
+    const config = iframeConfig(window);
+    if (config) {
+      window.kirie = { platform: { os: "web", backend: "iframe" } };
+    }
+  }
   const platform = window.kirie?.platform;
+  if (platform?.os === "web" && platform.backend === "iframe") {
+    const config = iframeConfig(window);
+    if (!config) {
+      throw new Error("Kirie iframe transport is unavailable.");
+    }
+
+    iframeTransport ??= createIframeTransport(window, config);
+    return iframeTransport;
+  }
   return transports[`${platform?.os}/${platform?.backend}`];
 }
 

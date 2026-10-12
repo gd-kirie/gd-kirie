@@ -1,5 +1,7 @@
 import { KirieGodotCefConfig } from "./godot_cef_config";
+
 import { _PointerInputForwarder } from "./pointer_input_forwarder";
+import { _WebIframeBackend } from "./web_iframe_backend";
 
 export class GdKirie extends Object {
   webview_ready = gd.signal();
@@ -23,11 +25,39 @@ export class GdKirie extends Object {
     }
   }
 
+  _web_backend: _WebIframeBackend | null = null;
+
+  _notification(what: int): void {
+    if (what === Object.NOTIFICATION_PREDELETE && this._web_backend !== null) {
+      this._web_backend.destroy_webview();
+    }
+  }
+
   _plugin_singleton: TSOnly<GodotObject> | null = null;
   _view_id = this.get_instance_id();
   _pointer_input_forwarder = new _PointerInputForwarder();
 
   _init(): void {
+    if (OS.has_feature("web")) {
+      this._web_backend = new _WebIframeBackend();
+      this._web_backend.webview_ready.connect(() => {
+        this.webview_ready.emit();
+      });
+      this._web_backend.text_received.connect((message: string) => {
+        this.text_received.emit(message);
+      });
+      this._web_backend.binary_received.connect((bytes: PackedByteArray) => {
+        this.binary_received.emit(bytes);
+      });
+      this._web_backend.data_received.connect((value: unknown) => {
+        this.data_received.emit(value);
+      });
+      this._web_backend.ipc_error.connect((error: string) => {
+        this.ipc_error.emit(error);
+      });
+      return;
+    }
+
     if (Engine.has_singleton(GdKirie.PLUGIN_SINGLETON_NAME)) {
       this._plugin_singleton = Engine.get_singleton(GdKirie.PLUGIN_SINGLETON_NAME);
       print("[Kirie][gd] platform singleton detected");
@@ -44,11 +74,6 @@ export class GdKirie extends Object {
   }
 
   create_webview(options: Dictionary = {}): void {
-    const plugin = this._ensure_plugin_singleton("create_webview");
-    if (plugin === null) {
-      return;
-    }
-
     let initial_url = "";
     if (options.has("initial_url")) {
       initial_url = `${options.get("initial_url")}`;
@@ -62,6 +87,16 @@ export class GdKirie extends Object {
       return;
     }
 
+    if (this._web_backend !== null) {
+      this._web_backend.create_webview(initial_url);
+      return;
+    }
+
+    const plugin = this._ensure_plugin_singleton("create_webview");
+    if (plugin === null) {
+      return;
+    }
+
     print(`[Kirie][gd] create_webview initial_url=${initial_url}`);
     if (this._is_godot_cef_backend()) {
       this._create_cef_webview(initial_url, parent_node);
@@ -72,6 +107,11 @@ export class GdKirie extends Object {
   }
 
   destroy_webview(): void {
+    if (this._web_backend !== null) {
+      this._web_backend.destroy_webview();
+      return;
+    }
+
     const cef_control = this._plugin_singleton instanceof Control ? this._plugin_singleton : null;
     this._pointer_input_forwarder.reset(cef_control);
     if (this._plugin_singleton === null) {
@@ -88,6 +128,11 @@ export class GdKirie extends Object {
   }
 
   load_url(url: string): void {
+    if (this._web_backend !== null) {
+      this._web_backend.load_url(url);
+      return;
+    }
+
     const plugin = this._ensure_plugin_singleton("load_url");
     if (plugin === null) {
       return;
@@ -103,6 +148,11 @@ export class GdKirie extends Object {
   }
 
   load_html_string(html: string, base_url: string = ""): void {
+    if (this._web_backend !== null) {
+      this._web_backend.load_html_string(html, base_url);
+      return;
+    }
+
     const plugin = this._ensure_plugin_singleton("load_html_string");
     if (plugin === null) {
       return;
@@ -118,6 +168,11 @@ export class GdKirie extends Object {
   }
 
   send_text(message: string): void {
+    if (this._web_backend !== null) {
+      this._web_backend.send_text(message);
+      return;
+    }
+
     const plugin = this._ensure_plugin_singleton("send_text");
     if (plugin === null) {
       return;
@@ -132,6 +187,11 @@ export class GdKirie extends Object {
   }
 
   send_binary(bytes: PackedByteArray): void {
+    if (this._web_backend !== null) {
+      this._web_backend.send_binary(bytes);
+      return;
+    }
+
     const plugin = this._ensure_plugin_singleton("send_binary");
     if (plugin === null) {
       return;
@@ -147,6 +207,11 @@ export class GdKirie extends Object {
   }
 
   send_data(value: unknown): void {
+    if (this._web_backend !== null) {
+      this._web_backend.send_data(value);
+      return;
+    }
+
     const plugin = this._ensure_plugin_singleton("send_data");
     if (plugin === null) {
       return;
@@ -158,18 +223,20 @@ export class GdKirie extends Object {
     // parameters do not reliably carry Variant containers. Use Godot's supported
     // Dictionary conversion path as a private carrier, then unwrap on Android
     // before CBOR encoding.
-    const value_type = gd.typeof(value);
-    const supported_types: Array<int> = [
-      Variant.Type.TYPE_NIL,
-      Variant.Type.TYPE_BOOL,
-      Variant.Type.TYPE_INT,
-      Variant.Type.TYPE_FLOAT,
-      Variant.Type.TYPE_STRING,
-      Variant.Type.TYPE_ARRAY,
-      Variant.Type.TYPE_DICTIONARY,
-    ];
-    if (!supported_types.has(value_type)) {
-      push_error(`Unsupported Kirie data type: ${type_string(value_type)}`);
+    let supported = value == null;
+    if (value != null) {
+      supported = gd.is(value, bool) ||
+        gd.is(value, int) ||
+        gd.is(value, float) ||
+        gd.is(value, String) ||
+        // tstogd converts this to GDScript's `is Array`; Array.isArray has no GDScript equivalent.
+        // eslint-disable-next-line unicorn/no-instanceof-builtins
+        value instanceof Array ||
+        value instanceof Dictionary;
+    }
+
+    if (!supported) {
+      push_error("Unsupported Kirie data type");
       return;
     }
 
@@ -182,6 +249,10 @@ export class GdKirie extends Object {
   }
 
   get_launch_option(key: string): string {
+    if (this._web_backend !== null) {
+      return this._web_backend.get_launch_option(key);
+    }
+
     const plugin = this._ensure_plugin_singleton("get_launch_option");
     if (plugin === null) {
       return "";
@@ -207,7 +278,7 @@ export class GdKirie extends Object {
   }
 
   is_available(): boolean {
-    return this._plugin_singleton !== null;
+    return this._web_backend !== null ? this._web_backend.is_available() : this._plugin_singleton !== null;
   }
 
   _get_desktop_launch_option(key: string): string {
@@ -297,6 +368,11 @@ export class GdKirie extends Object {
   }
 
   _resolve_permission(request_id: int, grant: boolean): boolean {
+    if (this._web_backend !== null) {
+      this.ipc_error.emit("Kirie Web does not support permission mediation");
+      return false;
+    }
+
     const method_name = grant ? "grant_permission" : "deny_permission";
     const plugin = this._ensure_plugin_singleton(method_name);
     if (plugin === null) {

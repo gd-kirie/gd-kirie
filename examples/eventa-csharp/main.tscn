@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://nhwlgv3vmwa7"]
 
 [ext_resource type="Script" uid="uid://cfe4pqjkva75b" path="res://scripts/Main.cs" id="1_main"]
+[ext_resource type="Script" path="res://addons/kirie/kirie_node.gd" id="2_kirie"]
 
 [node name="Main" type="Control" unique_id=752938999]
 layout_mode = 3
@@ -10,6 +11,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main")
+
+[node name="KirieNode" type="Control" parent="." unique_id=2131473975]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_kirie")
+auto_create = false
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1588009417]
 layout_mode = 1

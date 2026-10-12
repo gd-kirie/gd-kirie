@@ -31,7 +31,7 @@ export interface InstallAddonOptions {
   projectDir: string;
 }
 
-interface DownloadFileOptions {
+export interface DownloadFileOptions {
   expectedSha256?: string;
   output: DownloadProgressOutput;
   outputPath: string;
@@ -216,7 +216,7 @@ function formatDownloadProgress(
   return `[${bar}] ${percent} ${speedText} ${downloaded}/${formatBytes(totalBytes)}`;
 }
 
-async function downloadFile(options: DownloadFileOptions): Promise<void> {
+export async function downloadFile(options: DownloadFileOptions): Promise<void> {
   // Load the native addon only for the fixer so unsupported hosts can still use other CLI commands.
   const { DownloadTask, TakanawaError, TakanawaStatus } = await import("takanawa-node");
   const task = new DownloadTask({
@@ -316,7 +316,7 @@ function writeDownloadProgress(
   return line.length;
 }
 
-async function extractZip(archivePath: string, outputDir: string): Promise<void> {
+export async function extractZip(archivePath: string, outputDir: string): Promise<void> {
   if (process.platform === "win32") {
     const tarExecutable = path.join(process.env.SystemRoot!, "System32", "tar.exe");
     await execa(tarExecutable, ["-xf", archivePath, "-C", outputDir], { stdio: "inherit" });

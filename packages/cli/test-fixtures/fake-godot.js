@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 
 if (process.argv.includes("--version")) {
   console.log("4.5.stable.official.876b29033");
@@ -18,3 +19,10 @@ invocations.push({
 });
 
 writeFileSync(file, JSON.stringify(invocations));
+
+const exportIndex = process.argv.findIndex((argument) => argument.startsWith("--export-"));
+if (exportIndex >= 0) {
+  const outputPath = process.argv[exportIndex + 2];
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, "<!doctype html><title>Fake Godot Web</title>");
+}
