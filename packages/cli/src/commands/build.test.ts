@@ -60,29 +60,16 @@ describe("runBuild", () => {
 describe("runBuildDotnet", () => {
   it("builds a discovered .NET project", async () => {
     const project = await projects.copy();
-    await Promise.all([
-      fs.writeFile(
-        path.join(project, "Example.csproj"),
-        `<Project Sdk="Microsoft.NET.Sdk">
+    await fs.writeFile(
+      path.join(project, "Example.csproj"),
+      `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <RestoreConfigFile>$(MSBuildThisFileDirectory)NuGet.Config</RestoreConfigFile>
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 </Project>
 `,
-      ),
-      fs.writeFile(
-        path.join(project, "NuGet.Config"),
-        `<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <clear />
-  </packageSources>
-</configuration>
-`,
-      ),
-    ]);
+    );
 
     await runBuildDotnet({ cwd: project });
 

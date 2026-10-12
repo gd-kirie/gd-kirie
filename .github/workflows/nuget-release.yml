@@ -79,6 +79,9 @@ jobs:
           install_args: --locked dotnet
           cache: true
 
+      - name: Repair empty NuGet configuration
+        run: test -s "$HOME/.nuget/NuGet/NuGet.Config" || mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
+
       - name: Download Tray native libraries
         uses: actions/download-artifact@v8
         with:
