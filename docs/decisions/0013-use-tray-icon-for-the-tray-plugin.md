@@ -40,10 +40,8 @@ directly on `tray-icon` 0.26.1, and contains no platform backend abstraction. It
 owns one process Tray and exports only the required C ABI operations and error
 retrieval.
 
-The public browser API is `create`, `setIcon`, `setMenu`, `setTooltip`,
-`setVisible`, and `destroy`. Menus support plain items, check items, submenus,
-and separators. Remove the previous radio, multistate, item icon, item tooltip,
-accelerator, indentation, and partial-update APIs instead of emulating them.
+The browser contract replaces complete Tray state. Remove menu features that
+`tray-icon` cannot support consistently instead of emulating them.
 
 Linux uses the `tray-icon` KSNI feature without the default GTK/AppIndicator
 backend. The NuGet package ships native libraries for macOS, Windows, and Linux

@@ -121,15 +121,10 @@ example, and regression-test areas:
 - `examples/basic-ipc`: beginner-friendly demo project for the raw IPC flow
 - `examples/basic-kirie-cli`: beginner-friendly demo project for the Kirie CLI workflow
 - `examples/basic-platform`: desktop window, shortcut, and notification capabilities
-- [`examples/tray`](examples/tray/README.md): complete system tray lifecycle,
-  complete menu replacement, and activation feedback
+- [`examples/tray`](examples/tray/README.md): desktop system tray example
 - `examples/eventa-csharp`: beginner-friendly demo project for Godot C# Eventa adapter usage
 - `tests/integration`: exported-app platform integration tests
-- `scripts/build.ts`: mise task entrypoint and example run tasks
-- `scripts/build-kirie.ts`: Kirie addon artifact and packaging tasks
-- `scripts/build-tray-native.ts`: Tray native library build task
-- `scripts/build-shared.ts`: repo-local task glue around CLI and package build
-  primitives
+- `scripts`: repository build, test, and release tasks
 - `docs`: project notes and design decisions
   - `docs/dreams`: exploratory notes for ideas outside the current milestone
 
