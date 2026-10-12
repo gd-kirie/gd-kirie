@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Godot;
 
 namespace GdKirie.Tray;
 
@@ -79,32 +78,13 @@ internal static partial class TrayNative
             return nint.Zero;
         }
 
-        var fileName = "libkirie_tray_native.so";
-        if (OperatingSystem.IsWindows())
-        {
-            fileName = "kirie_tray_native.dll";
-        }
-        else if (OperatingSystem.IsMacOS())
-        {
-            fileName = "libkirie_tray_native.dylib";
-        }
+        var fileName = OperatingSystem.IsWindows()
+            ? "kirie_tray_native.dll"
+            : OperatingSystem.IsMacOS()
+                ? "libkirie_tray_native.dylib"
+                : "libkirie_tray_native.so";
 
-        string[] candidates =
-        [
-            Path.Combine(AppContext.BaseDirectory, fileName),
-            ProjectSettings.GlobalizePath($"res://.godot/mono/temp/bin/Debug/{fileName}"),
-        ];
-
-        foreach (var candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return NativeLibrary.Load(candidate);
-            }
-        }
-
-        throw new DllNotFoundException(
-            $"The Tray native library '{fileName}' was not found in the application or Godot build directory.");
+        return NativeLibrary.Load(Path.Combine(AppContext.BaseDirectory, fileName));
     }
 
     [LibraryImport(LibraryName, EntryPoint = "kirie_tray_create")]
