@@ -12,16 +12,24 @@
   "exports": { ".": { "import": "./src/index.ts" } },
   "files": [".gdignore", "addon", "dist"],
   "scripts": {
-    "build": "tsdown",
+    "build": "pnpm run generate:godot && tsdown",
+    "generate:godot": "pnpm run typecheck:godot && tstogd convert --no-check",
     "test:run": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "pnpm run typecheck:browser && pnpm run typecheck:godot",
+    "typecheck:browser": "tsc -p tsconfig.json --noEmit",
+    "typecheck:godot": "tsc -p tsconfig.godot.json --noEmit"
   },
   "dependencies": {
     "@gd-kirie/ipc-eventa": "workspace:*",
     "@moeru/eventa": "catalog:",
     "kirie": "workspace:*"
   },
-  "devDependencies": { "tsdown": "catalog:", "typescript": "catalog:", "vitest": "catalog:" },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-to-gdscript": "catalog:",
+    "vitest": "catalog:"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org",

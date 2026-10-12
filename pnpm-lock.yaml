@@ -438,6 +438,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      typescript-to-gdscript:
+        specifier: 'catalog:'
+        version: https://codeload.github.com/LemonNekoGH/typescript-to-gdscript/tar.gz/7bc9d41986110a7bd2d400fe60b01d77a8cfe178(typescript@6.0.3)
       vitest:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.6.2)(vite@8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))

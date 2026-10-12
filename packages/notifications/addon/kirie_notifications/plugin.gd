@@ -1,14 +1,17 @@
 @tool
 extends EditorPlugin
 
-var export_plugin: EditorExportPlugin
+const _ExportPlugin = preload("./export_plugin.gd")
 
+var _export_plugin: EditorExportPlugin = null
 
 func _enter_tree() -> void:
-	export_plugin = preload("export_plugin.gd").new()
-	add_export_plugin(export_plugin)
-
+	var export_plugin = _ExportPlugin.new()
+	self._export_plugin = export_plugin
+	self.add_export_plugin(export_plugin)
 
 func _exit_tree() -> void:
-	remove_export_plugin(export_plugin)
-	export_plugin = null
+	if self._export_plugin == null:
+		return
+	self.remove_export_plugin(self._export_plugin)
+	self._export_plugin = null

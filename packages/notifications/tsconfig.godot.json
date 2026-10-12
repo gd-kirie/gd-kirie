@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "noLib": true,
+    "target": "ES2022",
+    "strict": true,
+    "noEmit": true,
+    "types": []
+  },
+  "include": ["node_modules/typescript-to-gdscript/typings", "src-godot/*.ts"]
+}
