@@ -35,4 +35,7 @@ packages/kirie/addon/addons/kirie/*.gd
 *.aar
 *.xcframework
 
+packages/GdKirie.Tray/native/artifacts/
+packages/GdKirie.Tray/native/target/
+
 .build_version

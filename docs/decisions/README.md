@@ -45,6 +45,8 @@ architecture documentation.
 - [ADR-0010: Introduce Kirie plugins and the core plugin](0010-introduce-kirie-plugins-and-the-core-plugin.md)
   — accepted, 2026-10-08
 - [ADR-0011: Use Kirie-owned macOS status items for template icons](0011-own-macos-status-items-for-template-icons.md)
-  — accepted, 2026-10-10
+  — superseded by ADR-0013, 2026-10-10
 - [ADR-0012: Extract the system tray into a Kirie plugin](0012-extract-system-tray-into-a-kirie-plugin.md)
-  — accepted, 2026-10-10
+  — superseded by ADR-0013, 2026-10-10
+- [ADR-0013: Use tray-icon for the Tray plugin](0013-use-tray-icon-for-the-tray-plugin.md)
+  — accepted, 2026-10-11

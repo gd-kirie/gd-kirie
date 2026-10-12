@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "superseded"
 date: 2026-10-10
 decision-makers: "Doji"
 consulted: "Codex"
@@ -7,6 +7,10 @@ informed: "Kirie contributors"
 ---
 
 # Extract the system tray into a Kirie plugin
+
+Superseded by [ADR-0013](0013-use-tray-icon-for-the-tray-plugin.md), which
+retains the independent Tray plugin and its Eventa ownership while replacing
+the native implementation and distribution constraint.
 
 ## Context
 

@@ -4,9 +4,9 @@ This lane publishes
 [`GdKirie.EventaAdapter`](../packages/GdKirie.EventaAdapter/README.md) and
 [`GdKirie.Platform`](../packages/GdKirie.Platform/README.md), and
 [`GdKirie.Tray`](../packages/GdKirie.Tray/README.md). It is separate
-from addon zip publishing and browser-side npm publishing.
+from addon zip publishing and JavaScript/TypeScript npm publishing.
 
-The package targets `net10.0` only because the upstream Eventa .NET package
+All three packages target `net10.0` because the upstream Eventa .NET package
 targets `net10.0`. Projects targeting `net8.0` or `net9.0` should expect
 restore or build failures when referencing the adapter. .NET 8 LTS reaches end
 of support on 2026-11-10, so Kirie does not add a compatibility layer that
@@ -18,12 +18,19 @@ Restore, build, test, and pack the .NET workspace:
 
 ```sh
 mise x -- dotnet restore GdKirie.slnx
+mise run build:tray-native
 mise x -- dotnet build GdKirie.slnx --configuration Release
 mise x -- dotnet test --solution GdKirie.slnx --configuration Release --no-build
 mise x -- dotnet pack packages/GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj --configuration Release --no-build
 mise x -- dotnet pack packages/GdKirie.Platform/GdKirie.Platform.csproj --configuration Release --no-build
 mise x -- dotnet pack packages/GdKirie.Tray/GdKirie.Tray.csproj --configuration Release --no-build
 ```
+
+The native task builds only the current desktop RID and stages it under
+`packages/GdKirie.Tray/native/artifacts/<rid>/`. Cargo `target/` and the staged
+artifacts are generated and ignored by Git. `GdKirie.Tray` packs every staged
+library under `runtimes/<rid>/native/`, so use a clean artifact directory when
+checking exact local package contents.
 
 The Eventa adapter includes a NuGet `contentFiles` source bridge that connects the
 addon-shipped `KirieClient.cs` to the adapter without placing Eventa source in
@@ -35,10 +42,15 @@ Microsoft.Testing.Platform, which is required for this xUnit v3 test project on
 
 ## GitHub Actions Publishing
 
-The `Publish NuGet Packages` workflow publishes all three packages for pushed `v*`
-tags after verifying that the tagged commit is on `main`. It uses NuGet Trusted
-Publishing to exchange a GitHub Actions OIDC token for a short-lived NuGet API
-key; do not configure a long-lived NuGet API key for this workflow.
+The `Publish NuGet Packages` workflow first builds Tray libraries for macOS,
+Windows, and Linux on x64 and Arm64 runners. It combines those six assets into
+`GdKirie.Tray`, then publishes all three packages for pushed `v*` tags after
+verifying that the tagged commit is on `main`. It uses NuGet Trusted Publishing
+to exchange a GitHub Actions OIDC token for a short-lived NuGet API key; do not
+configure a long-lived NuGet API key for this workflow.
+
+A manual `workflow_dispatch` run also publishes its selected ref without the
+tag ancestry check.
 
 Create a Trusted Publishing policy on NuGet.org for the user or organization
 that owns all three packages. Configure the GitHub repository identity as:
@@ -59,3 +71,5 @@ OIDC credential.
 - [NuGet Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing)
 - [NuGet OIDC login action](https://github.com/NuGet/login)
 - [NuGet `dotnet nuget push`](https://learn.microsoft.com/dotnet/core/tools/dotnet-nuget-push)
+- [NuGet native runtime assets](https://learn.microsoft.com/nuget/create-packages/native-files-in-net-packages)
+- [`tray-icon`](https://github.com/tauri-apps/tray-icon)

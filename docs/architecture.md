@@ -177,15 +177,21 @@ GdKirie.Tray -> GdKirie.EventaAdapter
 browser client and Godot host borrow the application's existing Eventa context;
 the descriptor does not provide runtime hooks.
 
-On macOS, `GdKirie.Tray` owns an AppKit `NSStatusItem` so it can apply native
-template-image rendering when `iconAsTemplate` is enabled. Its menu uses Godot
-`NativeMenu`. Windows, and other platforms where Godot reports support, use
-Godot `StatusIndicator` and `PopupMenu`. Requesting template rendering outside
-macOS is rejected. C# and browser calls share the tray through `kirie:tray:*`
-contracts, and browser icons use `res://` resource references. The package
-boundary and native implementation are recorded in
-[ADR-0012](decisions/0012-extract-system-tray-into-a-kirie-plugin.md) and
-[ADR-0011](decisions/0011-own-macos-status-items-for-template-icons.md).
+`GdKirie.Tray` is a narrow host for the
+[`tray-icon`](https://github.com/tauri-apps/tray-icon) Rust library. The .NET
+host loads Godot `res://` textures, converts them to RGBA pixels, and calls a
+private Rust dynamic library through P/Invoke. It does not implement a second
+tray backend or expose the native library through GDScript. The NuGet package
+ships the Rust library as RID-specific runtime assets for macOS, Windows, and
+Linux. Linux uses `tray-icon`'s KSNI backend.
+
+Browser calls use the `kirie:tray:*` contracts. The .NET package only adapts
+those contracts to the private Rust library: it passes menu JSON and scalar
+values through and emits activated menu IDs. `window.kirie.platform.os` may
+select inputs such as a macOS template icon; the .NET host rejects non-desktop
+systems, and the Rust library rejects template icons outside macOS. This design
+is recorded in
+[ADR-0013](decisions/0013-use-tray-icon-for-the-tray-plugin.md).
 
 The public API is independent of Uninvoke. Any Uninvoke-specific names, event
 IDs, compatibility behavior, or unsupported-method policy belong in the
@@ -196,9 +202,8 @@ capability discovery remain outside this milestone.
 
 `@gd-kirie/platform` is the application capability SDK. It must not be confused
 with the existing `window.kirie.platform` value and TypeScript
-`KiriePlatform` interface in `@gd-kirie/ipc`; those describe the selected
-low-level transport backend (`android`, `ios`, or `cef`) and are not capability
-objects.
+`KiriePlatform` interface in `@gd-kirie/ipc`; those identify the native OS and
+low-level WebView backend and are not capability objects.
 
 Windows pointer passthrough is the one initial native exception. Godot's current
 Windows hit-test path returns `HTTRANSPARENT`, whose forwarding scope is limited
