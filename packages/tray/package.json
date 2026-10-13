@@ -18,10 +18,11 @@
     }
   },
   "files": [
+    "addon",
     "dist"
   ],
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && node scripts/package-addon.ts",
     "test:run": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

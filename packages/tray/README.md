@@ -21,4 +21,10 @@ Install the plugin dependencies:
 pnpm kirie doctor --fix plugin:tray
 ```
 
+This command installs `addons/kirie_tray` and the `GdKirie.Tray` NuGet host.
+The npm package bundles the desktop GDExtension libraries. Godot selects the
+library for the current platform and includes it in application exports.
+macOS, Windows, and Linux support x64 and Arm64. Linux requires a
+StatusNotifierItem host.
+
 See the [`tray` example](../../examples/tray/README.md) for a complete setup.

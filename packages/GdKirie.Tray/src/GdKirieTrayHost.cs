@@ -4,12 +4,13 @@ using Godot;
 
 namespace GdKirie.Tray;
 
-/// <summary>Owns the process tray icon and its Eventa registrations.</summary>
+/// <summary>Owns a native Tray object and its Eventa registrations.</summary>
 internal sealed class GdKirieTrayHost : IDisposable
 {
     private readonly Window _window;
     private readonly SceneTree _sceneTree;
     private readonly IEventContext _context;
+    private readonly TrayNative _native;
     private readonly IDisposable[] _registrations;
     private bool _disposed;
 
@@ -18,27 +19,42 @@ internal sealed class GdKirieTrayHost : IDisposable
         _window = window;
         _sceneTree = window.GetTree();
         _context = context;
-        _registrations =
-        [
-            context.RegisterInvokeHandler(
+        _native = new TrayNative();
+        var registrations = new List<IDisposable>();
+        try
+        {
+            registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.Create,
-                (options, _) => Complete(() => Create(options))),
-            context.RegisterInvokeHandler(
+                (options, _) => Complete(() => Create(options))));
+            registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetIcon,
-                (icon, _) => Complete(() => SetIcon(icon))),
-            context.RegisterInvokeHandler(
+                (icon, _) => Complete(() => SetIcon(icon))));
+            registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetMenu,
-                (items, _) => Complete(() => SetMenu(items))),
-            context.RegisterInvokeHandler(
+                (items, _) => Complete(() => SetMenu(items))));
+            registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetTooltip,
-                (tooltip, _) => Complete(() => SetTooltip(tooltip))),
-            context.RegisterInvokeHandler(
+                (tooltip, _) => Complete(() => SetTooltip(tooltip))));
+            registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetVisible,
-                (visible, _) => Complete(() => SetVisible(visible))),
-            context.RegisterInvokeHandler(
+                (visible, _) => Complete(() => SetVisible(visible))));
+            registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.Destroy,
-                (EmptyPayload _, CancellationToken _) => Complete(Destroy)),
-        ];
+                (EmptyPayload _, CancellationToken _) => Complete(Destroy)));
+
+            _registrations = registrations.ToArray();
+        }
+        catch
+        {
+            foreach (var registration in registrations)
+            {
+                registration.Dispose();
+            }
+
+            _native.Dispose();
+            throw;
+        }
+
         _window.TreeExiting += Dispose;
         _sceneTree.ProcessFrame += DrainMenuEvents;
     }
@@ -49,7 +65,7 @@ internal sealed class GdKirieTrayHost : IDisposable
         EnsureAvailable();
 
         var pixels = LoadIcon(icon.Icon);
-        TrayNative.Create(pixels.Rgba, pixels.Width, pixels.Height, icon.IconAsTemplate);
+        _native.Create(pixels.Rgba, pixels.Width, pixels.Height, icon.IconAsTemplate);
     }
 
     private void SetIcon(TrayIconPayload icon)
@@ -58,31 +74,31 @@ internal sealed class GdKirieTrayHost : IDisposable
         EnsureAvailable();
 
         var pixels = LoadIcon(icon.Icon);
-        TrayNative.SetIcon(pixels.Rgba, pixels.Width, pixels.Height, icon.IconAsTemplate);
+        _native.SetIcon(pixels.Rgba, pixels.Width, pixels.Height, icon.IconAsTemplate);
     }
 
     private void SetMenu(JsonElement menu)
     {
         EnsureAvailable();
-        TrayNative.SetMenu(menu.GetRawText());
+        _native.SetMenu(menu.GetRawText());
     }
 
     private void SetTooltip(string? tooltip)
     {
         EnsureAvailable();
-        TrayNative.SetTooltip(tooltip);
+        _native.SetTooltip(tooltip);
     }
 
     private void SetVisible(bool visible)
     {
         EnsureAvailable();
-        TrayNative.SetVisible(visible);
+        _native.SetVisible(visible);
     }
 
     private void Destroy()
     {
         EnsureAvailable();
-        TrayNative.Destroy();
+        _native.Destroy();
     }
 
     /// <inheritdoc />
@@ -98,16 +114,23 @@ internal sealed class GdKirieTrayHost : IDisposable
         _window.TreeExiting -= Dispose;
         _sceneTree.ProcessFrame -= DrainMenuEvents;
 
-        TrayNative.Destroy();
-        foreach (var registration in _registrations)
+        try
         {
-            registration.Dispose();
+            _native.Destroy();
+        }
+        finally
+        {
+            _native.Dispose();
+            foreach (var registration in _registrations)
+            {
+                registration.Dispose();
+            }
         }
     }
 
     private void DrainMenuEvents()
     {
-        while (TrayNative.PollMenuEvent() is { } id)
+        foreach (var id in _native.PollMenuEvents())
         {
             _context.Emit(TrayEvents.MenuItemActivated, id);
         }

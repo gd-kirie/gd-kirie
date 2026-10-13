@@ -160,17 +160,21 @@ dependency direction is:
 GdKirie.Tray -> GdKirie.EventaAdapter
 ```
 
-`@gd-kirie/tray/plugin` declares the `GdKirie.Tray` NuGet dependency. The
-browser client and Godot host borrow the application's existing Eventa context;
-the descriptor does not provide runtime hooks.
+`@gd-kirie/tray/plugin` declares the `GdKirie.Tray` NuGet host and the bundled
+`addons/kirie_tray` GDExtension. The browser client and Godot host borrow the
+application's existing Eventa context. The descriptor supplies installation data.
 
-`GdKirie.Tray` is a narrow host for the
-[`tray-icon`](https://github.com/tauri-apps/tray-icon) Rust library. The .NET
-host loads Godot `res://` textures, converts them to RGBA pixels, and calls a
-private Rust dynamic library through P/Invoke. It does not implement a second
-tray backend or expose the native library through GDScript. The NuGet package
-ships the Rust library as RID-specific runtime assets for macOS, Windows, and
-Linux. Linux uses `tray-icon`'s KSNI backend.
+The Rust extension uses
+[`tray-icon`](https://github.com/tauri-apps/tray-icon) and registers one
+`KirieTrayNative` class. The .NET host owns one native instance through Godot's
+`ClassDB`. It loads `res://` textures, converts them to RGBA pixels, and calls
+the native instance through Godot. Each native instance owns its tray.
+The host destroys the tray and releases the instance on Godot's main thread.
+
+The npm plugin bundles macOS, Windows, and Linux libraries for x64 and Arm64.
+Godot selects and exports the native library through `.gdextension` feature
+tags. The NuGet package contains only the managed host. Linux uses `tray-icon`'s
+KSNI backend.
 
 Browser calls use the `kirie:tray:*` contracts. The .NET package only adapts
 those contracts to the private Rust library: it passes menu JSON and scalar
@@ -178,7 +182,7 @@ values through and emits activated menu IDs. `window.kirie.platform.os` may
 select inputs such as a macOS template icon; the .NET host rejects non-desktop
 systems, and the Rust library rejects template icons outside macOS. This design
 is recorded in
-[ADR-0013](decisions/0013-use-tray-icon-for-the-tray-plugin.md).
+[ADR-0014](decisions/0014-load-tray-through-a-gdextension.md).
 
 The public API is independent of Uninvoke. Any Uninvoke-specific names, event
 IDs, compatibility behavior, or unsupported-method policy belong in the
@@ -771,10 +775,10 @@ iOS plugin and Apple embedded platform export APIs.
 ## GitHub Release addon flow
 
 GitHub Release addon publishing is configured through the `Addon Release`
-workflow. Keep it separate from the npm publishing flow, which is only for
-browser-side workspace packages such as `@gd-kirie/ipc`,
-`@gd-kirie/ipc-eventa`, `@gd-kirie/platform`, `@gd-kirie/tray`, and
-`@gd-kirie/notifications`.
+workflow. Keep it separate from npm package publishing. The npm packages contain
+browser APIs, CLI tools, and bundled addons. `@gd-kirie/tray` includes its
+desktop GDExtension, while `@gd-kirie/notifications` includes its Godot export
+plugin.
 
 The release artifact shape and workflow modes live in
 [Addon Release](./addon-release.md).

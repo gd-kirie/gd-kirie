@@ -15,48 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  tray-native:
-    name: Tray native (${{ matrix.runner }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        runner:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
-          - macos-15-intel
-          - macos-15
-          - windows-2025
-          - windows-11-arm
-    env:
-      MISE_EXEC_AUTO_INSTALL: "false"
-      MISE_NOT_FOUND_AUTO_INSTALL: "false"
-      MISE_TASK_RUN_AUTO_INSTALL: "false"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install Node and Rust
-        uses: jdx/mise-action@v3
-        with:
-          install: true
-          install_args: --locked node rust
-          cache: true
-
-      - name: Build Tray native library
-        run: mise run build:tray-native
-
-      - name: Upload Tray native library
-        uses: actions/upload-artifact@v7
-        with:
-          name: tray-native-${{ matrix.runner }}
-          path: packages/GdKirie.Tray/native/artifacts
-          if-no-files-found: error
-
   packages:
     name: Publish NuGet Packages
     runs-on: ubuntu-latest
-    needs: tray-native
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -81,25 +42,6 @@ jobs:
 
       - name: Repair empty NuGet configuration
         run: test -s "$HOME/.nuget/NuGet/NuGet.Config" || mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
-
-      - name: Download Tray native libraries
-        uses: actions/download-artifact@v8
-        with:
-          pattern: tray-native-*
-          path: packages/GdKirie.Tray/native/artifacts
-          merge-multiple: true
-
-      - name: Verify Tray native libraries
-        run: |
-          for asset in \
-            linux-x64/libkirie_tray_native.so \
-            linux-arm64/libkirie_tray_native.so \
-            osx-x64/libkirie_tray_native.dylib \
-            osx-arm64/libkirie_tray_native.dylib \
-            win-x64/kirie_tray_native.dll \
-            win-arm64/kirie_tray_native.dll; do
-            test -f "packages/GdKirie.Tray/native/artifacts/${asset}"
-          done
 
       - name: Restore dependencies
         run: mise x -- dotnet restore GdKirie.slnx

@@ -1,0 +1,11 @@
+[configuration]
+entry_symbol = "gdext_rust_init"
+compatibility_minimum = "4.7"
+
+[libraries]
+macos.arm64 = "./bin/osx-arm64/libkirie_tray_native.dylib"
+macos.x86_64 = "./bin/osx-x64/libkirie_tray_native.dylib"
+linux.arm64 = "./bin/linux-arm64/libkirie_tray_native.so"
+linux.x86_64 = "./bin/linux-x64/libkirie_tray_native.so"
+windows.arm64 = "./bin/win-arm64/kirie_tray_native.dll"
+windows.x86_64 = "./bin/win-x64/kirie_tray_native.dll"

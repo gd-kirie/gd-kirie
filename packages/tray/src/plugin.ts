@@ -2,13 +2,26 @@ import type { KiriePlugin } from "kirie/plugin";
 import { defineKiriePlugin } from "kirie/plugin";
 import packageJson from "../package.json" with { type: "json" };
 
-// ADR-0013: Tray stays an explicit plugin and owns its .NET and native host.
-// See docs/decisions/0013-use-tray-icon-for-the-tray-plugin.md.
+const bundledAddonUrl = new URL("../addon/kirie_tray", import.meta.url).href;
+
+// ADR-0014: Godot loads and exports the optional Tray native library.
+// See docs/decisions/0014-load-tray-through-a-gdextension.md.
 export default defineKiriePlugin({
   id: "tray",
   dotnetPackages: [
     {
       id: "GdKirie.Tray",
+      version: packageJson.version,
+    },
+  ],
+  godotAddons: [
+    {
+      id: "kirie-tray",
+      path: "addons/kirie_tray",
+      source: {
+        type: "bundled",
+        url: bundledAddonUrl,
+      },
       version: packageJson.version,
     },
   ],

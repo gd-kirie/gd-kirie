@@ -47,7 +47,7 @@ description = "Build iOS debug xcframework artifact"
 run = "./scripts/run-build-task.js buildIosDebugXcframework"
 
 [tasks."build:tray-native"]
-description = "Build the Tray native library for the current desktop platform"
+description = "Build the Tray GDExtension for the current desktop platform"
 run = "node ./scripts/build-tray-native.ts"
 
 [tasks."install:godot-cef"]
@@ -121,7 +121,6 @@ run = "dotnet format analyzers -v diag"
 
 [tasks."pack:nuget"]
 description = "Pack the .NET Eventa adapter, Platform, and Tray NuGet packages"
-depends = ["build:tray-native"]
 run = [
   "dotnet pack packages/GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj --configuration Release",
   "dotnet pack packages/GdKirie.Platform/GdKirie.Platform.csproj --configuration Release",
@@ -151,6 +150,11 @@ run = "dotnet test --solution GdKirie.slnx --configuration Release"
 [tasks."test:tray-native"]
 description = "Run Tray native tests"
 run = "cargo test --manifest-path packages/GdKirie.Tray/native/Cargo.toml --locked"
+
+[tasks."test:tray-consumer"]
+description = "Test installed Tray packages and a macOS exported application"
+depends = ["build:tray-native"]
+run = "node ./scripts/test-tray-consumer.ts"
 
 [tasks."test:swift"]
 description = "Run Swift unit tests"

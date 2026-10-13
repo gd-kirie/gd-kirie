@@ -19,7 +19,6 @@ Restore, build, test, and pack the .NET workspace:
 
 ```sh
 mise x -- dotnet restore GdKirie.slnx
-mise run build:tray-native
 mise x -- dotnet build GdKirie.slnx --configuration Release
 mise x -- dotnet test --solution GdKirie.slnx --configuration Release --no-build
 mise x -- dotnet pack GdKirie.slnx \
@@ -40,11 +39,9 @@ mise x -- dotnet nuget push "artifacts/nuget/*.nupkg" \
   --skip-duplicate
 ```
 
-The native task builds only the current desktop RID and stages it under
-`packages/GdKirie.Tray/native/artifacts/<rid>/`. Cargo `target/` and the staged
-artifacts are generated and ignored by Git. `GdKirie.Tray` packs every staged
-library under `runtimes/<rid>/native/`, so use a clean artifact directory when
-checking exact local package contents.
+`GdKirie.Tray` contains only the managed Eventa host. The `@gd-kirie/tray` npm
+package supplies its native GDExtension through `addons/kirie_tray`. Native
+builds and packaging belong to the [npm release flow](npm-publishing.md).
 
 The Eventa adapter includes a NuGet `contentFiles` source bridge that connects the
 addon-shipped `KirieClient.cs` to the adapter without placing Eventa source in
@@ -56,11 +53,9 @@ Microsoft.Testing.Platform, which is required for this xUnit v3 test project on
 
 ## GitHub Actions Publishing
 
-The `Publish NuGet Packages` workflow first builds Tray libraries for macOS,
-Windows, and Linux on x64 and Arm64 runners. It combines those six assets into
-`GdKirie.Tray`, then packs every `IsPackable=true` project in `GdKirie.slnx`
-and publishes the resulting packages for pushed `v*` tags after
-verifying that the tagged commit is on `main`. It uses NuGet Trusted Publishing
+The `Publish NuGet Packages` workflow builds, tests, and publishes all four
+managed packages for pushed `v*` tags. It checks that the tagged commit is on
+`main`. It uses NuGet Trusted Publishing
 to exchange a GitHub Actions OIDC token for a short-lived NuGet API key; do not
 configure a long-lived NuGet API key for this workflow.
 
@@ -86,5 +81,4 @@ OIDC credential.
 - [NuGet Trusted Publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing)
 - [NuGet OIDC login action](https://github.com/NuGet/login)
 - [NuGet `dotnet nuget push`](https://learn.microsoft.com/dotnet/core/tools/dotnet-nuget-push)
-- [NuGet native runtime assets](https://learn.microsoft.com/nuget/create-packages/native-files-in-net-packages)
-- [`tray-icon`](https://github.com/tauri-apps/tray-icon)
+- [Tray npm and GDExtension distribution](npm-publishing.md#tray-native-libraries)

@@ -1,0 +1,9 @@
+{
+  "name": "kirie-tray-installed-consumer-test",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@gd-kirie/tray": "file:@TEST_TRAY_PACKAGE@",
+    "kirie": "@KIRIE_VERSION@"
+  }
+}

@@ -102,6 +102,38 @@ activation, and cleanup acceptance. Follow the
 [`tray` example README](../examples/tray/README.md). On macOS, also confirm the
 template icon in light and dark menu-bar appearances.
 
+### Installed Tray Consumer
+
+On macOS, test the installed packages and the exported application:
+
+```sh
+mise run test:tray-consumer
+```
+
+This task requires the pinned Godot .NET toolchain, its export templates, and
+a graphical desktop session. It builds the current host's GDExtension and
+installs packed npm and NuGet packages into a temporary project outside the
+repository. It keeps package archives and the exported app in `dist/tray-consumer`.
+The fixture has no repository project references. It sends Tray requests
+through Eventa and checks lifecycle operations and native errors.
+
+To test native menu activation, run:
+
+```sh
+mise run test:tray-consumer -- --wait-menu
+```
+
+In the exported application, click the tray icon. Then click
+**Complete consumer test**. The task checks that the matching menu ID returns
+through Eventa before it closes the application.
+
+The automated consumer currently stops at a class import crash during its first
+headless startup. AIRI's normal graphical editor discovery and subsequent
+development startup passed with installed packages. Native menu activation and
+export acceptance remain unverified. See
+[ADR-0014](decisions/0014-load-tray-through-a-gdextension.md#validation-status)
+for the toolchain, minimal probes, and downstream results.
+
 ## Android
 
 Build the Android addon artifact, then run the suite:

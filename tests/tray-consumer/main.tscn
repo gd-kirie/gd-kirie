@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Main.cs" id="1"]
+
+[node name="TrayConsumer" type="Node"]
+script = ExtResource("1")
+
+[node name="Status" type="Label" parent="."]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 500.0
+offset_bottom = 160.0
+text = "Running installed Tray consumer checks…"
