@@ -182,7 +182,7 @@ values through and emits activated menu IDs. `window.kirie.platform.os` may
 select inputs such as a macOS template icon; the .NET host rejects non-desktop
 systems, and the Rust library rejects template icons outside macOS. This design
 is recorded in
-[ADR-0014](decisions/0014-load-tray-through-a-gdextension.md).
+[ADR-0015](decisions/0015-load-tray-through-a-gdextension.md).
 
 The public API is independent of Uninvoke. Any Uninvoke-specific names, event
 IDs, compatibility behavior, or unsupported-method policy belong in the

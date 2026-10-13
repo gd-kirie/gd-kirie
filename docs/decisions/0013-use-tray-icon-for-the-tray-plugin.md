@@ -9,7 +9,7 @@ informed: "Kirie contributors"
 # Use tray-icon for the Tray plugin
 
 This decision is superseded by
-[ADR-0014](0014-load-tray-through-a-gdextension.md), which replaces P/Invoke and
+[ADR-0015](0015-load-tray-through-a-gdextension.md), which replaces P/Invoke and
 NuGet native assets with a Godot GDExtension. It retains `tray-icon` and the
 existing Eventa contracts.
 
