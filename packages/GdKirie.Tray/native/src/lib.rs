@@ -52,13 +52,13 @@ impl KirieTrayNative {
             let tray = builder.build().map_err(|error| error.to_string())?;
             // A page reload replaces the icon while the Eventa host stays attached.
             self.tray = Some(tray);
-            Ok::<_, String>(())
+            Ok(())
         })
     }
 
     #[func]
     fn set_icon(
-        &mut self,
+        &self,
         rgba: PackedByteArray,
         width: i64,
         height: i64,
@@ -66,56 +66,56 @@ impl KirieTrayNative {
     ) -> GString {
         operation_error(|| {
             let icon = read_icon(rgba.to_vec(), width, height)?;
-            self.with_tray(|tray| {
-                #[cfg(target_os = "macos")]
-                let result = if icon_as_template {
-                    tray.set_icon_templated(Some(icon))
-                } else {
-                    tray.set_icon(Some(icon))
-                };
+            let tray = self.tray()?;
 
-                #[cfg(not(target_os = "macos"))]
-                let result = {
-                    if icon_as_template {
-                        return Err("template tray icons are supported only on macOS".into());
-                    }
+            #[cfg(target_os = "macos")]
+            let result = if icon_as_template {
+                tray.set_icon_templated(Some(icon))
+            } else {
+                tray.set_icon(Some(icon))
+            };
 
-                    tray.set_icon(Some(icon))
-                };
+            #[cfg(not(target_os = "macos"))]
+            let result = {
+                if icon_as_template {
+                    return Err("template tray icons are supported only on macOS".into());
+                }
 
-                result.map_err(|error| error.to_string())
-            })
+                tray.set_icon(Some(icon))
+            };
+
+            result.map_err(|error| error.to_string())
         })
     }
 
     #[func]
-    fn set_menu(&mut self, json: GString) -> GString {
+    fn set_menu(&self, json: GString) -> GString {
         operation_error(|| {
             let definitions: Vec<MenuDefinition> =
                 serde_json::from_str(&json.to_string()).map_err(|error| error.to_string())?;
             let menu = build_menu(&definitions)?;
-            self.with_tray(|tray| {
-                tray.set_menu(Some(Box::new(menu)));
-                Ok(())
-            })
+            self.tray()?.set_menu(Some(Box::new(menu)));
+            Ok(())
         })
     }
 
     #[func]
-    fn set_tooltip(&mut self, tooltip: GString) -> GString {
+    fn set_tooltip(&self, tooltip: GString) -> GString {
         let tooltip = tooltip.to_string();
         operation_error(|| {
-            self.with_tray(|tray| {
-                let tooltip = (!tooltip.is_empty()).then_some(tooltip.as_str());
-                tray.set_tooltip(tooltip).map_err(|error| error.to_string())
-            })
+            let tooltip = (!tooltip.is_empty()).then_some(tooltip.as_str());
+            self.tray()?
+                .set_tooltip(tooltip)
+                .map_err(|error| error.to_string())
         })
     }
 
     #[func]
-    fn set_visible(&mut self, visible: bool) -> GString {
+    fn set_visible(&self, visible: bool) -> GString {
         operation_error(|| {
-            self.with_tray(|tray| tray.set_visible(visible).map_err(|error| error.to_string()))
+            self.tray()?
+                .set_visible(visible)
+                .map_err(|error| error.to_string())
         })
     }
 
@@ -137,16 +137,10 @@ impl KirieTrayNative {
         })
     }
 
-    fn with_tray<T>(
-        &self,
-        operation: impl FnOnce(&TrayIcon) -> Result<T, String>,
-    ) -> Result<T, String> {
-        let tray = self
-            .tray
+    fn tray(&self) -> Result<&TrayIcon, String> {
+        self.tray
             .as_ref()
-            .ok_or_else(|| "the tray icon does not exist".to_string())?;
-
-        operation(tray)
+            .ok_or_else(|| "the tray icon does not exist".to_string())
     }
 }
 
@@ -176,7 +170,7 @@ fn read_icon(rgba: Vec<u8>, width: i64, height: i64) -> Result<Icon, String> {
     Icon::from_rgba(rgba, width, height).map_err(|error| error.to_string())
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 enum MenuDefinition {
     Item {

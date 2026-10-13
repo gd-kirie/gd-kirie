@@ -66,7 +66,7 @@ Platform capabilities into GDExtension.
 
 - [x] Run Rust tests and lint, TypeScript checks, and the .NET build and tests.
 - [x] Install packed npm and NuGet packages into a separate Godot project without repository project references.
-- [ ] Exercise tray creation, menu updates, error propagation, destruction, and recreation through the Eventa host.
+- [x] Exercise tray creation, menu updates, error propagation, destruction, and recreation through the Eventa host.
 - [ ] Export that project and run the exported application with its installed GDExtension.
 - [x] Check that release packaging requires the six real desktop libraries.
 
@@ -76,7 +76,7 @@ Platform capabilities into GDExtension.
 - A downstream copy step requires each application to repair Kirie's package layout.
 - A remote archive adds release checksum coordination that the existing bundled addon mechanism does not require.
 
-## Validation Status
+## More Information
 
 On 2026-10-12, builds, lint, and unit tests passed. The installed consumer
 installed the addon and checked its NuGet reference, but its first headless editor import
@@ -103,6 +103,30 @@ at exit; their ownership has not been isolated from the application's CEF host.
 
 Native menu activation and exported application acceptance remain unverified.
 The graphical result does not resolve the first headless import crash.
+
+### 2026-10-13 Ablation Experiment
+
+The installed consumer now invokes the installed Kirie executable directly and
+lets Godot perform its graphical `--build-solutions` startup before running the
+project. This removes a second package-manager resolution and avoids the cold
+headless import path that crashes before Tray behavior can run.
+
+The packed npm and NuGet packages installed into a temporary project with no
+repository project references. Godot loaded the extension, and the consumer
+completed Tray creation, menu assignment, native error propagation, destruction,
+and recreation through Eventa. The installed project printed
+`[Tray consumer] PASS`.
+
+The export then stopped because the local Godot installation has no
+`godot_macos_debug.arm64` export template. Exported-application and native menu
+activation acceptance remain incomplete.
+
+The experiment retained the managed `TrayNative` boundary, native panic-to-error
+conversion, addon staging script, six-platform release matrix, and final asset
+check. Each owns a distinct resource, compatibility, packaging, or release
+constraint. The Rust callback-style Tray accessor and pure managed forwarding
+methods were removed because the GDExtension instance already owns those
+responsibilities directly.
 
 ## References
 

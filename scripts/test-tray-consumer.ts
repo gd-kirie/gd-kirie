@@ -57,16 +57,12 @@ try {
 
   await execa("pnpm", ["install"], { cwd: project, stdio: "inherit", timeout: 180_000 });
   await fs.writeFile(path.join(project, "node_modules/.gdignore"), "");
-  await execa("pnpm", ["exec", "kirie", "doctor", "--fix", "plugin:tray"], {
+  await execa(path.join(project, "node_modules/.bin/kirie"), ["doctor", "--fix", "plugin:tray"], {
     cwd: project,
     stdio: "inherit",
     timeout: 180_000,
   });
-  await execa("godot", ["--headless", "--path", project, "--import"], {
-    stdio: "inherit",
-    timeout: 60_000,
-  });
-  await execa("dotnet", ["build", path.join(project, "TrayConsumer.csproj")], {
+  await execa("godot", ["--path", project, "--build-solutions", "--quit-after", "300"], {
     stdio: "inherit",
     timeout: 180_000,
   });

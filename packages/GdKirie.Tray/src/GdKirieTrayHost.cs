@@ -31,16 +31,16 @@ internal sealed class GdKirieTrayHost : IDisposable
                 (icon, _) => Complete(() => SetIcon(icon))));
             registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetMenu,
-                (items, _) => Complete(() => SetMenu(items))));
+                (items, _) => Complete(() => _native.SetMenu(items.GetRawText()))));
             registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetTooltip,
-                (tooltip, _) => Complete(() => SetTooltip(tooltip))));
+                (tooltip, _) => Complete(() => _native.SetTooltip(tooltip))));
             registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.SetVisible,
-                (visible, _) => Complete(() => SetVisible(visible))));
+                (visible, _) => Complete(() => _native.SetVisible(visible))));
             registrations.Add(context.RegisterInvokeHandler(
                 TrayEvents.Destroy,
-                (EmptyPayload _, CancellationToken _) => Complete(Destroy)));
+                (EmptyPayload _, CancellationToken _) => Complete(_native.Destroy)));
 
             _registrations = registrations.ToArray();
         }
@@ -62,8 +62,6 @@ internal sealed class GdKirieTrayHost : IDisposable
     private void Create(TrayIconPayload icon)
     {
         ArgumentNullException.ThrowIfNull(icon);
-        EnsureAvailable();
-
         var pixels = LoadIcon(icon.Icon);
         _native.Create(pixels.Rgba, pixels.Width, pixels.Height, icon.IconAsTemplate);
     }
@@ -71,34 +69,8 @@ internal sealed class GdKirieTrayHost : IDisposable
     private void SetIcon(TrayIconPayload icon)
     {
         ArgumentNullException.ThrowIfNull(icon);
-        EnsureAvailable();
-
         var pixels = LoadIcon(icon.Icon);
         _native.SetIcon(pixels.Rgba, pixels.Width, pixels.Height, icon.IconAsTemplate);
-    }
-
-    private void SetMenu(JsonElement menu)
-    {
-        EnsureAvailable();
-        _native.SetMenu(menu.GetRawText());
-    }
-
-    private void SetTooltip(string? tooltip)
-    {
-        EnsureAvailable();
-        _native.SetTooltip(tooltip);
-    }
-
-    private void SetVisible(bool visible)
-    {
-        EnsureAvailable();
-        _native.SetVisible(visible);
-    }
-
-    private void Destroy()
-    {
-        EnsureAvailable();
-        _native.Destroy();
     }
 
     /// <inheritdoc />
@@ -175,8 +147,9 @@ internal sealed class GdKirieTrayHost : IDisposable
         }
     }
 
-    private static Task<EmptyPayload> Complete(Action action)
+    private Task<EmptyPayload> Complete(Action action)
     {
+        EnsureAvailable();
         action();
         return Task.FromResult(new EmptyPayload());
     }

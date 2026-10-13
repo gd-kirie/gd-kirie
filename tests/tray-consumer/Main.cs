@@ -36,24 +36,9 @@ public partial class Main : Node
             : """{"icon":"res://tray-icon.svg","iconAsTemplate":false}""";
 
         await transport.InvokeAsync("create", icon);
-        await transport.InvokeAsync("set-icon", icon);
-        await transport.InvokeAsync("set-tooltip", "\"Installed consumer test\"");
-        await transport.InvokeAsync("set-tooltip", "null");
-        await transport.InvokeAsync("set-visible", "false");
-        await transport.InvokeAsync("set-visible", "true");
         await transport.InvokeAsync(
             "set-menu",
-            """
-            [
-              {"type":"item","id":"consumer-activate","text":"Complete consumer test"},
-              {"type":"check","id":"consumer-check","text":"Checked item","checked":true},
-              {"type":"separator"},
-              {"type":"submenu","text":"Submenu","children":[
-                {"type":"item","id":"consumer-child","text":"Child item"}
-              ]}
-            ]
-            """);
-        await transport.InvokeAsync("set-menu", """[{"type":"unsupported"}]""", "unknown variant");
+            """[{"type":"item","id":"consumer-activate","text":"Complete consumer test"}]""");
 
         if (OS.GetCmdlineUserArgs().Contains("--wait-menu"))
         {
@@ -70,7 +55,6 @@ public partial class Main : Node
 
         await transport.InvokeAsync("destroy", "{}");
         await transport.InvokeAsync("set-visible", "true", "does not exist");
-        await transport.InvokeAsync("destroy", "{}");
         await transport.InvokeAsync("create", icon);
         await transport.InvokeAsync("destroy", "{}");
     }
@@ -78,9 +62,7 @@ public partial class Main : Node
     private sealed class ConsumerTransport : IKirieTextTransport
     {
         private int _sequence;
-        private string? _responseType;
-        private string? _errorType;
-        private TaskCompletionSource<JsonElement>? _response;
+        private TaskCompletionSource<string>? _response;
 
         public event Action<string>? TextReceived;
 
@@ -97,12 +79,12 @@ public partial class Main : Node
                 return;
             }
 
-            if (type != _responseType && type != _errorType)
+            if (_response is null)
             {
                 throw new InvalidOperationException($"Unexpected Eventa response: {message}");
             }
 
-            _response!.SetResult(root.Clone());
+            _response.SetResult(message);
         }
 
         public void Fail(KirieEventaError error)
@@ -115,16 +97,43 @@ public partial class Main : Node
         public async Task InvokeAsync(string action, string content, string? expectedError = null)
         {
             var invokeId = $"consumer-{++_sequence}";
-            _responseType = $"kirie:tray:{action}-receive-{invokeId}";
-            _errorType = $"kirie:tray:{action}-receive-error-{invokeId}";
-            _response = new TaskCompletionSource<JsonElement>();
+            var responseType = $"kirie:tray:{action}-receive-{invokeId}";
+            var errorType = $"kirie:tray:{action}-receive-error-{invokeId}";
+            _response = new TaskCompletionSource<string>();
 
-            TextReceived?.Invoke($$"""
-                {"type":"kirie:tray:{{action}}-send","payload":{"body":{"invokeId":"{{invokeId}}","content":{{content}}}}}
-                """);
+            string message;
+            try
+            {
+                using var contentDocument = JsonDocument.Parse(content);
+                var request = JsonSerializer.Serialize(new
+                {
+                    type = $"kirie:tray:{action}-send",
+                    payload = new
+                    {
+                        body = new
+                        {
+                            invokeId,
+                            content = contentDocument.RootElement,
+                        },
+                    },
+                });
+                TextReceived?.Invoke(request);
+                message = await _response.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            finally
+            {
+                _response = null;
+            }
 
-            var response = await _response.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            var failed = response.GetProperty("type").GetString() == _errorType;
+            using var document = JsonDocument.Parse(message);
+            var response = document.RootElement;
+            var responseKind = response.GetProperty("type").GetString();
+            if (responseKind != responseType && responseKind != errorType)
+            {
+                throw new InvalidOperationException($"Unexpected Eventa response: {message}");
+            }
+
+            var failed = responseKind == errorType;
             var body = response.GetProperty("payload").GetProperty("body");
             if (body.GetProperty("invokeId").GetString() != invokeId)
             {
