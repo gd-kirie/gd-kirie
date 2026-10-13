@@ -54,30 +54,6 @@ the host removes its registrations. The Windows hook stops after the final
 Windows registration is removed. Linux global-shortcut backends are not yet
 implemented.
 
-## Desktop notifications
-
-On macOS 11 or later, RumpSharp requests permission, posts silent notifications,
-and reports their caller-owned IDs when clicked.
-
-On Windows 10 version 1607 or later, the host posts a silent toast through
-`Windows.UI.Notifications` and reports the same caller-owned ID when it is
-clicked. An unpackaged process registers its notification identity for the
-current user while a Platform host is alive. That identity follows the running
-executable, so the Godot editor and an exported game are different
-applications. Clicks are posted to Godot's main thread only while the host is
-alive and do not start the process. Windows does not show a permission prompt;
-`show()` fails when notifications are turned off.
-
-Multiple Platform hosts share one process notification listener. A click reaches
-only the host that published the notification. The browser receives its original
-ID. A host's callback ends when that host is disposed. Callbacks do not survive
-a cold launch.
-
-RumpSharp owns the process UserNotifications delegate and runs in-process; do
-not install a second delegate while any Platform host is active. Linux calls fail
-with `PlatformNotSupportedException`. Elevated Windows processes cannot post
-these notifications.
-
 ## System back
 
 Android forwards the system Back button through the bound window's

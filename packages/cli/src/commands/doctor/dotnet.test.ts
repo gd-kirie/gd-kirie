@@ -30,6 +30,32 @@ describe("dotnet package doctor support", () => {
     expect(reference).toEqual({ type: "package", version: "2.0.0" });
   });
 
+  it("accepts a matching local project reference", async () => {
+    const reference = await getDotnetDependencyReference({
+      dependency,
+      projectDir: "/project",
+      runDotnet: async (args) => {
+        if (args.includes("-getProperty:PackageId")) {
+          return "Example.Package";
+        }
+
+        return JSON.stringify({
+          Items: {
+            ProjectReference: [{ Identity: "../Example.Package/Example.Package.csproj" }],
+          },
+          Properties: {
+            MSBuildProjectDirectory: "/project",
+          },
+        });
+      },
+    });
+
+    expect(reference).toEqual({
+      path: "../Example.Package/Example.Package.csproj",
+      type: "project",
+    });
+  });
+
   it("delegates package updates to the dotnet CLI", async () => {
     let invocation: { args: string[]; cwd: string } | undefined;
 

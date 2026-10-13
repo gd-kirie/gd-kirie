@@ -79,6 +79,9 @@ jobs:
           install_args: --locked dotnet
           cache: true
 
+      - name: Repair empty NuGet configuration
+        run: test -s "$HOME/.nuget/NuGet/NuGet.Config" || mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
+
       - name: Download Tray native libraries
         uses: actions/download-artifact@v8
         with:
@@ -108,10 +111,9 @@ jobs:
         run: mise x -- dotnet test --solution GdKirie.slnx --configuration Release --no-build
 
       - name: Pack NuGet packages
-        run: |
-          mise x -- dotnet pack packages/GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj --configuration Release --no-build
-          mise x -- dotnet pack packages/GdKirie.Platform/GdKirie.Platform.csproj --configuration Release --no-build
-          mise x -- dotnet pack packages/GdKirie.Tray/GdKirie.Tray.csproj --configuration Release --no-build
+        run: >-
+          mise x -- dotnet pack GdKirie.slnx --configuration Release --no-build
+          --disable-build-servers -m:1 --output artifacts/nuget
 
       - name: Validate Trusted Publishing configuration
         env:
@@ -132,15 +134,7 @@ jobs:
         env:
           NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
-          mise x -- dotnet nuget push "packages/GdKirie.EventaAdapter/bin/Release/*.nupkg" \
-            --api-key "${NUGET_API_KEY}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
-          mise x -- dotnet nuget push "packages/GdKirie.Platform/bin/Release/*.nupkg" \
-            --api-key "${NUGET_API_KEY}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
-          mise x -- dotnet nuget push "packages/GdKirie.Tray/bin/Release/*.nupkg" \
+          mise x -- dotnet nuget push "artifacts/nuget/*.nupkg" \
             --api-key "${NUGET_API_KEY}" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate

@@ -21,19 +21,31 @@ class KirieAndroidPlugin(
     private val webViewManager by lazy {
         KirieWebViewManager(
             activityProvider = { activity },
-            onWebViewReady = { viewId -> emitSignal(SIGNAL_WEBVIEW_READY, viewId) },
+            onWebViewReady = { viewId -> emitOnGodotThread(SIGNAL_WEBVIEW_READY, viewId) },
             onTextPacket = { viewId, bytes ->
-                emitSignal(SIGNAL_TEXT_RECEIVED, viewId, cborMapper.readValue(bytes, String::class.java))
+                emitOnGodotThread(
+                    SIGNAL_TEXT_RECEIVED,
+                    viewId,
+                    cborMapper.readValue(bytes, String::class.java),
+                )
             },
             onBinaryPacket = { viewId, bytes ->
-                emitSignal(SIGNAL_BINARY_RECEIVED, viewId, cborMapper.readValue(bytes, ByteArray::class.java))
+                emitOnGodotThread(
+                    SIGNAL_BINARY_RECEIVED,
+                    viewId,
+                    cborMapper.readValue(bytes, ByteArray::class.java),
+                )
             },
             onDataPacket = { viewId, bytes ->
-                emitSignal(SIGNAL_DATA_RECEIVED, viewId, cborMapper.readTree(bytes).toGodotVariant())
+                emitOnGodotThread(
+                    SIGNAL_DATA_RECEIVED,
+                    viewId,
+                    cborMapper.readTree(bytes).toGodotVariant(),
+                )
             },
             onIpcError = { viewId, message ->
                 Log.e(pluginName, "ipc_error view_id=$viewId message=$message")
-                emitSignal(SIGNAL_IPC_ERROR, viewId, message)
+                emitOnGodotThread(SIGNAL_IPC_ERROR, viewId, message)
             },
         )
     }
@@ -134,6 +146,13 @@ class KirieAndroidPlugin(
 
     @UsedByGodot
     fun getLaunchOption(key: String): String = activity?.intent?.getStringExtra(key).orEmpty()
+
+    private fun emitOnGodotThread(
+        signal: SignalInfo,
+        vararg arguments: Any?,
+    ) {
+        runOnRenderThread { emitSignal(signal, *arguments) }
+    }
 
     companion object {
         private val cborMapper = ObjectMapper(CBORFactory())

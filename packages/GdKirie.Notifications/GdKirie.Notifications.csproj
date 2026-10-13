@@ -1,0 +1,29 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAotCompatible>true</IsAotCompatible>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>GdKirie.Notifications</PackageId>
+    <Version>0.12.0</Version>
+    <Authors>Moeru AI</Authors>
+    <Description>Cross-platform notifications over Kirie Eventa IPC.</Description>
+    <PackageTags>godot;kirie;eventa;notifications</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/moeru-ai/godot-kirie</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/moeru-ai/godot-kirie</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PackageOutputPath>bin/$(Configuration)</PackageOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj" />
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.298" PrivateAssets="all" />
+    <PackageReference Include="RumpSharp" Version="1.0.1" />
+  </ItemGroup>
+  <ItemGroup><None Include="README.md" Pack="true" PackagePath="\" /></ItemGroup>
+</Project>

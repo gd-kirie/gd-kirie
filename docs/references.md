@@ -120,6 +120,11 @@ packaging, or platform WebView bridge details.
   Upstream implementation reference for Carbon hot-key registration and
   pressed/released event dispatch on the application event target.
 
+## Mobile plugins
+
+- [Godot Notification Scheduler](https://github.com/godot-mobile-plugins/godot-notification-scheduler)
+  Upstream Android and iOS native implementation pinned by the Notifications plugin.
+
 ## Windows
 
 - [ToastNotificationManager](https://learn.microsoft.com/en-us/uwp/api/windows.ui.notifications.toastnotificationmanager)
@@ -250,7 +255,8 @@ packaging, or platform WebView bridge details.
   Reference for cross-application hit testing through layered transparent
   windows.
 - [Microsoft CsWin32](https://github.com/microsoft/CsWin32)
-  Source generator for the Windows APIs used by `GdKirie.Platform`.
+  Source generator for the Windows APIs used by `GdKirie.Platform` and
+  `GdKirie.Notifications`.
 - [SetWindowsHookExW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw)
   Reference for installing the Windows low-level keyboard hook.
 - [LowLevelKeyboardProc](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc)

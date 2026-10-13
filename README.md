@@ -108,6 +108,8 @@ example, and regression-test areas:
 - [`@gd-kirie/platform`](packages/platform/README.md): browser-side desktop host
   capabilities
 - [`@gd-kirie/tray`](packages/tray/README.md): browser-side system tray plugin
+- [`@gd-kirie/notifications`](packages/notifications/README.md): cross-platform
+  system notifications and its Kirie plugin descriptor
 - `packages/build`: public build and export automation API for scripts
 - `packages/cli`: Kirie command-line tools for development sessions, export,
   install, and launch workflows
@@ -118,10 +120,14 @@ example, and regression-test areas:
   Platform Eventa contract
 - [`GdKirie.Tray`](packages/GdKirie.Tray/README.md): Godot host for the Tray
   Eventa contract
+- [`GdKirie.Notifications`](packages/GdKirie.Notifications/README.md): Godot
+  notification host and native platform adapters
 - `examples/basic-ipc`: beginner-friendly demo project for the raw IPC flow
 - `examples/basic-kirie-cli`: beginner-friendly demo project for the Kirie CLI workflow
-- `examples/basic-platform`: desktop window, shortcut, and notification capabilities
+- `examples/basic-platform`: desktop window and shortcut capabilities
 - [`examples/tray`](examples/tray/README.md): desktop system tray example
+- [`examples/notifications`](examples/notifications/README.md): immediate
+  notifications and activation feedback
 - `examples/eventa-csharp`: beginner-friendly demo project for Godot C# Eventa adapter usage
 - `tests/integration`: exported-app platform integration tests
 - `scripts`: repository build, test, and release tasks

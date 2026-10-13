@@ -14,7 +14,6 @@ public sealed class GdKiriePlatformHost : IDisposable
     private readonly Action<WindowStatePayload> _emitWindowStateChanged;
     private readonly Action _emitBackRequested;
     private readonly GlobalShortcutManager _globalShortcuts;
-    private readonly Guid _notificationHostId;
     private readonly List<IDisposable> _registrations = [];
     private PointerPositionPayload? _lastPointerPosition;
     private WindowStatePayload? _lastWindowState;
@@ -31,9 +30,6 @@ public sealed class GdKiriePlatformHost : IDisposable
         _emitBackRequested = () => context.Emit(PlatformEvents.BackRequested, new EmptyPayload());
         _globalShortcuts = new GlobalShortcutManager(
             payload => context.Emit(PlatformEvents.GlobalShortcutStateChanged, payload),
-            SynchronizationContext.Current);
-        _notificationHostId = Notifications.Attach(
-            id => context.Emit(PlatformEvents.NotificationActivated, new NotificationActivatedPayload(id)),
             SynchronizationContext.Current);
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.BeginMove,
@@ -113,10 +109,6 @@ public sealed class GdKiriePlatformHost : IDisposable
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.OpenApplicationDataDirectory,
             (EmptyPayload _, CancellationToken _) => Task.FromResult(OpenApplicationDataDirectory())));
-        _registrations.Add(context.RegisterInvokeHandler(
-            PlatformEvents.ShowNotification,
-            (notification, cancellationToken) =>
-                Notifications.ShowAsync(_notificationHostId, notification, cancellationToken)));
         _window.FocusEntered += RefreshWindowState;
         _window.FocusExited += RefreshWindowState;
         _window.SizeChanged += RefreshWindowState;
@@ -154,7 +146,6 @@ public sealed class GdKiriePlatformHost : IDisposable
         }
 
         _globalShortcuts.Dispose();
-        Notifications.Detach(_notificationHostId);
         foreach (var registration in _registrations)
         {
             registration.Dispose();

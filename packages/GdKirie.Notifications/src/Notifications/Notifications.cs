@@ -1,7 +1,9 @@
-namespace GdKirie.Platform;
+using Godot;
+
+namespace GdKirie.Notifications;
 
 /// <summary>
-/// Shares one native listener across Platform hosts and routes each activation
+/// Shares one native listener across notification hosts and routes each activation
 /// to the Eventa context that published the notification.
 /// </summary>
 internal static class Notifications
@@ -82,8 +84,14 @@ internal static class Notifications
                 "Windows desktop notifications require Windows 10 version 1607 or later.");
         }
 
+        if (OS.HasFeature("android") || OS.HasFeature("ios"))
+        {
+            await MobileNotificationRuntime.ShowAsync(nativeNotification, cancellationToken);
+            return new EmptyPayload();
+        }
+
         throw new PlatformNotSupportedException(
-            "Desktop notifications are currently implemented only on macOS 11 or later and Windows 10 version 1607 or later.");
+            "Notifications are implemented on Android, iOS, macOS 11 or later, and Windows 10 version 1607 or later.");
     }
 
     private static void Activate(string nativeId)
@@ -109,6 +117,12 @@ internal static class Notifications
                 synchronizationContext
                     ?? throw new InvalidOperationException(
                         "Windows desktop notifications require Godot's main-thread synchronization context."));
+            return;
+        }
+
+        if (OS.HasFeature("android") || OS.HasFeature("ios"))
+        {
+            MobileNotificationRuntime.SetListener(onActivated);
         }
     }
 
@@ -123,6 +137,12 @@ internal static class Notifications
         if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393))
         {
             WindowsNotificationRuntime.RemoveListener();
+            return;
+        }
+
+        if (OS.HasFeature("android") || OS.HasFeature("ios"))
+        {
+            MobileNotificationRuntime.RemoveListener();
         }
     }
 }

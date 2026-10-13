@@ -1,7 +1,7 @@
-namespace GdKirie.Platform;
+namespace GdKirie.Notifications;
 
 /// <summary>
-/// Routes a process notification back to the Platform host that published it.
+/// Routes a process notification back to the Notifications host that published it.
 /// Native identifiers include a host ID and preserve the caller-owned ID.
 /// </summary>
 internal sealed class NotificationRouter
@@ -22,7 +22,7 @@ internal sealed class NotificationRouter
     {
         if (!_handlers.ContainsKey(hostId))
         {
-            throw new ObjectDisposedException("Platform notification host");
+            throw new ObjectDisposedException("Kirie notification host");
         }
 
         return $"{hostId:N}:{callerId}";

@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
 using RumpSharp;
 
-namespace GdKirie.Platform;
+namespace GdKirie.Notifications;
 
 [SupportedOSPlatform("macos11.0")]
 internal static class MacOsNotificationRuntime

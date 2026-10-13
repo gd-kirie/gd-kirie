@@ -1,0 +1,38 @@
+{
+  "name": "@gd-kirie/notifications",
+  "version": "0.12.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moeru-ai/godot-kirie.git",
+    "directory": "packages/notifications"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "import": "./src/index.ts" } },
+  "files": [".gdignore", "addon", "dist"],
+  "scripts": {
+    "build": "pnpm run generate:godot && tsdown",
+    "generate:godot": "pnpm run typecheck:godot && tstogd convert --no-check",
+    "test:run": "vitest run",
+    "typecheck": "pnpm run typecheck:browser && pnpm run typecheck:godot",
+    "typecheck:browser": "tsc -p tsconfig.json --noEmit",
+    "typecheck:godot": "tsc -p tsconfig.godot.json --noEmit"
+  },
+  "dependencies": {
+    "@gd-kirie/ipc-eventa": "workspace:*",
+    "@moeru/eventa": "catalog:",
+    "kirie": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "typescript-to-gdscript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org",
+    "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } }
+  }
+}

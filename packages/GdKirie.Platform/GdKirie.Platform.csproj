@@ -25,7 +25,6 @@
   <ItemGroup>
     <ProjectReference Include="../GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj" />
     <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.298" PrivateAssets="all" />
-    <PackageReference Include="RumpSharp" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>

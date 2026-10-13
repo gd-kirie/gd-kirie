@@ -1,0 +1,23 @@
+{
+  "name": "@gd-kirie/example-notifications",
+  "version": "0.12.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "kirie build", "dev": "kirie dev", "typecheck": "vue-tsc -p tsconfig.json --noEmit" },
+  "dependencies": {
+    "@gd-kirie/ipc-eventa": "workspace:*",
+    "@gd-kirie/notifications": "workspace:*",
+    "@proj-airi/ui": "0.11.3",
+    "vue": "3.5.41"
+  },
+  "devDependencies": {
+    "@proj-airi/unocss-preset-chromatic": "1.1.4",
+    "@unocss/reset": "66.8.1",
+    "@vitejs/plugin-vue": "6.0.8",
+    "kirie": "workspace:*",
+    "typescript": "catalog:",
+    "unocss": "66.8.1",
+    "vite": "catalog:",
+    "vue-tsc": "3.3.11"
+  }
+}

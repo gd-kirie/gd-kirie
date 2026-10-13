@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/packages/">
     <Project Path="packages/GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj" />
+    <Project Path="packages/GdKirie.Notifications/GdKirie.Notifications.csproj" />
     <Project Path="packages/GdKirie.Platform/GdKirie.Platform.csproj" />
     <Project Path="packages/GdKirie.Tray/GdKirie.Tray.csproj" />
   </Folder>

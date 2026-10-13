@@ -50,3 +50,5 @@ architecture documentation.
   — superseded by ADR-0013, 2026-10-10
 - [ADR-0013: Use tray-icon for the Tray plugin](0013-use-tray-icon-for-the-tray-plugin.md)
   — accepted, 2026-10-11
+- [ADR-0014: Extract notifications into a Kirie plugin](0014-extract-notifications-into-a-kirie-plugin.md)
+  — proposed, 2026-10-10

@@ -25,11 +25,12 @@ tests/integration/web/
 **/addons/godot_cef/
 examples/basic-kirie-cli/src-godot/generated/
 examples/basic-kirie-cli/src-godot/_typings/
-packages/kirie/src-godot/_typings/
+packages/*/src-godot/_typings/
 tests/integration/scripts/vidot/
 tests/integration/src/_typings/
 tests/integration/tstogd_modules/
 packages/kirie/addon/addons/kirie/*.gd
+packages/notifications/addon/kirie_notifications/*.gd
 *.apk
 *.aab
 *.aar

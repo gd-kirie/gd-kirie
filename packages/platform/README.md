@@ -99,35 +99,6 @@ await platform.globalShortcuts.unregister(shortcut);
 One `onKeyEvent` handler receives both states; keyboard auto-repeat does not
 produce extra calls.
 
-## Desktop notifications
-
-Desktop notifications are available on macOS 11 or later and on Windows 10
-version 1607 or later:
-
-```ts
-import { notificationActivated } from "@gd-kirie/platform";
-
-const stop = context.on(notificationActivated, ({ body }) => {
-  if (body)
-    console.log(`The user clicked ${body.id}`);
-});
-
-await platform.notifications.show({
-  id: "assistant-answer-42",
-  title: "Kirie",
-  body: "The answer is ready.",
-});
-
-stop();
-```
-
-The first macOS `show()` requests permission. Windows does not show a
-permission prompt; `show()` fails when notifications are turned off. IDs and
-titles must not be empty. With multiple Platform hosts, a click reaches only
-the Eventa context that published the notification. Click events end when the
-Platform host is disposed and do not survive a cold launch. The Windows
-identity follows the running executable. Linux backends are not implemented.
-
 ## System back
 
 Android delivers the system Back button as a Platform event. The application
