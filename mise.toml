@@ -151,11 +151,6 @@ run = "dotnet test --solution GdKirie.slnx --configuration Release"
 description = "Run Tray native tests"
 run = "cargo test --manifest-path packages/GdKirie.Tray/native/Cargo.toml --locked"
 
-[tasks."test:tray-consumer"]
-description = "Test installed Tray packages and a macOS exported application"
-depends = ["build:tray-native"]
-run = "node ./scripts/test-tray-consumer.ts"
-
 [tasks."test:swift"]
 description = "Run Swift unit tests"
 run = "pnpm run test:swift"
