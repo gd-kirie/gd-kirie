@@ -6,7 +6,7 @@
     <IsAotCompatible>true</IsAotCompatible>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageId>GdKirie.Notifications</PackageId>
-    <Version>0.12.0</Version>
+    <Version>0.13.0</Version>
     <Authors>Moeru AI</Authors>
     <Description>Cross-platform notifications over Kirie Eventa IPC.</Description>
     <PackageTags>godot;kirie;eventa;notifications</PackageTags>

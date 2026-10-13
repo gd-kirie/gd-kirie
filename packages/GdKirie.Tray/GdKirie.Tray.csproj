@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsAotCompatible>true</IsAotCompatible>
     <PackageId>GdKirie.Tray</PackageId>
-    <Version>0.12.0</Version>
+    <Version>0.13.0</Version>
     <Authors>Moeru AI</Authors>
     <Description>System tray integration for Godot applications using Kirie Eventa IPC.</Description>
     <PackageTags>godot;kirie;eventa;tray;menu;status-item</PackageTags>
