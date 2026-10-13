@@ -64,4 +64,4 @@ const destination = path.join(destinationDir, target.fileName);
 mkdirSync(destinationDir, { recursive: true });
 copyFileSync(source, destination);
 
-console.log(`Built ${path.relative(rootDir, destination)}`);
+console.log(`Built Tray GDExtension: ${path.relative(rootDir, destination)}`);

@@ -1,23 +1,176 @@
-use std::{
-    cell::RefCell,
-    ffi::{CStr, CString, c_char},
-    panic::{AssertUnwindSafe, catch_unwind},
-    ptr, slice,
-};
+// See docs/decisions/0014-load-tray-through-a-gdextension.md.
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
+use godot::prelude::*;
 use serde::Deserialize;
 use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder,
     menu::{CheckMenuItem, IsMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu},
 };
 
-thread_local! {
-    static TRAY: RefCell<Option<TrayIcon>> = const { RefCell::new(None) };
-    static LAST_ERROR: RefCell<CString> = RefCell::new(CString::default());
-    static LAST_MENU_EVENT: RefCell<Option<CString>> = const { RefCell::new(None) };
+struct KirieTrayExtension;
+
+#[gdextension]
+unsafe impl ExtensionLibrary for KirieTrayExtension {}
+
+#[derive(GodotClass)]
+#[class(init, base=RefCounted)]
+struct KirieTrayNative {
+    tray: Option<TrayIcon>,
 }
 
-#[derive(Debug, Deserialize)]
+#[godot_api]
+impl KirieTrayNative {
+    #[func]
+    fn create(
+        &mut self,
+        rgba: PackedByteArray,
+        width: i64,
+        height: i64,
+        icon_as_template: bool,
+    ) -> GString {
+        operation_error(|| {
+            let icon = read_icon(rgba.to_vec(), width, height)?;
+            let builder = TrayIconBuilder::new();
+
+            #[cfg(target_os = "macos")]
+            let builder = if icon_as_template {
+                builder.with_icon_templated(icon)
+            } else {
+                builder.with_icon(icon)
+            };
+
+            #[cfg(not(target_os = "macos"))]
+            let builder = {
+                if icon_as_template {
+                    return Err("template tray icons are supported only on macOS".into());
+                }
+
+                builder.with_icon(icon)
+            };
+
+            let tray = builder.build().map_err(|error| error.to_string())?;
+            // A page reload replaces the icon while the Eventa host stays attached.
+            self.tray = Some(tray);
+            Ok(())
+        })
+    }
+
+    #[func]
+    fn set_icon(
+        &self,
+        rgba: PackedByteArray,
+        width: i64,
+        height: i64,
+        icon_as_template: bool,
+    ) -> GString {
+        operation_error(|| {
+            let icon = read_icon(rgba.to_vec(), width, height)?;
+            let tray = self.tray()?;
+
+            #[cfg(target_os = "macos")]
+            let result = if icon_as_template {
+                tray.set_icon_templated(Some(icon))
+            } else {
+                tray.set_icon(Some(icon))
+            };
+
+            #[cfg(not(target_os = "macos"))]
+            let result = {
+                if icon_as_template {
+                    return Err("template tray icons are supported only on macOS".into());
+                }
+
+                tray.set_icon(Some(icon))
+            };
+
+            result.map_err(|error| error.to_string())
+        })
+    }
+
+    #[func]
+    fn set_menu(&self, json: GString) -> GString {
+        operation_error(|| {
+            let definitions: Vec<MenuDefinition> =
+                serde_json::from_str(&json.to_string()).map_err(|error| error.to_string())?;
+            let menu = build_menu(&definitions)?;
+            self.tray()?.set_menu(Some(Box::new(menu)));
+            Ok(())
+        })
+    }
+
+    #[func]
+    fn set_tooltip(&self, tooltip: GString) -> GString {
+        let tooltip = tooltip.to_string();
+        operation_error(|| {
+            let tooltip = (!tooltip.is_empty()).then_some(tooltip.as_str());
+            self.tray()?
+                .set_tooltip(tooltip)
+                .map_err(|error| error.to_string())
+        })
+    }
+
+    #[func]
+    fn set_visible(&self, visible: bool) -> GString {
+        operation_error(|| {
+            self.tray()?
+                .set_visible(visible)
+                .map_err(|error| error.to_string())
+        })
+    }
+
+    #[func]
+    fn poll_menu_events(&self) -> PackedStringArray {
+        let mut events = PackedStringArray::new();
+        while let Ok(event) = MenuEvent::receiver().try_recv() {
+            events.push(&GString::from(&event.id.0));
+        }
+
+        events
+    }
+
+    #[func]
+    fn destroy(&mut self) -> GString {
+        operation_error(|| {
+            drop(self.tray.take());
+            Ok(())
+        })
+    }
+
+    fn tray(&self) -> Result<&TrayIcon, String> {
+        self.tray
+            .as_ref()
+            .ok_or_else(|| "the tray icon does not exist".to_string())
+    }
+}
+
+// Godot's panic fallback returns an empty string, which this boundary reserves for success.
+fn operation_error(operation: impl FnOnce() -> Result<(), String>) -> GString {
+    match catch_unwind(AssertUnwindSafe(operation)) {
+        Ok(Ok(())) => GString::new(),
+        Ok(Err(error)) => error.as_str().into(),
+        Err(payload) => {
+            let message = payload
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown panic");
+
+            format!("native tray panic: {message}").as_str().into()
+        }
+    }
+}
+
+fn read_icon(rgba: Vec<u8>, width: i64, height: i64) -> Result<Icon, String> {
+    let width =
+        u32::try_from(width).map_err(|_| "tray icon width is outside the supported range")?;
+    let height =
+        u32::try_from(height).map_err(|_| "tray icon height is outside the supported range")?;
+
+    Icon::from_rgba(rgba, width, height).map_err(|error| error.to_string())
+}
+
+#[derive(Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 enum MenuDefinition {
     Item {
@@ -45,188 +198,6 @@ enum MenuDefinition {
 
 const fn default_enabled() -> bool {
     true
-}
-
-#[unsafe(no_mangle)]
-/// # Safety
-///
-/// `rgba` must point to `rgba_len` readable bytes for the duration of this call.
-pub unsafe extern "C" fn kirie_tray_create(
-    rgba: *const u8,
-    rgba_len: usize,
-    width: u32,
-    height: u32,
-    icon_as_template: bool,
-) -> bool {
-    ffi_bool(|| {
-        let icon = read_icon(rgba, rgba_len, width, height)?;
-        let builder = TrayIconBuilder::new();
-
-        #[cfg(target_os = "macos")]
-        let builder = if icon_as_template {
-            builder.with_icon_templated(icon)
-        } else {
-            builder.with_icon(icon)
-        };
-
-        #[cfg(not(target_os = "macos"))]
-        let builder = {
-            if icon_as_template {
-                return Err("template tray icons are supported only on macOS".into());
-            }
-
-            builder.with_icon(icon)
-        };
-
-        let tray = builder.build().map_err(|error| error.to_string())?;
-        // A page reload calls create again while the .NET host keeps running,
-        // so an existing Tray is replaced instead of rejected.
-        drop(TRAY.with_borrow_mut(|slot| slot.replace(tray)));
-
-        Ok(())
-    })
-}
-
-#[unsafe(no_mangle)]
-/// # Safety
-///
-/// `rgba` must point to `rgba_len` readable bytes for the duration of this call.
-pub unsafe extern "C" fn kirie_tray_set_icon(
-    rgba: *const u8,
-    rgba_len: usize,
-    width: u32,
-    height: u32,
-    icon_as_template: bool,
-) -> bool {
-    ffi_bool(|| {
-        let icon = read_icon(rgba, rgba_len, width, height)?;
-        with_tray(|tray| {
-            #[cfg(target_os = "macos")]
-            let result = if icon_as_template {
-                tray.set_icon_templated(Some(icon))
-            } else {
-                tray.set_icon(Some(icon))
-            };
-
-            #[cfg(not(target_os = "macos"))]
-            let result = {
-                if icon_as_template {
-                    return Err("template tray icons are supported only on macOS".into());
-                }
-
-                tray.set_icon(Some(icon))
-            };
-
-            result.map_err(|error| error.to_string())
-        })
-    })
-}
-
-#[unsafe(no_mangle)]
-/// # Safety
-///
-/// `json` must point to a null-terminated UTF-8 string for the duration of this call.
-pub unsafe extern "C" fn kirie_tray_set_menu(json: *const c_char) -> bool {
-    ffi_bool(|| {
-        let definitions: Vec<MenuDefinition> =
-            serde_json::from_str(unsafe { read_string(json, "menu JSON")? })
-                .map_err(|error| error.to_string())?;
-        let menu = build_menu(&definitions)?;
-
-        with_tray(|tray| {
-            tray.set_menu(Some(Box::new(menu)));
-            Ok(())
-        })
-    })
-}
-
-#[unsafe(no_mangle)]
-/// # Safety
-///
-/// `tooltip` must point to a null-terminated UTF-8 string for the duration of this call.
-pub unsafe extern "C" fn kirie_tray_set_tooltip(tooltip: *const c_char) -> bool {
-    ffi_bool(|| {
-        let tooltip = unsafe { read_string(tooltip, "tooltip")? };
-        with_tray(|tray| {
-            let tooltip = (!tooltip.is_empty()).then_some(tooltip);
-            tray.set_tooltip(tooltip).map_err(|error| error.to_string())
-        })
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn kirie_tray_set_visible(visible: bool) -> bool {
-    ffi_bool(|| with_tray(|tray| tray.set_visible(visible).map_err(|error| error.to_string())))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn kirie_tray_poll_menu_event() -> *const c_char {
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let Ok(event) = MenuEvent::receiver().try_recv() else {
-            LAST_MENU_EVENT.with_borrow_mut(|slot| *slot = None);
-            return Ok(ptr::null());
-        };
-
-        let id = CString::new(event.id.0)
-            .map_err(|_| "menu event ID contains an interior null byte".to_string())?;
-        LAST_MENU_EVENT.with_borrow_mut(|slot| {
-            *slot = Some(id);
-            Ok(slot.as_ref().expect("event was just stored").as_ptr())
-        })
-    }));
-
-    match result {
-        Ok(Ok(pointer)) => {
-            clear_last_error();
-            pointer
-        }
-        Ok(Err(error)) => {
-            set_last_error(error);
-            ptr::null()
-        }
-        Err(payload) => {
-            set_last_error(panic_message(payload));
-            ptr::null()
-        }
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn kirie_tray_destroy() -> bool {
-    ffi_bool(|| {
-        drop(TRAY.with_borrow_mut(Option::take));
-        LAST_MENU_EVENT.with_borrow_mut(|slot| *slot = None);
-        Ok(())
-    })
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn kirie_tray_last_error() -> *const c_char {
-    match catch_unwind(AssertUnwindSafe(|| {
-        LAST_ERROR.with_borrow(|error| error.as_ptr())
-    })) {
-        Ok(pointer) => pointer,
-        Err(_) => ptr::null(),
-    }
-}
-
-fn read_icon(rgba: *const u8, rgba_len: usize, width: u32, height: u32) -> Result<Icon, String> {
-    if rgba.is_null() {
-        return Err("tray icon RGBA pointer is null".into());
-    }
-
-    let bytes = unsafe { slice::from_raw_parts(rgba, rgba_len) };
-    Icon::from_rgba(bytes.to_vec(), width, height).map_err(|error| error.to_string())
-}
-
-unsafe fn read_string<'a>(pointer: *const c_char, name: &str) -> Result<&'a str, String> {
-    if pointer.is_null() {
-        return Err(format!("{name} pointer is null"));
-    }
-
-    unsafe { CStr::from_ptr(pointer) }
-        .to_str()
-        .map_err(|_| format!("{name} is not valid UTF-8"))
 }
 
 fn build_menu(definitions: &[MenuDefinition]) -> Result<Menu, String> {
@@ -272,55 +243,16 @@ fn build_menu_item(definition: &MenuDefinition) -> Result<Box<dyn IsMenuItem>, S
     }
 }
 
-fn with_tray<T>(operation: impl FnOnce(&TrayIcon) -> Result<T, String>) -> Result<T, String> {
-    TRAY.with_borrow(|slot| {
-        let tray = slot
-            .as_ref()
-            .ok_or_else(|| "the tray icon does not exist".to_string())?;
-        operation(tray)
-    })
-}
-
-fn ffi_bool(operation: impl FnOnce() -> Result<(), String>) -> bool {
-    match catch_unwind(AssertUnwindSafe(operation)) {
-        Ok(Ok(())) => {
-            clear_last_error();
-            true
-        }
-        Ok(Err(error)) => {
-            set_last_error(error);
-            false
-        }
-        Err(payload) => {
-            set_last_error(panic_message(payload));
-            false
-        }
-    }
-}
-
-fn clear_last_error() {
-    LAST_ERROR.with_borrow_mut(|error| *error = CString::default());
-}
-
-fn set_last_error(error: String) {
-    let error = error.replace('\0', "�");
-    LAST_ERROR.with_borrow_mut(|slot| {
-        *slot = CString::new(error).unwrap_or_else(|_| CString::default());
-    });
-}
-
-fn panic_message(payload: Box<dyn std::any::Any + Send>) -> String {
-    let message = payload
-        .downcast_ref::<&str>()
-        .copied()
-        .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
-        .unwrap_or("unknown panic");
-    format!("native tray panic: {message}")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_invalid_icon_dimensions_and_pixels() {
+        assert!(read_icon(vec![0; 4], -1, 1).is_err());
+        assert!(read_icon(vec![0; 4], 1, i64::MAX).is_err());
+        assert!(read_icon(vec![0; 3], 1, 1).is_err());
+    }
 
     #[test]
     fn parses_supported_menu_tree() {

@@ -39,6 +39,21 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
     assertIosDevExportProjectOnly(config);
   }
   if (target === "desktop") {
+    for (const plugin of config.plugins) {
+      for (const addon of plugin.godotAddons ?? []) {
+        if (addon.optional) {
+          continue;
+        }
+
+        const result = await checkGodotAddon(config.godot.project, addon);
+        if (!result.valid) {
+          throw new Error(
+            `Godot addon ${addon.id} is required. ${result.message}. Run: pnpm kirie doctor --fix plugin:${plugin.id}`,
+          );
+        }
+      }
+    }
+
     const core = config.plugins.find((plugin) => plugin.id === "core");
     const godotCef = core?.godotAddons?.find((addon) => addon.id === "godot-cef");
     if (!godotCef) {

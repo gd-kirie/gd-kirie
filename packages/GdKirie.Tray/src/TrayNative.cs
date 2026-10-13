@@ -1,135 +1,66 @@
-using System.Reflection;
-using System.Runtime.InteropServices;
+using Godot;
 
 namespace GdKirie.Tray;
 
-internal static partial class TrayNative
+// See docs/decisions/0014-load-tray-through-a-gdextension.md.
+internal sealed class TrayNative : IDisposable
 {
-    private const string LibraryName = "kirie_tray_native";
+    private readonly RefCounted _tray;
 
-    static TrayNative()
+    internal TrayNative()
     {
-        NativeLibrary.SetDllImportResolver(typeof(TrayNative).Assembly, ResolveLibrary);
-    }
-
-    public static unsafe void Create(byte[] rgba, uint width, uint height, bool iconAsTemplate)
-    {
-        fixed (byte* data = rgba)
+        using var className = new StringName("KirieTrayNative");
+        if (!ClassDB.ClassExists(className))
         {
-            ThrowIfFailed(CreateNative(data, (nuint)rgba.Length, width, height, iconAsTemplate));
-        }
-    }
-
-    public static unsafe void SetIcon(byte[] rgba, uint width, uint height, bool iconAsTemplate)
-    {
-        fixed (byte* data = rgba)
-        {
-            ThrowIfFailed(SetIconNative(data, (nuint)rgba.Length, width, height, iconAsTemplate));
-        }
-    }
-
-    public static void SetMenu(string menuJson) => ThrowIfFailed(SetMenuNative(menuJson));
-
-    public static void SetTooltip(string? tooltip) =>
-        ThrowIfFailed(SetTooltipNative(tooltip ?? string.Empty));
-
-    public static void SetVisible(bool visible) => ThrowIfFailed(SetVisibleNative(visible));
-
-    public static string? PollMenuEvent()
-    {
-        var eventId = PollMenuEventNative();
-        if (eventId != nint.Zero)
-        {
-            return Marshal.PtrToStringUTF8(eventId);
+            throw new InvalidOperationException(
+                "The Kirie Tray GDExtension is not loaded. Install the @gd-kirie/tray plugin assets in this Godot project.");
         }
 
-        var error = Marshal.PtrToStringUTF8(LastErrorNative());
-        if (!string.IsNullOrEmpty(error))
-        {
-            throw new InvalidOperationException(error);
-        }
-
-        return null;
+        using var instance = ClassDB.Instantiate(className);
+        _tray = (RefCounted)instance.AsGodotObject();
     }
 
-    public static void Destroy() => ThrowIfFailed(DestroyNative());
+    internal void Create(byte[] rgba, uint width, uint height, bool iconAsTemplate) =>
+        Execute("create", rgba, width, height, iconAsTemplate);
 
-    private static void ThrowIfFailed(bool succeeded)
+    internal void SetIcon(byte[] rgba, uint width, uint height, bool iconAsTemplate) =>
+        Execute("set_icon", rgba, width, height, iconAsTemplate);
+
+    internal void SetMenu(string menuJson) => Execute("set_menu", menuJson);
+
+    internal void SetTooltip(string? tooltip) => Execute("set_tooltip", tooltip ?? string.Empty);
+
+    internal void SetVisible(bool visible) => Execute("set_visible", visible);
+
+    internal string[] PollMenuEvents()
     {
-        if (succeeded)
-        {
-            return;
-        }
-
-        var error = LastErrorNative();
-        throw new InvalidOperationException(
-            error == nint.Zero
-                ? "The native tray operation failed."
-                : Marshal.PtrToStringUTF8(error));
+        using var method = new StringName("poll_menu_events");
+        using var result = _tray.Call(method);
+        return result.AsStringArray();
     }
 
-    private static nint ResolveLibrary(
-        string libraryName,
-        Assembly _,
-        DllImportSearchPath? __)
+    internal void Destroy() => Execute("destroy");
+
+    public void Dispose() => _tray.Dispose();
+
+    private void Execute(string method, params Variant[] arguments)
     {
-        if (libraryName != LibraryName)
+        try
         {
-            return nint.Zero;
+            using var methodName = new StringName(method);
+            using var result = _tray.Call(methodName, arguments);
+            var error = result.AsString();
+            if (!string.IsNullOrEmpty(error))
+            {
+                throw new InvalidOperationException(error);
+            }
         }
-
-        var fileName = OperatingSystem.IsWindows()
-            ? "kirie_tray_native.dll"
-            : OperatingSystem.IsMacOS()
-                ? "libkirie_tray_native.dylib"
-                : "libkirie_tray_native.so";
-
-        return NativeLibrary.Load(Path.Combine(AppContext.BaseDirectory, fileName));
+        finally
+        {
+            foreach (var argument in arguments)
+            {
+                argument.Dispose();
+            }
+        }
     }
-
-    [LibraryImport(LibraryName, EntryPoint = "kirie_tray_create")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static unsafe partial bool CreateNative(
-        byte* rgba,
-        nuint rgbaLength,
-        uint width,
-        uint height,
-        [MarshalAs(UnmanagedType.I1)] bool iconAsTemplate);
-
-    [LibraryImport(LibraryName, EntryPoint = "kirie_tray_set_icon")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static unsafe partial bool SetIconNative(
-        byte* rgba,
-        nuint rgbaLength,
-        uint width,
-        uint height,
-        [MarshalAs(UnmanagedType.I1)] bool iconAsTemplate);
-
-    [LibraryImport(
-        LibraryName,
-        EntryPoint = "kirie_tray_set_menu",
-        StringMarshalling = StringMarshalling.Utf8)]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static partial bool SetMenuNative(string menuJson);
-
-    [LibraryImport(
-        LibraryName,
-        EntryPoint = "kirie_tray_set_tooltip",
-        StringMarshalling = StringMarshalling.Utf8)]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static partial bool SetTooltipNative(string tooltip);
-
-    [LibraryImport(LibraryName, EntryPoint = "kirie_tray_set_visible")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static partial bool SetVisibleNative([MarshalAs(UnmanagedType.I1)] bool visible);
-
-    [LibraryImport(LibraryName, EntryPoint = "kirie_tray_poll_menu_event")]
-    private static partial nint PollMenuEventNative();
-
-    [LibraryImport(LibraryName, EntryPoint = "kirie_tray_destroy")]
-    [return: MarshalAs(UnmanagedType.I1)]
-    private static partial bool DestroyNative();
-
-    [LibraryImport(LibraryName, EntryPoint = "kirie_tray_last_error")]
-    private static partial nint LastErrorNative();
 }

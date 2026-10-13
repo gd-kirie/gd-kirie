@@ -182,8 +182,10 @@ packaging, or platform WebView bridge details.
   Reference for the pinned `0.26.1` features and platform dependencies.
 - [`muda` menu items](https://github.com/tauri-apps/muda/blob/88e0c3658a85668872c621f77d6aad1616f42780/src/items/mod.rs)
   Upstream menu types exposed through `tray-icon`.
-- [NuGet native runtime assets](https://learn.microsoft.com/nuget/create-packages/native-files-in-net-packages)
-  Reference for RID-specific native libraries under `runtimes/<rid>/native/`.
+- [Godot GDExtension descriptor](https://docs.godotengine.org/en/stable/engine_details/engine_api/gdextension/gdextension_file.html)
+  Platform library selection and application export for the Tray addon.
+- [godot-rust 0.5.5 manifest](https://github.com/godot-rust/gdext/blob/v0.5.5/godot/Cargo.toml)
+  The Rust binding and `api-4-7` compatibility target.
 
 ## .NET
 
@@ -311,8 +313,8 @@ packaging, or platform WebView bridge details.
 - When changing the Eventa adapter or NuGet packaging, start with .NET Native
   AOT, System.Text.Json source generation, the upstream Eventa repositories,
   NuGet contentFiles, `dotnet pack`, and `dotnet nuget push`.
-- When changing the Tray plugin, start with `tray-icon`, `muda`, and NuGet
-  native runtime asset guidance.
+- When changing the Tray plugin, start with `tray-icon`, `muda`, godot-rust,
+  and the Godot GDExtension descriptor.
 - When changing npm package publishing, start with npm trusted publishing,
   GitHub Actions OIDC, bumpp, and pnpm publish behavior.
 - When changing native artifact orchestration, start with Node.js TypeScript
