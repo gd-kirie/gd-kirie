@@ -235,22 +235,34 @@ importers:
       '@gd-kirie/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
+      '@proj-airi/ui':
+        specifier: 0.11.3
+        version: 0.11.3(typescript@6.0.3)
       vue:
         specifier: 3.5.41
         version: 3.5.41(typescript@6.0.3)
     devDependencies:
+      '@proj-airi/unocss-preset-chromatic':
+        specifier: 1.1.4
+        version: 1.1.4
+      '@unocss/reset':
+        specifier: 66.8.1
+        version: 66.8.1
       '@vitejs/plugin-vue':
         specifier: 6.0.8
-        version: 6.0.8(vite@8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))(vue@3.5.41(typescript@6.0.3))
+        version: 6.0.8(vite@8.0.16(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.3))(vue@3.5.41(typescript@6.0.3))
       kirie:
         specifier: workspace:*
         version: link:../../packages/cli
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      unocss:
+        specifier: 66.8.1
+        version: 66.8.1(vite@8.0.16(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.3))
       vite:
         specifier: 'catalog:'
-        version: 8.0.16(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1)
+        version: 8.0.16(@types/node@25.6.0)(jiti@2.7.0)(yaml@2.8.3)
       vue-tsc:
         specifier: 3.3.11
         version: 3.3.11(typescript@6.0.3)

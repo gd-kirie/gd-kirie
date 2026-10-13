@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="android/**/*.cs" />
+    <Compile Remove="ios/**/*.cs" />
     <Compile Remove="node_modules/**/*.cs" />
     <ProjectReference Include="../../packages/GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj" />
     <ProjectReference Include="../../packages/GdKirie.Notifications/GdKirie.Notifications.csproj" />
