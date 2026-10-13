@@ -16,7 +16,7 @@ macOS notifications should be tested from an application installed in
 `/Applications` or `~/Applications`. Windows activations are delivered while
 the host is alive. Android and iOS request notification permission on first use.
 
-Export the mobile variants after configuring their Godot presets:
+Export the included mobile presets:
 
 ```sh
 mise x -- pnpm -C examples/notifications exec kirie export android

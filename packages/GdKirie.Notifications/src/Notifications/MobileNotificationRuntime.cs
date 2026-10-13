@@ -8,6 +8,7 @@ internal static class MobileNotificationRuntime
     private const string SingletonName = "NotificationSchedulerPlugin";
     private const string ChannelId = "kirie.notifications.default";
     private const string NativeIdKey = "kirie_notification_id";
+    private const int MinimumDelaySeconds = 1;
     private static GodotObject? _plugin;
     private static Action<string>? _listener;
     private static TaskCompletionSource<bool>? _initialized;
@@ -73,8 +74,8 @@ internal static class MobileNotificationRuntime
             ["channel_id"] = ChannelId,
             ["title"] = notification.Title,
             ["content"] = notification.Body,
-            ["delay"] = 0,
-            ["small_icon_name"] = "ic_default_notification",
+            ["delay"] = MinimumDelaySeconds,
+            ["small_icon_name"] = "abc_star_black_48dp",
             ["custom_data"] = customData,
         };
         EnsureOk(plugin.Call("schedule", data).AsInt32(), "schedule notification");

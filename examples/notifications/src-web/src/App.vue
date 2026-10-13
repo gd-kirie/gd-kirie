@@ -22,7 +22,7 @@ async function show(): Promise<void> {
     await notifications.show({ id, title: title.value, body: body.value });
     status.value = `Sent ${id}`;
   } catch (error) {
-    status.value = error instanceof Error ? error.message : String(error);
+    status.value = error instanceof Error ? error.message : JSON.stringify(error) ?? String(error);
   }
 }
 
@@ -45,6 +45,7 @@ onBeforeUnmount(() => { stop?.(); eventa?.dispose(); });
 <style>
 :root { font-family: system-ui, sans-serif; color: #171717; background: #f5f5f5; }
 main { min-height: 100vh; display: grid; place-items: center; }
-form { width: min(34rem, calc(100% - 3rem)); display: grid; gap: 1rem; padding: 2rem; border: 1px solid #ddd; border-radius: 1rem; background: white; }
-h1, p { margin: 0; } label { display: grid; gap: .4rem; } input, textarea, button { padding: .75rem; font: inherit; } textarea { min-height: 7rem; resize: vertical; } button { cursor: pointer; } output { font-family: monospace; color: #555; }
+form { width: min(42rem, calc(100% - 2rem)); display: grid; grid-template-columns: 1fr 1fr; gap: .4rem 1rem; padding: .5rem 1rem; border: 1px solid #ddd; border-radius: 1rem; background: white; }
+h1, p, button, output { grid-column: 1 / -1; }
+h1, p { margin: 0; } h1 { font-size: 1.5rem; } label { display: grid; gap: .4rem; } input, textarea, button { padding: .35rem .5rem; font: inherit; } textarea { min-height: 2.5rem; resize: vertical; } button { cursor: pointer; } output { font-family: monospace; color: #555; }
 </style>

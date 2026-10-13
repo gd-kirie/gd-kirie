@@ -49,8 +49,9 @@ On Android and iOS, bridge directly to the upstream
 `godot-mobile-plugins/godot-notification-scheduler` v6.0 and verify the
 `NotificationSchedulerPlugin-Multi-v6.0.zip` asset with SHA-256
 `7446e9b1701b04a95106b731bc96dfcff6689c8482e8865866bd63453333f581`.
-The bridge requests permission when required, maps `show()` to a zero-delay
-schedule, and uses reserved custom data to recover the Kirie host and string ID.
+The bridge requests permission when required, maps `show()` to the upstream
+scheduler's shortest supported delay of one second, and uses reserved custom
+data to recover the Kirie host and string ID.
 Android uses one internal default channel. Activation is not persisted for
 cold-start replay.
 
