@@ -269,6 +269,39 @@ describe("runDev", () => {
       code: "ENOENT",
     });
   });
+
+  it("requires plugin Godot addons before starting desktop dev", async () => {
+    const project = await projects.copy();
+    await installGodotCefFixture(project);
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+
+export default {
+  plugins: [
+    core,
+    {
+      id: "tray",
+      godotAddons: [{
+        id: "kirie-tray",
+        path: "addons/kirie_tray",
+        source: { type: "bundled", url: "file:///missing" },
+      }],
+    },
+  ],
+  web: { vite: { logLevel: "silent" } },
+};
+`,
+    );
+
+    await expect(runDev({ cwd: project })).rejects.toThrow(
+      "Godot addon kirie-tray is required. not installed. Run: pnpm kirie doctor --fix plugin:tray",
+    );
+
+    await expect(fs.stat(path.join(project, FAKE_GODOT_INVOCATIONS_FILE))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
 });
 
 async function readFakeGodotInvocations(
