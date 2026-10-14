@@ -836,7 +836,7 @@ The Web backend supports same-origin content only. It maps
 `res://` roots are unavailable to the browser.
 
 C# Web support uses the experimental templates from
-`moeru-ai/godot-dotnet-web-templates`. `kirie doctor --fix web` installs and
+`gd-kirie/godot-dotnet-web-templates`. `kirie doctor --fix web` installs and
 validates them without installing another Godot editor or writing machine-local
 paths into the project. The template
 repository owns their build and release workflow.

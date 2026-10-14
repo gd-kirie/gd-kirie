@@ -124,7 +124,7 @@ const DOTNET_WEB_RELEASE: DotnetWebRelease = {
   asset: {
     archive: "godot-dotnet-web-templates-4.7.2-net10.zip",
     sha256: "76616cdbb253c9f923f3b3beb10240ff5107d425ebfa2f054c0c5b6e78444729",
-    url: "https://github.com/moeru-ai/godot-dotnet-web-templates/releases/download/4.7.2-dotnet10-preview.1/godot-dotnet-web-templates-4.7.2-net10.zip",
+    url: "https://github.com/gd-kirie/godot-dotnet-web-templates/releases/download/4.7.2-dotnet10-preview.1/godot-dotnet-web-templates-4.7.2-net10.zip",
   },
   draftCommit: "aa1f5ffe8321bc57155f606197b5aa93dd9e662c",
   godotCommit: "ed1daf0bf001b61586d9930840f2f1394092c079",

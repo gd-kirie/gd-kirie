@@ -30,7 +30,7 @@ Add an experimental Godot Web export target to Kirie.
 
 The C# export path uses templates derived from Godot's unfinished official
 [.NET Web draft](https://github.com/godotengine/godot/pull/106125). The separate
-`moeru-ai/godot-dotnet-web-templates` repository owns template builds and
+`gd-kirie/godot-dotnet-web-templates` repository owns template builds and
 releases. `kirie doctor --fix web` installs the experimental toolchain, while
 `kirie export web` and `kirie dev web` expose it through the normal CLI surface.
 
@@ -62,7 +62,7 @@ Android, or iOS backends.
 - **Affected paths**: `packages/kirie/src-godot/`, `packages/ipc/src/`,
   `packages/cli/src/commands/doctor/`, `packages/cli/src/commands/dev.ts`,
   `packages/cli/src/commands/export.ts`, and Web export examples.
-- **Dependencies**: use releases from `moeru-ai/godot-dotnet-web-templates`;
+- **Dependencies**: use releases from `gd-kirie/godot-dotnet-web-templates`;
   do not move their build scripts into this repository.
 - **Patterns to follow**: keep `KirieNode` as the WebView owner, keep the three
   IPC lanes explicit, and keep Eventa above the low-level IPC package.
