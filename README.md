@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/kirie-logo-color.svg" alt="Kirie logo" width="128">
+</p>
+
 # godot-kirie
 
 Kirie is an experimental Godot application framework built around an embeddable
