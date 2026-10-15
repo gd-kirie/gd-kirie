@@ -12,7 +12,6 @@ python = "3.13.13"
 uv = "0.11.7"
 java = "temurin-21.0.10+7.0.LTS"
 dotnet = "10.0.300"
-rust = { version = "1.99.0", components = ["clippy", "rustfmt"] }
 ktlint = "1.8.0"
 swiftlint = { version = "0.62.2", os = ["macos", "linux"] }
 pnpm = "12"
@@ -46,10 +45,6 @@ run = "./scripts/run-build-task.js buildIosXcframework"
 description = "Build iOS debug xcframework artifact"
 run = "./scripts/run-build-task.js buildIosDebugXcframework"
 
-[tasks."build:tray-native"]
-description = "Build the Tray GDExtension for the current desktop platform"
-run = "node ./scripts/build-tray-native.ts"
-
 [tasks."install:godot-cef"]
 description = "Install pinned Godot CEF desktop addon into a Godot project"
 depends = ["build:packages"]
@@ -73,7 +68,7 @@ run = "./scripts/run-build-task.js checkAddonPack"
 
 [tasks.format]
 description = "Format all covered source files"
-run = "pnpm run format:eslint && mise run format:kotlin && mise run format:swift && mise run format:rust && mise run format:csharp"
+run = "pnpm run format:eslint && mise run format:kotlin && mise run format:swift && mise run format:csharp"
 
 [tasks."format:eslint"]
 description = "Format TypeScript, JSON, CSS, and HTML files"
@@ -87,17 +82,13 @@ run = "ktlint --format \"packages/kirie/native/android/**/*.kt\" \"packages/kiri
 description = "Format Swift files"
 run = "swiftlint lint --fix --format --no-cache --config .swiftlint.yml"
 
-[tasks."format:rust"]
-description = "Format Rust files"
-run = "cargo fmt --manifest-path packages/GdKirie.Tray/native/Cargo.toml"
-
 [tasks."format:csharp"]
 description = "Format C# files"
 run = "dotnet format style -v diag"
 
 [tasks.lint]
 description = "Run all linters"
-run = "pnpm -C packages/kirie run generate:godot && pnpm run lint:eslint && mise run lint:kotlin && mise run lint:swift && mise run lint:rust && mise run lint:csharp"
+run = "pnpm -C packages/kirie run generate:godot && pnpm run lint:eslint && mise run lint:kotlin && mise run lint:swift && mise run lint:csharp"
 
 [tasks."lint:eslint"]
 description = "Lint TypeScript, JSON, CSS, and HTML files"
@@ -111,20 +102,15 @@ run = "ktlint \"packages/kirie/native/android/**/*.kt\" \"packages/kirie/native/
 description = "Lint Swift files"
 run = "swiftlint lint --strict --no-cache --config .swiftlint.yml"
 
-[tasks."lint:rust"]
-description = "Lint Rust files"
-run = "cargo clippy --manifest-path packages/GdKirie.Tray/native/Cargo.toml --all-targets --locked -- -D warnings"
-
 [tasks."lint:csharp"]
 description = "Lint C# files"
 run = "dotnet format analyzers -v diag"
 
 [tasks."pack:nuget"]
-description = "Pack the .NET Eventa adapter, Platform, and Tray NuGet packages"
+description = "Pack the .NET Eventa adapter and Platform NuGet packages"
 run = [
   "dotnet pack packages/GdKirie.EventaAdapter/GdKirie.EventaAdapter.csproj --configuration Release",
   "dotnet pack packages/GdKirie.Platform/GdKirie.Platform.csproj --configuration Release",
-  "dotnet pack packages/GdKirie.Tray/GdKirie.Tray.csproj --configuration Release",
 ]
 
 [tasks.release]
@@ -134,10 +120,6 @@ run = "pnpm run release"
 [tasks."test:dotnet"]
 description = "Run .NET tests"
 run = "dotnet test --solution GdKirie.slnx --configuration Release"
-
-[tasks."test:tray-native"]
-description = "Run Tray native tests"
-run = "cargo test --manifest-path packages/GdKirie.Tray/native/Cargo.toml --locked"
 
 [tasks."test:swift"]
 description = "Run Swift unit tests"

@@ -152,6 +152,9 @@ The choice is recorded in
 
 ## Tray plugin
 
+The Tray packages and native extension are maintained in
+[kirie-plugins](https://github.com/gd-kirie/kirie-plugins).
+
 System trays and native popup menus belong to the optional Tray plugin. Its
 dependency direction is:
 
@@ -197,6 +200,9 @@ with the existing `window.kirie.platform` value and TypeScript
 low-level WebView backend and are not capability objects.
 
 ## Notifications plugin
+
+The Notifications packages and export adapter are maintained in
+[kirie-plugins](https://github.com/gd-kirie/kirie-plugins).
 
 `@gd-kirie/notifications` and `GdKirie.Notifications` borrow the application's
 existing Eventa context and expose immediate notifications with live click
@@ -776,16 +782,15 @@ iOS plugin and Apple embedded platform export APIs.
 
 GitHub Release addon publishing is configured through the `Addon Release`
 workflow. Keep it separate from npm package publishing. The npm packages contain
-browser APIs, CLI tools, and bundled addons. `@gd-kirie/tray` includes its
-desktop GDExtension, while `@gd-kirie/notifications` includes its Godot export
-plugin.
+browser APIs, CLI tools, and bundled addons. Optional Tray and Notifications
+packages are built and published from kirie-plugins.
 
 The release artifact shape and workflow modes live in
 [Addon Release](./addon-release.md).
 
-The .NET Eventa adapter, Platform host, Tray host, and Notifications host use a
-separate NuGet release lane. Keep them separate from addon zip publishing and
-npm publishing.
+The .NET Eventa adapter and Platform host use a separate NuGet release lane.
+The Tray and Notifications hosts are published from kirie-plugins.
+Keep NuGet publishing separate from addon zip publishing and npm publishing.
 
 ## IPC and adapter split
 

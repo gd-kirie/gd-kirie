@@ -26,6 +26,9 @@ url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stabl
 [tools.godot."platforms.macos-x64"]
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_macos.universal.zip"
 
+[tools.godot."platforms.windows-arm64"]
+url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_windows_arm64.zip"
+
 [tools.godot."platforms.windows-x64"]
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_win64.zip"
 
@@ -57,6 +60,10 @@ url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0
 checksum = "sha256:7484d5d4cdb02fc17a842ab86ddac2524a0365066659c46b2e258c64152379cd"
 url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_mac_hotspot_21.0.10_7.tar.gz"
 
+[tools.java."platforms.windows-arm64"]
+checksum = "sha256:0e1f016cd74c05ab4fe2b2a839f6439e3dc516c9bb201bfb75d12b3fb2a63334"
+url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_aarch64_windows_hotspot_21.0.10_7.zip"
+
 [tools.java."platforms.windows-x64"]
 checksum = "sha256:08cae782814f027f8b159d6b68823f0f87422eb475c1a0ea1abc7a4357aaf11f"
 url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.10_7.zip"
@@ -68,30 +75,42 @@ backend = "aqua:pinterest/ktlint"
 [tools.ktlint."platforms.linux-arm64"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [tools.ktlint."platforms.linux-arm64-musl"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [tools.ktlint."platforms.linux-x64"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [tools.ktlint."platforms.linux-x64-musl"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [tools.ktlint."platforms.macos-arm64"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [tools.ktlint."platforms.macos-x64"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
+
+[tools.ktlint."platforms.windows-arm64"]
+checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
+url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [tools.ktlint."platforms.windows-x64"]
 checksum = "sha256:3722801dd119b96a2fbeda0b9d66f173994f249998c87bcf2274b51977aa8f77"
 url = "https://github.com/ktlint/ktlint/releases/download/1.8.0/ktlint-1.8.0.zip"
+url_api = "https://api.github.com/repos/ktlint/ktlint/releases/assets/316074523"
 
 [[tools.node]]
 version = "24.15.0"
@@ -169,6 +188,12 @@ url = "https://github.com/pnpm/pnpm/releases/download/v12.3.4/pnpm-darwin-x64.ta
 url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/544431958"
 provenance = "github-attestations"
 
+[tools.pnpm."platforms.windows-arm64"]
+checksum = "sha256:410872aaccbe38b36e2c1d648aa8d2964b42c71708ccf38f55652e92675aad85"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.3.4/pnpm-win32-arm64.zip"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/544431961"
+provenance = "github-attestations"
+
 [tools.pnpm."platforms.windows-x64"]
 checksum = "sha256:ada0d8b62adff9884686d473e27d0f57ef2ca4a044d23a7c6782af86b9a8a6cf"
 url = "https://github.com/pnpm/pnpm/releases/download/v12.3.4/pnpm-win32-x64.zip"
@@ -209,17 +234,15 @@ checksum = "sha256:90761d4827285280b38e8d8ecd83f08b838f03730b891c6714e584fb0a533
 url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260602/cpython-3.13.13+20260602-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
+[tools.python."platforms.windows-arm64"]
+checksum = "sha256:e6aad12a6b53595391b5f7ef01382f58d320ed14624acee75dbac84b71b1120a"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260602/cpython-3.13.13+20260602-aarch64-pc-windows-msvc-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
 [tools.python."platforms.windows-x64"]
 checksum = "sha256:747876f7d97b228faccf680022de675ade6416f3e8e383efeb4976fd22a122f7"
 url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260602/cpython-3.13.13+20260602-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
 provenance = "github-attestations"
-
-[[tools.rust]]
-version = "1.99.0"
-backend = "core:rust"
-
-[tools.rust.options]
-components = "clippy,rustfmt"
 
 [[tools.swiftlint]]
 version = "0.62.2"
@@ -228,62 +251,81 @@ backend = "aqua:realm/SwiftLint"
 [tools.swiftlint."platforms.linux-arm64"]
 checksum = "sha256:a90ea84be3675e787c5784e46dcb5d173a3bf0b35b4f4e9e455d7b8eb728947e"
 url = "https://github.com/realm/SwiftLint/releases/download/0.62.2/swiftlint_linux_arm64.zip"
+url_api = "https://api.github.com/repos/realm/SwiftLint/releases/assets/309770383"
 
 [tools.swiftlint."platforms.linux-arm64-musl"]
 checksum = "sha256:a90ea84be3675e787c5784e46dcb5d173a3bf0b35b4f4e9e455d7b8eb728947e"
 url = "https://github.com/realm/SwiftLint/releases/download/0.62.2/swiftlint_linux_arm64.zip"
+url_api = "https://api.github.com/repos/realm/SwiftLint/releases/assets/309770383"
 
 [tools.swiftlint."platforms.linux-x64"]
 checksum = "sha256:d44e21c234cded72e1735abb32e8c641fadaf60270ef49ea6abf979a47a31deb"
 url = "https://github.com/realm/SwiftLint/releases/download/0.62.2/swiftlint_linux_amd64.zip"
+url_api = "https://api.github.com/repos/realm/SwiftLint/releases/assets/309770374"
 
 [tools.swiftlint."platforms.linux-x64-musl"]
 checksum = "sha256:d44e21c234cded72e1735abb32e8c641fadaf60270ef49ea6abf979a47a31deb"
 url = "https://github.com/realm/SwiftLint/releases/download/0.62.2/swiftlint_linux_amd64.zip"
+url_api = "https://api.github.com/repos/realm/SwiftLint/releases/assets/309770374"
 
 [tools.swiftlint."platforms.macos-arm64"]
 checksum = "sha256:79625bece2716395d955d34a5993e6c948ef57d0256abe5538aaab82f2ad6b68"
 url = "https://github.com/realm/SwiftLint/releases/download/0.62.2/portable_swiftlint.zip"
+url_api = "https://api.github.com/repos/realm/SwiftLint/releases/assets/309770381"
 
 [tools.swiftlint."platforms.macos-x64"]
 checksum = "sha256:79625bece2716395d955d34a5993e6c948ef57d0256abe5538aaab82f2ad6b68"
 url = "https://github.com/realm/SwiftLint/releases/download/0.62.2/portable_swiftlint.zip"
+url_api = "https://api.github.com/repos/realm/SwiftLint/releases/assets/309770381"
 
 [[tools.uv]]
 version = "0.11.7"
 backend = "aqua:astral-sh/uv"
 
 [tools.uv."platforms.linux-arm64"]
-checksum = "sha256:46647dc16cbb7d6700f762fdd7a67d220abe18570914732bc310adc91308d272"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-aarch64-unknown-linux-musl.tar.gz"
+checksum = "sha256:f2ee1cde9aabb4c6e43bd3f341dadaf42189a54e001e521346dc31547310e284"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306019"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-arm64-musl"]
 checksum = "sha256:46647dc16cbb7d6700f762fdd7a67d220abe18570914732bc310adc91308d272"
 url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306022"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64"]
-checksum = "sha256:64ddb5f1087649e3f75aa50d139aa4f36ddde728a5295a141e0fa9697bfb7b0f"
-url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-x86_64-unknown-linux-musl.tar.gz"
+checksum = "sha256:6681d691eb7f9c00ac6a3af54252f7ab29ae72f0c8f95bdc7f9d1401c23ea868"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306063"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64-musl"]
 checksum = "sha256:64ddb5f1087649e3f75aa50d139aa4f36ddde728a5295a141e0fa9697bfb7b0f"
 url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306071"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-arm64"]
 checksum = "sha256:66e37d91f839e12481d7b932a1eccbfe732560f42c1cfb89faddfa2454534ba8"
 url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306011"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-x64"]
 checksum = "sha256:0a4bc8fcde4974ea3560be21772aeecab600a6f43fa6e58169f9fa7b3b71d302"
 url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306059"
+provenance = "github-attestations"
+
+[tools.uv."platforms.windows-arm64"]
+checksum = "sha256:fe0c7815acf4fc45f8a5eff58ed3cf7ae2e15c3cf1dceadbd10c816ec1690cc1"
+url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306062"
 provenance = "github-attestations"
 
 [tools.uv."platforms.windows-x64"]
 checksum = "sha256:fe0c7815acf4fc45f8a5eff58ed3cf7ae2e15c3cf1dceadbd10c816ec1690cc1"
 url = "https://github.com/astral-sh/uv/releases/download/0.11.7/uv-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/397306062"
 provenance = "github-attestations"
