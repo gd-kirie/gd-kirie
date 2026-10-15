@@ -28,6 +28,7 @@ tests/integration/scripts/vidot/
 tests/integration/src/_typings/
 tests/integration/tstogd_modules/
 packages/kirie/addon/addons/kirie/*.gd
+packages/kirie/addon/addons/kirie/iframe_host.js
 *.apk
 *.aab
 *.aar

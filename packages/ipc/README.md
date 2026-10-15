@@ -21,8 +21,9 @@ const unsubscribe = onTextReceived((message) => {
 unsubscribe();
 ```
 
-The package selects the native transport from `window.kirie.platform`, which is
-injected by Kirie before page scripts run.
+The package selects native transports from `window.kirie.platform`.
+Native backends inject this property before page scripts run.
+On Web, the first API call discovers the iframe port and sets the platform property.
 
 Android exposes three channels backed by CBOR packets and AndroidX WebKit
 ArrayBuffer messages. iOS exposes the same lane API over WKWebView script
@@ -36,6 +37,46 @@ message:
 The structured data subset is limited to `null`, booleans, numbers, strings,
 arrays, and objects with string keys. JSON message shapes are a caller or
 adapter convention and should be sent with `sendText()` when needed.
+
+## Web iframe transport
+
+On Web exports, the package discovers its same-origin parent.
+The first API call sets `window.kirie.platform` to `{ os: "web", backend: "iframe" }`.
+These values extend `KiriePlatformOs` and `KiriePlatformBackend`.
+Each receive function returns an unsubscribe function that removes its message listener.
+After the iframe document loads, the host transfers one end of a browser
+`MessageChannel`. The iframe reports readiness through that port. Readiness
+does not depend on lane subscriptions, so
+a text-only adapter such as Eventa does not need empty binary or data handlers.
+Subscribe only to the lanes the page consumes:
+
+```ts
+import { onTextReceived, sendText } from "@gd-kirie/ipc";
+
+const stopText = onTextReceived(sendText);
+
+window.addEventListener("pagehide", () => {
+  stopText();
+}, { once: true });
+```
+
+Web sends text strings, binary ArrayBuffers, and data values through the
+transferred `MessagePort` and
+[structured clone](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm).
+It does not serialize payloads as JSON or CBOR.
+Binary API arguments and callbacks still use `Uint8Array`.
+The transport copies the selected byte range and keeps the sender's buffer intact.
+Data accepts only the documented cross-platform subset.
+It rejects custom prototypes, cycles, non-finite numbers, unsafe integers, and nesting beyond 64 container levels.
+
+The host uses an exact target origin when it transfers the port. The iframe
+accepts that port only from its same-origin parent. Later lane traffic stays on
+the private port, so Kirie does not implement another window-message router or
+channel registry. Cross-origin content and opaque origins are unsupported.
+
+`createIframeTransport(window, { origin })` exposes the transport explicitly.
+`KirieIframeConfig` and `KirieTransport` describe its configuration and API.
+The factory receives the port from its parent; it does not create or own an iframe.
 
 ## Pointer input forwarding
 

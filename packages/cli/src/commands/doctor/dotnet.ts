@@ -1,4 +1,5 @@
 import type { KirieDotnetPackageDependency } from "../../plugin/index.ts";
+import fs from "node:fs/promises";
 import path from "node:path";
 
 import { execa } from "execa";
@@ -29,6 +30,20 @@ export interface DotnetPackageOptions {
   dependency: KirieDotnetPackageDependency;
   projectDir: string;
   runDotnet?: (args: string[], cwd: string) => Promise<string>;
+}
+
+export async function hasDotnetProject(options: {
+  csproj?: string;
+  projectDir: string;
+}): Promise<boolean> {
+  if (options.csproj) {
+    return true;
+  }
+
+  const entries = await fs.readdir(options.projectDir, { withFileTypes: true });
+  return entries.some(
+    (entry) => entry.isFile() && path.extname(entry.name).toLowerCase() === ".csproj",
+  );
 }
 
 export async function getDotnetDependencyReference(

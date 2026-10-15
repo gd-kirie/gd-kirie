@@ -1,9 +1,15 @@
 import path from "node:path";
-import { exportGodotPreset, type ExportMode } from "@gd-kirie/build";
+import {
+  assertViteWebOutput,
+  copyViteWebOutput,
+  exportGodotPreset,
+  type ExportMode,
+} from "@gd-kirie/build";
 import { runBuild } from "./build.ts";
 import { loadKirieConfig, type ResolvedKirieConfig } from "./config.ts";
+import { tryExportDotnetWeb } from "./doctor/dotnet-web.ts";
 
-export type ExportPlatform = "android" | "ios";
+export type ExportPlatform = "android" | "ios" | "web";
 
 export interface ExportOptions {
   build?: boolean;
@@ -20,6 +26,7 @@ export interface ExportOptions {
 const DEFAULT_PLATFORM_PRESETS: Record<ExportPlatform, string> = {
   android: "Android",
   ios: "iOS",
+  web: "Web",
 };
 
 export async function runExport(options: ExportOptions = {}): Promise<void> {
@@ -42,11 +49,23 @@ export async function runExport(options: ExportOptions = {}): Promise<void> {
     preset,
   });
 
+  if (options.platform === "web" && await tryExportDotnetWeb({
+    build: options.build !== false,
+    config,
+    godotCommand: options.godotCommand ?? config.godot.command,
+    outputPath,
+    preset,
+    release: options.release === true,
+    userArgs: options.userArgs,
+  })) {
+    return;
+  }
+
   if (options.build !== false) {
-    await runBuild({
-      cwd: config.cwd,
-      mode: config.mode,
-    });
+    await runBuild({ cwd: config.cwd, mode: config.mode });
+  }
+  if (options.platform === "web") {
+    assertViteWebOutput(config.web.root);
   }
 
   await exportGodotPreset({
@@ -59,6 +78,9 @@ export async function runExport(options: ExportOptions = {}): Promise<void> {
     projectDir: config.godot.project,
     userArgs: options.userArgs,
   });
+  if (options.platform === "web") {
+    copyViteWebOutput({ outputDir: path.dirname(outputPath), webRoot: config.web.root });
+  }
 }
 
 export function resolveExportOutputPath(options: {
@@ -73,12 +95,13 @@ export function resolveExportOutputPath(options: {
   }
 
   const platformName = options.platform ?? options.preset.toLowerCase().replaceAll(/\W+/g, "-");
-  const extension = platformName === "android" ? "apk" : "xcodeproj";
+  const extension = platformName === "android" ? "apk" : platformName === "web" ? "html" : "xcodeproj";
+  const outputName = platformName === "web" ? "index" : options.mode;
   return path.resolve(
     options.configCwd,
     "dist",
     "kirie",
     platformName,
-    `${options.mode}.${extension}`,
+    `${outputName}.${extension}`,
   );
 }

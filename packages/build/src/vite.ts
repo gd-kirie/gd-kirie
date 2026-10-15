@@ -12,6 +12,11 @@ export interface BuildViteWebOptions {
   webRoot: string;
 }
 
+export interface CopyViteWebOutputOptions {
+  outputDir: string;
+  webRoot: string;
+}
+
 export async function buildViteWeb(options: BuildViteWebOptions): Promise<void> {
   const indexPath = path.join(options.webRoot, "index.html");
   if (!fs.existsSync(indexPath)) {
@@ -19,6 +24,39 @@ export async function buildViteWeb(options: BuildViteWebOptions): Promise<void> 
   }
 
   await build(createViteBuildConfig(options));
+}
+
+export function assertViteWebOutput(webRoot: string): void {
+  const indexPath = path.join(webRoot, "dist", "index.html");
+  if (!fs.existsSync(indexPath)) {
+    throw new Error(
+      `Kirie Web export requires ${indexPath}. Run kirie build web or remove --no-build.`,
+    );
+  }
+}
+
+export function copyViteWebOutput(options: CopyViteWebOutputOptions): void {
+  assertViteWebOutput(options.webRoot);
+
+  const sourceDir = path.resolve(options.webRoot, "dist");
+  const targetDir = path.resolve(options.outputDir, "src-web", "dist");
+  if (pathContains(sourceDir, targetDir) || pathContains(targetDir, sourceDir)) {
+    throw new Error(
+      `Kirie Web export source and target directories cannot contain each other: ${sourceDir} and ${targetDir}.`,
+    );
+  }
+
+  fs.rmSync(targetDir, { force: true, recursive: true });
+  fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+  fs.cpSync(sourceDir, targetDir, { recursive: true });
+}
+
+function pathContains(parent: string, child: string): boolean {
+  const relative = path.relative(parent, child);
+  return (
+    relative === "" ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))
+  );
 }
 
 export function createViteBuildConfig(options: BuildViteWebOptions): InlineConfig {
