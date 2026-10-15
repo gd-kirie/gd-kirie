@@ -3,9 +3,9 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runBuild, runBuildDotnet, runBuildWeb } from "./build.ts";
-import { createBasicKirieCliProjectTracker, installKirieConfigFixture } from "./test-project.ts";
+import { createCliProjectTracker, installKirieConfigFixture } from "./test-project.ts";
 
-const projects = createBasicKirieCliProjectTracker("kirie-cli-build-");
+const projects = createCliProjectTracker("kirie-cli-build-");
 
 afterEach(async () => {
   await projects.cleanup();
