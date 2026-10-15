@@ -122,7 +122,10 @@ pnpm kirie export web
 ```
 
 The default entry is `dist/kirie/web/index.html`; serve its containing directory
-so the mapped `src-web/dist/index.html` remains on the same origin. Godot 4.7.2
+so the mapped `src-web/dist/index.html` remains on the same origin. The
+templates use WebAssembly threads, so the server must also send
+`Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`. Godot 4.7.2
 does not officially support .NET Web export. For C# projects, run
 `pnpm kirie doctor --fix web` before the export. The fixer installs the
 experimental templates, packages, and .NET `wasm-tools` workload. It does not

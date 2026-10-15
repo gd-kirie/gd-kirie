@@ -27,3 +27,8 @@ Godot 4.7.2 does not officially support .NET Web export. The templates are an
 experimental preview built from upstream Draft PR #106125. The fixer installs
 the templates and .NET workload. It does not install another Godot editor or
 write machine-local template paths to the project.
+
+The templates use WebAssembly threads, so the page must be cross-origin
+isolated. `kirie dev web` sends `Cross-Origin-Opener-Policy: same-origin` and
+`Cross-Origin-Embedder-Policy: require-corp`; serve exported output with the
+same headers.

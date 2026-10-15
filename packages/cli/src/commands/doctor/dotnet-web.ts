@@ -123,13 +123,13 @@ interface Manifest {
 const DOTNET_WEB_RELEASE: DotnetWebRelease = {
   asset: {
     archive: "godot-dotnet-web-templates-4.7.2-net10.zip",
-    sha256: "76616cdbb253c9f923f3b3beb10240ff5107d425ebfa2f054c0c5b6e78444729",
-    url: "https://github.com/gd-kirie/godot-dotnet-web-templates/releases/download/4.7.2-dotnet10-preview.1/godot-dotnet-web-templates-4.7.2-net10.zip",
+    sha256: "a2ab8cb7dcb11f858a4a0351b54e3976458b1a3ca3ec5250158471719c7e2366",
+    url: "https://github.com/gd-kirie/godot-dotnet-web-templates/releases/download/4.7.2-dotnet10-preview.2/godot-dotnet-web-templates-4.7.2-net10.zip",
   },
   draftCommit: "aa1f5ffe8321bc57155f606197b5aa93dd9e662c",
   godotCommit: "ed1daf0bf001b61586d9930840f2f1394092c079",
   godotVersion: "4.7.2.stable.mono",
-  tag: "4.7.2-dotnet10-preview.1",
+  tag: "4.7.2-dotnet10-preview.2",
   targetFramework: "net10.0",
 };
 
@@ -364,7 +364,7 @@ export async function assembleDotnetWebExport(options: AssembleOptions): Promise
     const config = {
       args: [],
       canvasResizePolicy: 2,
-      emscriptenPoolSize: 8,
+      emscriptenPoolSize: 24,
       ensureCrossOriginIsolationHeaders: true,
       executable: outputBase,
       experimentalVK: false,
@@ -381,7 +381,7 @@ export async function assembleDotnetWebExport(options: AssembleOptions): Promise
       .replaceAll("$GODOT_SPLASH", "data:image/gif;base64,R0lGODlhAQABAAAAACw=")
       .replaceAll("$GODOT_URL", `${outputBase}.js`)
       .replaceAll("$GODOT_CONFIG", JSON.stringify(config))
-      .replaceAll("$GODOT_THREADS_ENABLED", "false");
+      .replaceAll("$GODOT_THREADS_ENABLED", "true");
     await fs.writeFile(options.outputPath, html);
   } finally {
     await fs.rm(temporaryDir, { force: true, recursive: true });
@@ -512,8 +512,10 @@ func _init() -> void:
         var section := "preset.%d" % index
         if config.get_value(section, "platform", "") == "Web":
             var options_section := "%s.options" % section
-            config.set_value(options_section, "variant/thread_support", false)
+            config.set_value(options_section, "variant/thread_support", true)
             config.set_value(options_section, "variant/extensions_support", false)
+            config.set_value(options_section, "threads/emscripten_pool_size", 24)
+            config.set_value(options_section, "threads/godot_pool_size", 4)
             if config.save(preset_path) != OK:
                 push_error("Could not save export_presets.cfg.")
                 quit(2)

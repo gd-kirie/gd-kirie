@@ -839,7 +839,9 @@ C# Web support uses the experimental templates from
 `gd-kirie/godot-dotnet-web-templates`. `kirie doctor --fix web` installs and
 validates them without installing another Godot editor or writing machine-local
 paths into the project. The template
-repository owns their build and release workflow.
+repository owns their build and release workflow. The templates use WebAssembly
+threads, so served Web content must be cross-origin isolated; `kirie dev web`
+supplies the isolation headers for development.
 
 ### Data lane type mapping
 
