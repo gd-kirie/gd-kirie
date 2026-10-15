@@ -1,8 +1,0 @@
-{
-  "tsDir": "src-godot/scripts",
-  "gdDir": "src-godot/generated",
-  "typingsDir": "src-godot/_typings",
-  "tsconfig": "tsconfig.json",
-  "scenesDir": "src-godot/scripts",
-  "exclude": ["addons/**"]
-}

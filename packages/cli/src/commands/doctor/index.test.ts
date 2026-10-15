@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ResolvedKirieConfig, resolveKirieConfig } from "../config.ts";
 import { parseDoctorTarget } from "../index.ts";
-import { createBasicKirieCliProjectTracker } from "../test-project.ts";
+import { createCliProjectTracker } from "../test-project.ts";
 import {
   checkAndroidSdk,
   checkGodotCommand,
@@ -15,7 +15,7 @@ import {
   runDoctor,
 } from "./index.ts";
 
-const projects = createBasicKirieCliProjectTracker("kirie-cli-doctor-");
+const projects = createCliProjectTracker("kirie-cli-doctor-");
 const tempDirs: string[] = [];
 const bundledUrl = pathToFileURL(os.tmpdir()).href;
 const requiredAddon: KirieGodotAddonDependency = {

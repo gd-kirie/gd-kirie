@@ -7,7 +7,6 @@
 node_modules/
 .pnpm-store/
 packages/cli/addon/
-packages/tray/addon/
 # APM resolves these directories from apm.yml and apm.lock.yaml.
 apm_modules/
 /.agents/skills/*
@@ -24,20 +23,15 @@ obj/
 godot/
 tests/integration/web/
 **/addons/godot_cef/
-examples/basic-kirie-cli/src-godot/generated/
-examples/basic-kirie-cli/src-godot/_typings/
 packages/*/src-godot/_typings/
 tests/integration/scripts/vidot/
 tests/integration/src/_typings/
 tests/integration/tstogd_modules/
 packages/kirie/addon/addons/kirie/*.gd
-packages/notifications/addon/kirie_notifications/*.gd
 *.apk
 *.aab
 *.aar
 *.xcframework
 
-packages/GdKirie.Tray/native/artifacts/
-packages/GdKirie.Tray/native/target/
 
 .build_version

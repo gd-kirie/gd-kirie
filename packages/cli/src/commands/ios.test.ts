@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { exportIosApp } from "./ios.ts";
-import { createBasicKirieCliProjectTracker } from "./test-project.ts";
+import { createCliProjectTracker } from "./test-project.ts";
 
-const projects = createBasicKirieCliProjectTracker("kirie-cli-ios-");
+const projects = createCliProjectTracker("kirie-cli-ios-");
 
 afterEach(async () => {
   await projects.cleanup();

@@ -30,7 +30,7 @@ jobs:
         uses: jdx/mise-action@v3
         with:
           install: true
-          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet rust
+          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet
           cache: true
 
       - name: Repair empty NuGet configuration
@@ -72,7 +72,7 @@ jobs:
         uses: jdx/mise-action@v3
         with:
           install: true
-          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet rust
+          install_args: --locked node pnpm python uv java ktlint swiftlint dotnet
           cache: true
 
       - name: Repair empty NuGet configuration
