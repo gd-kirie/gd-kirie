@@ -126,13 +126,9 @@ example, and regression-test areas:
   Eventa contract
 - [`GdKirie.Notifications`](packages/GdKirie.Notifications/README.md): Godot
   notification host and native platform adapters
-- `examples/basic-ipc`: beginner-friendly demo project for the raw IPC flow
-- `examples/basic-kirie-cli`: beginner-friendly demo project for the Kirie CLI workflow
-- `examples/basic-platform`: desktop window and shortcut capabilities
-- [`examples/tray`](examples/tray/README.md): desktop system tray example
-- [`examples/notifications`](examples/notifications/README.md): immediate
-  notifications and activation feedback
-- `examples/eventa-csharp`: beginner-friendly demo project for Godot C# Eventa adapter usage
+- [`kirie-examples`](https://github.com/gd-kirie/kirie-examples): runnable examples
+  for raw IPC, CLI workflows, Platform, Tray, notifications, C# Eventa, and
+  native-hosted Godot
 - `tests/integration`: exported-app platform integration tests
 - `scripts`: repository build, test, and release tasks
 - `docs`: project notes and design decisions

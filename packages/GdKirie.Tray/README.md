@@ -9,4 +9,4 @@ The native tray runs in the `addons/kirie_tray` GDExtension. The
 host. Godot loads and exports the platform library from the addon.
 
 The host uses the application's Eventa context. See the
-[`tray` example](../../examples/tray/README.md) for the project setup.
+[`tray` example](https://github.com/gd-kirie/kirie-examples/blob/main/examples/tray/README.md) for the project setup.

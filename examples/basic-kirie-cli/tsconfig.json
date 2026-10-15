@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "noLib": true,
-    "strict": true,
-    "noEmit": true,
-    "types": []
-  },
-  "include": ["node_modules/typescript-to-gdscript/typings", "src-godot/scripts/**/*.ts"]
-}

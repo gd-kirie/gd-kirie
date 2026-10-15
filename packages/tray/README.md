@@ -27,4 +27,4 @@ library for the current platform and includes it in application exports.
 macOS, Windows, and Linux support x64 and Arm64. Linux requires a
 StatusNotifierItem host.
 
-See the [`tray` example](../../examples/tray/README.md) for a complete setup.
+See the [`tray` example](https://github.com/gd-kirie/kirie-examples/blob/main/examples/tray/README.md) for a complete setup.

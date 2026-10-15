@@ -1,12 +1,4 @@
 packages:
-  - "examples/basic-ipc/src-web"
-  - "examples/basic-platform"
-  - "examples/tray"
-  - "examples/notifications"
-  - "examples/basic-kirie-cli"
-  - "examples/eventa-csharp/src-web"
-  - "examples/basic-host-app-embedded"
-  - "examples/basic-host-app-embedded/src-web"
   - "packages/*"
   - "scripts"
   - "tests/integration"

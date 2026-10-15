@@ -97,7 +97,7 @@ run = "dotnet format style -v diag"
 
 [tasks.lint]
 description = "Run all linters"
-run = "pnpm -C packages/kirie run generate:godot && pnpm -C examples/basic-kirie-cli run generate:godot && pnpm run lint:eslint && mise run lint:kotlin && mise run lint:swift && mise run lint:rust && mise run lint:csharp"
+run = "pnpm -C packages/kirie run generate:godot && pnpm run lint:eslint && mise run lint:kotlin && mise run lint:swift && mise run lint:rust && mise run lint:csharp"
 
 [tasks."lint:eslint"]
 description = "Lint TypeScript, JSON, CSS, and HTML files"
@@ -130,18 +130,6 @@ run = [
 [tasks.release]
 description = "Run the package release flow"
 run = "pnpm run release"
-
-[tasks."run:example"]
-description = "Build, install, and launch an example on Android or iOS"
-depends = ["build:packages"]
-usage = '''
-arg "<platform>" help="Target platform" {
-  choices "android" "ios"
-}
-arg "<example_name>" help="Example project name"
-arg "[device_id]" help="Optional target device ID; omit for the iOS simulator"
-'''
-run = './scripts/run-build-task.js runExample "${usage_platform?}" "${usage_example_name?}" "${usage_device_id}"'
 
 [tasks."test:dotnet"]
 description = "Run .NET tests"

@@ -676,7 +676,7 @@ target when the checksum is missing or different. The public installer command i
 pnpm kirie doctor --fix plugin:core
 ```
 
-The repository root declares `kirie` for examples and integration fixtures. Its
+The repository root declares `kirie` for integration fixtures. Its
 mise wrapper runs that root-local binary against the selected Godot project:
 
 ```sh

@@ -10,8 +10,6 @@ export default defineConfig({
   files: [
     "package.json",
     "packages/*/package.json",
-    "examples/*/package.json",
-    "examples/*/src-web/package.json",
     "tests/*/src-web/package.json",
   ],
   execute: (operation) => {
