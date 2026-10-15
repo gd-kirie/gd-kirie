@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createWebDevHostUrl, resolveAndroidReverseWebUrl, runDev } from "./dev.ts";
 import { createKirieDevLaunchOptions, runIosSimulator } from "./run.ts";
 import {
-  createBasicKirieCliProjectTracker,
+  createCliProjectTracker,
   installGodotCefFixture,
   installKirieConfigFixture,
   installProjectFixture,
@@ -17,7 +17,7 @@ const FAKE_GODOT_INVOCATIONS_FILE = "godot-invocations.json";
 const FAKE_ADB_INVOCATIONS_FILE = "adb-invocations.json";
 const FAKE_XCRUN_INVOCATIONS_FILE = "xcrun-invocations.json";
 const cliPath = fileURLToPath(import.meta.resolve("../cli.ts"));
-const projects = createBasicKirieCliProjectTracker("kirie-cli-dev-");
+const projects = createCliProjectTracker("kirie-cli-dev-");
 
 interface AdbInvocation {
   argv: string[];
@@ -262,7 +262,7 @@ describe("runDev", () => {
       "--level",
       "info",
       "--predicate",
-      "subsystem == \"ai.moeru.kirie.examples.basic-kirie-cli\"",
+      "subsystem == \"org.gd-kirie.cli-test\"",
     ]);
 
     expect(launchRun?.argv.slice(0, 6)).toEqual([
@@ -271,7 +271,7 @@ describe("runDev", () => {
       "--console",
       "--terminate-running-process",
       "booted",
-      "ai.moeru.kirie.examples.basic-kirie-cli",
+      "org.gd-kirie.cli-test",
     ]);
     expect(launchRun?.argv).toContain("--kirie-dev=1");
     expect(launchRun?.argv).toContain("--kirie-web-url=http://127.0.0.1:5173/");

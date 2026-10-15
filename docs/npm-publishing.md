@@ -4,8 +4,9 @@ This repository publishes browser-side npm packages from GitHub Actions using
 npm trusted publishing. The workflow avoids long-lived npm write tokens and
 lets npm issue short-lived publish credentials through GitHub Actions OIDC.
 
-The Tray npm package also includes its desktop GDExtension. This flow is
-separate from the core addon zip and the NuGet publishing lane for .NET hosts.
+This flow is separate from the core addon zip and the NuGet publishing lane
+for .NET hosts. Tray and Notifications are published from
+[kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/npm-publishing.md).
 
 ## Current Packages
 
@@ -13,10 +14,6 @@ separate from the core addon zip and the NuGet publishing lane for .NET hosts.
 - `@gd-kirie/ipc-eventa` is published from `packages/ipc-eventa`.
 - `@gd-kirie/platform` is published from
   [`packages/platform`](../packages/platform/README.md).
-- `@gd-kirie/tray` is published from
-  [`packages/tray`](../packages/tray/README.md), including `addons/kirie_tray`.
-- `@gd-kirie/notifications` is published from
-  [`packages/notifications`](../packages/notifications/README.md).
 - `@gd-kirie/build` is published from `packages/build` as a public
   programmatic build and export API package.
 - `@gd-kirie/vitest` is the ViDot launch adapter for desktop, Android, and iOS
@@ -31,7 +28,7 @@ depend on the CLI.
 
 The npm organization and package scope is `gd-kirie`; public JavaScript
 packages include `@gd-kirie/ipc`, `@gd-kirie/ipc-eventa`,
-`@gd-kirie/platform`, `@gd-kirie/tray`, `@gd-kirie/notifications`,
+`@gd-kirie/platform`,
 `@gd-kirie/build`, and `@gd-kirie/vitest`. The unscoped `kirie` package
 publishes the CLI.
 
@@ -74,26 +71,6 @@ pnpm rewrites them to published version ranges when packing or publishing.
 
 Manual `workflow_dispatch` runs build and npm publish dry-run validation only.
 Actual publishing is restricted to pushed release tags.
-
-## Tray Native Libraries
-
-The npm workflow builds the Tray GDExtension on macOS, Windows, and Linux
-runners for x64 and Arm64. It downloads all six libraries before the package
-build. Before publication, it checks that the addon contains all six libraries.
-
-For local development, build the current host's native library before the npm
-packages:
-
-```sh
-mise run build:tray-native
-mise run build:packages
-```
-
-The native task stages libraries under
-`packages/GdKirie.Tray/native/artifacts/<rid>/`. The Tray package build copies
-available libraries into `packages/tray/addon/kirie_tray/bin/<rid>/`. It also
-generates addon version metadata from the npm package version. The staged
-addon and Cargo output are generated files that Git ignores.
 
 ## References
 

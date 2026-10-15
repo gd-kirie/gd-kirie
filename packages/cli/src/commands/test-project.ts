@@ -2,31 +2,23 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const basicKirieCliExample = fileURLToPath(
-  import.meta.resolve("../../../../examples/basic-kirie-cli"),
-);
 const cliTestFixturesDir = fileURLToPath(import.meta.resolve("../../test-fixtures"));
+const kirieAddonDir = fileURLToPath(import.meta.resolve("../../../kirie/addon/addons/kirie"));
 const repositoryTmpDir = fileURLToPath(import.meta.resolve("../../../../.tmp"));
-const ignoredExampleCopyRoots = [".godot", "addons/godot_cef", "node_modules", "src-web/dist"];
 const godotCefSha256 = "51adbd1c4bae7dc53c6d64226ecce3cdefedf71a69f86ccb0f8f3db4d978c838";
 
-export async function copyBasicKirieCliExample(prefix: string): Promise<string> {
+async function copyCliProject(prefix: string): Promise<string> {
   await fs.mkdir(repositoryTmpDir, { recursive: true });
   const project = await fs.mkdtemp(path.join(repositoryTmpDir, prefix));
-  await fs.cp(basicKirieCliExample, project, {
-    filter: shouldCopyExamplePath,
+  await fs.cp(path.join(cliTestFixturesDir, "project"), project, {
     recursive: true,
   });
-  await fs.symlink(
-    path.join(basicKirieCliExample, "node_modules"),
-    path.join(project, "node_modules"),
-    "dir",
-  );
+  await fs.cp(kirieAddonDir, path.join(project, "addons", "kirie"), { recursive: true });
 
   return project;
 }
 
-export function createBasicKirieCliProjectTracker(prefix: string): {
+export function createCliProjectTracker(prefix: string): {
   cleanup: () => Promise<void>;
   copy: () => Promise<string>;
 } {
@@ -34,7 +26,7 @@ export function createBasicKirieCliProjectTracker(prefix: string): {
 
   return {
     async copy() {
-      const project = await copyBasicKirieCliExample(prefix);
+      const project = await copyCliProject(prefix);
       projects.push(project);
       return project;
     },
@@ -69,16 +61,4 @@ export async function installProjectFixture(
   outputName: string = fixtureName,
 ): Promise<void> {
   await fs.copyFile(path.join(cliTestFixturesDir, fixtureName), path.join(project, outputName));
-}
-
-function shouldCopyExamplePath(entry: string): boolean {
-  const relativePath = path.relative(basicKirieCliExample, entry).split(path.sep).join("/");
-
-  if (relativePath === "") {
-    return true;
-  }
-
-  return !ignoredExampleCopyRoots.some(
-    (ignoredRoot) => relativePath === ignoredRoot || relativePath.startsWith(`${ignoredRoot}/`),
-  );
 }

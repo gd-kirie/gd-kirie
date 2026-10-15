@@ -1,8 +1,0 @@
-{
-  "lib": true,
-  "tsDir": "src-godot",
-  "gdDir": "addon/kirie_notifications",
-  "typingsDir": "src-godot/_typings",
-  "tsconfig": "tsconfig.godot.json",
-  "disableGodotLint": true
-}

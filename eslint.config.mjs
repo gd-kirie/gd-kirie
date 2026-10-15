@@ -18,7 +18,7 @@ export default antfu(
     toml: false,
     yaml: false,
     pnpm: false,
-    ignores: ["examples/*/addons/**", "scripts/run-build-task.js"],
+    ignores: ["scripts/run-build-task.js"],
   },
   {
     files: ["**/*.{js,ts,tsx}"],
@@ -53,15 +53,9 @@ export default antfu(
     },
   },
   {
-    files: ["examples/*/src-web/src/main.ts", "packages/build/src/dotnet.ts"],
+    files: ["packages/build/src/dotnet.ts"],
     rules: {
       "no-console": "off",
-    },
-  },
-  {
-    files: ["examples/basic-host-app-embedded/src-web/src/main.ts"],
-    rules: {
-      "antfu/no-top-level-await": "off",
     },
   },
   {

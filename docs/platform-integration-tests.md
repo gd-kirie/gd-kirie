@@ -99,7 +99,7 @@ The headless suite cannot validate a visible system tray or native menu. Run
 the `tray` example on Windows, macOS, and a Linux desktop with a
 StatusNotifierItem host for icon and menu replacement, tooltip, visibility,
 activation, and cleanup acceptance. Follow the
-[`tray` example README](../examples/tray/README.md). On macOS, also confirm the
+[`tray` example README](https://github.com/gd-kirie/kirie-examples/blob/main/examples/tray/README.md). On macOS, also confirm the
 template icon in light and dark menu-bar appearances.
 
 ## Android

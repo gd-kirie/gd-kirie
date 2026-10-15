@@ -5,11 +5,11 @@ import { copyViteWebOutput } from "@gd-kirie/build";
 import { execa } from "execa";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBasicKirieCliProjectTracker, installProjectFixture } from "./test-project.ts";
+import { createCliProjectTracker, installProjectFixture } from "./test-project.ts";
 
 const FAKE_GODOT_INVOCATIONS_FILE = "godot-invocations.json";
 const cliPath = fileURLToPath(import.meta.resolve("../cli.ts"));
-const projects = createBasicKirieCliProjectTracker("kirie-cli-export-");
+const projects = createCliProjectTracker("kirie-cli-export-");
 
 afterEach(async () => {
   await projects.cleanup();

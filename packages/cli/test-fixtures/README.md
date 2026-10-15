@@ -1,5 +1,10 @@
 # CLI test fixtures
 
+`project/` contains the minimal project for CLI command tests. Tests copy it into
+the repository's `.tmp/` directory, where module resolution uses the workspace
+dependencies. The test setup also copies the Kirie addon from `packages/kirie`.
+It has no dependency on the external examples repository.
+
 These fixtures are copied into temporary Kirie projects during CLI tests. Keep
 Kirie config fixtures as real `kirie.config.ts` files instead of building
 JavaScript or TypeScript source strings inside test code.
