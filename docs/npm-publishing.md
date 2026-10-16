@@ -35,8 +35,8 @@ publishes the CLI.
 Configure trusted publishing for each public browser package on npmjs.com. These
 fields identify the GitHub repository that is allowed to publish the package:
 
-- Organization or user: `moeru-ai`
-- Repository: `godot-kirie`
+- Organization or user: `gd-kirie`
+- Repository: `gd-kirie`
 - Workflow filename: `npm-publish.yml`
 - Environment name: leave empty unless the workflow is later moved behind a
   GitHub deployment environment

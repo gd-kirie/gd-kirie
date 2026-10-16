@@ -61,8 +61,8 @@ tag ancestry check.
 Create a Trusted Publishing policy on NuGet.org for the user or organization
 that owns both packages. Configure the GitHub repository identity as:
 
-- Repository owner: `moeru-ai`
-- Repository: `godot-kirie`
+- Repository owner: `gd-kirie`
+- Repository: `gd-kirie`
 - Workflow file: `nuget-release.yml`
 - Environment: empty
 
