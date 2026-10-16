@@ -63,7 +63,8 @@ NuGet checks and fixes when the Godot project has no `.csproj`.
 
 Capabilities such as the system tray are separate plugins. Import
 `@gd-kirie/tray/plugin`, add it beside `core`, and run
-`kirie doctor --fix plugin:tray` to install its GDExtension and `GdKirie.Tray` host.
+`kirie doctor --fix plugin:tray` to install its GDExtension and
+`GdKirie.Tray.EventaAdapter`. The `GdKirie.Tray` C# SDK also works without IPC.
 
 ## Repository Development
 

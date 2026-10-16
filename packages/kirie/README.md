@@ -32,8 +32,12 @@ Run `pnpm kirie doctor --fix` to install Kirie and Godot CEF. Select
 ## C# binding
 
 `addon/addons/kirie/csharp/KirieClient.cs` exposes Kirie signals as idiomatic
-C# events while keeping Godot `Callable` usage internal. Its default constructor
-talks directly to the platform singleton:
+C# events while keeping Godot `Callable` usage internal.
+
+The wrapper derives from `RefCounted`. `Dispose()` releases its native wrapper
+object and disconnects callbacks. A borrowed `KirieNode` keeps ownership of its WebView.
+
+Its default constructor talks directly to the platform singleton:
 
 ```csharp
 private readonly KirieClient _kirie = new();

@@ -1,5 +1,5 @@
 ---
-status: "accepted"
+status: "superseded"
 date: 2026-10-12
 decision-makers: "Doji"
 consulted: "Codex"
@@ -7,6 +7,10 @@ informed: "Kirie contributors"
 ---
 
 # Load Tray through a GDExtension
+
+The API and lifecycle choices are superseded by
+[ADR-0016 in kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0016-forward-native-tray-and-menu-objects.md). The GDExtension loader
+and distribution choices remain in effect.
 
 ## Context
 
