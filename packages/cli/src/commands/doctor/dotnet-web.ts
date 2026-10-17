@@ -63,6 +63,7 @@ interface InstallOptions extends HostOptions {
 interface PublishOptions {
   configuration: "ExportDebug" | "ExportRelease";
   nugetPackagesDir: string;
+  nugetSourceDir: string;
   outputDir: string;
   projectFile: string;
   runDotnet?: (
@@ -84,10 +85,10 @@ interface PackOptions {
 }
 
 interface AssembleOptions {
-  extractArchive?: (archivePath: string, outputDir: string) => Promise<void>;
+  assemblerPath: string;
   outputPath: string;
   packPath: string;
-  projectName: string;
+  publishDir: string;
   templatePath: string;
 }
 
@@ -111,6 +112,7 @@ interface DotnetWebExportOptions {
 }
 
 interface Manifest {
+  dotnetHost?: string;
   draftCommit?: string;
   files?: Record<string, { sha256?: string; size?: number }>;
   godotCommit?: string;
@@ -123,13 +125,13 @@ interface Manifest {
 const DOTNET_WEB_RELEASE: DotnetWebRelease = {
   asset: {
     archive: "godot-dotnet-web-templates-4.7.2-net10.zip",
-    sha256: "a2ab8cb7dcb11f858a4a0351b54e3976458b1a3ca3ec5250158471719c7e2366",
-    url: "https://github.com/gd-kirie/godot-dotnet-web-templates/releases/download/4.7.2-dotnet10-preview.2/godot-dotnet-web-templates-4.7.2-net10.zip",
+    sha256: "affcedcd778a1bdade8d9804496caf99501a7d77a9832d6eb1357f33d734c22f",
+    url: "https://github.com/gd-kirie/godot-dotnet-web-templates/releases/download/4.7.2-dotnet10-preview.3/godot-dotnet-web-templates-4.7.2-net10.zip",
   },
   draftCommit: "aa1f5ffe8321bc57155f606197b5aa93dd9e662c",
   godotCommit: "ed1daf0bf001b61586d9930840f2f1394092c079",
   godotVersion: "4.7.2.stable.mono",
-  tag: "4.7.2-dotnet10-preview.2",
+  tag: "4.7.2-dotnet10-preview.3",
   targetFramework: "net10.0",
 };
 
@@ -138,6 +140,7 @@ const payloadFiles = [
   "Godot.SourceGenerators.4.7.2.nupkg",
   "GodotSharp.4.7.2.nupkg",
   "GodotSharpEditor.4.7.2.nupkg",
+  "assemble-export.py",
   "web_debug.zip",
   "web_release.zip",
 ] as const;
@@ -239,6 +242,7 @@ export async function tryExportDotnetWeb(options: DotnetWebExportOptions): Promi
     await (options.runPublish ?? publishDotnetWeb)({
       configuration: options.release ? "ExportRelease" : "ExportDebug",
       nugetPackagesDir: path.join(checked.toolchain.root, "nuget-packages"),
+      nugetSourceDir: checked.toolchain.root,
       outputDir: publishDir,
       projectFile: await resolveDotnetProjectFile(options.config),
     });
@@ -254,14 +258,14 @@ export async function tryExportDotnetWeb(options: DotnetWebExportOptions): Promi
       userArgs: options.userArgs,
     });
     await (options.runAssembly ?? assembleDotnetWebExport)({
+      assemblerPath: path.join(checked.toolchain.root, "assemble-export.py"),
       outputPath: options.outputPath,
       packPath,
-      projectName: path.basename(options.config.godot.project),
+      publishDir,
       templatePath: options.release ?
         checked.toolchain.releaseTemplatePath :
         checked.toolchain.debugTemplatePath,
     });
-    await patchDotnetWebExport(options.outputPath);
     if (options.includeWebContent !== false) {
       copyViteWebOutput({
         outputDir: path.dirname(options.outputPath),
@@ -296,6 +300,31 @@ export function resolveDotnetWebInstallDir(options: HostOptions = {}): string {
 export async function publishDotnetWeb(options: PublishOptions): Promise<void> {
   await fs.rm(options.outputDir, { force: true, recursive: true });
   await fs.mkdir(options.outputDir, { recursive: true });
+  const restoreDir = await fs.mkdtemp(path.join(os.tmpdir(), "kirie-dotnet-web-restore-"));
+  try {
+    // PackageDownload installs the local SDK before the application's SDK resolution.
+    const project = path.join(restoreDir, "packages.csproj");
+    await fs.writeFile(project, `<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <PackageDownload Include="Godot.NET.Sdk" Version="[4.7.2]" />
+    <PackageDownload Include="Godot.SourceGenerators" Version="[4.7.2]" />
+    <PackageDownload Include="GodotSharp" Version="[4.7.2]" />
+    <PackageDownload Include="GodotSharpEditor" Version="[4.7.2]" />
+  </ItemGroup>
+</Project>
+`);
+    await (options.runDotnet ?? runPublish)("dotnet", [
+      "restore",
+      project,
+      "--source",
+      options.nugetSourceDir,
+      "--packages",
+      options.nugetPackagesDir,
+    ], { cwd: restoreDir, env: process.env });
+  } finally {
+    await fs.rm(restoreDir, { force: true, recursive: true });
+  }
   await (options.runDotnet ?? runPublish)(
     "dotnet",
     [
@@ -341,64 +370,17 @@ export async function exportDotnetWebPack(options: PackOptions): Promise<void> {
 }
 
 export async function assembleDotnetWebExport(options: AssembleOptions): Promise<void> {
-  const outputDir = path.dirname(options.outputPath);
-  const outputBase = path.basename(options.outputPath, path.extname(options.outputPath));
-  const temporaryDir = await fs.mkdtemp(path.join(os.tmpdir(), "kirie-dotnet-web-template-"));
-  try {
-    await (options.extractArchive ?? extractZip)(options.templatePath, temporaryDir);
-    await fs.mkdir(outputDir, { recursive: true });
-    for (const [source, target] of [
-      ["godot.js", `${outputBase}.js`],
-      ["godot.wasm", `${outputBase}.wasm`],
-      ["godot.audio.worklet.js", `${outputBase}.audio.worklet.js`],
-      ["godot.audio.position.worklet.js", `${outputBase}.audio.position.worklet.js`],
-    ]) {
-      await fs.copyFile(path.join(temporaryDir, source), path.join(outputDir, target));
-    }
-    await fs.copyFile(options.packPath, path.join(outputDir, `${outputBase}.pck`));
-
-    const [pack, wasm] = await Promise.all([
-      fs.stat(path.join(outputDir, `${outputBase}.pck`)),
-      fs.stat(path.join(outputDir, `${outputBase}.wasm`)),
-    ]);
-    const config = {
-      args: [],
-      canvasResizePolicy: 2,
-      emscriptenPoolSize: 24,
-      ensureCrossOriginIsolationHeaders: true,
-      executable: outputBase,
-      experimentalVK: false,
-      fileSizes: { [`${outputBase}.pck`]: pack.size, [`${outputBase}.wasm`]: wasm.size },
-      focusCanvas: true,
-      gdextensionLibs: [],
-      godotPoolSize: 4,
-    };
-    const html = (await fs.readFile(path.join(temporaryDir, "godot.html"), "utf8"))
-      .replaceAll("$GODOT_PROJECT_NAME", escapeHtml(options.projectName))
-      .replaceAll("$GODOT_SPLASH_COLOR", "#242424")
-      .replaceAll("$GODOT_HEAD_INCLUDE", "")
-      .replaceAll("$GODOT_SPLASH_CLASSES", "show-image--false fullsize--false use-filter--true")
-      .replaceAll("$GODOT_SPLASH", "data:image/gif;base64,R0lGODlhAQABAAAAACw=")
-      .replaceAll("$GODOT_URL", `${outputBase}.js`)
-      .replaceAll("$GODOT_CONFIG", JSON.stringify(config))
-      .replaceAll("$GODOT_THREADS_ENABLED", "true");
-    await fs.writeFile(options.outputPath, html);
-  } finally {
-    await fs.rm(temporaryDir, { force: true, recursive: true });
-  }
-}
-
-export async function patchDotnetWebExport(outputPath: string): Promise<void> {
-  const extension = path.extname(outputPath);
-  const scriptPath = `${extension ? outputPath.slice(0, -extension.length) : outputPath}.js`;
-  const source = await fs.readFile(scriptPath, "utf8");
-  const setupCall = /^DOTNET\.setup\([^\n]+\);;\r?\n/gm;
-  const matches = source.match(setupCall);
-  if (matches?.length !== 1) {
-    throw new Error(`Expected one .NET JS host setup call in ${scriptPath}`);
-  }
-
-  await fs.writeFile(scriptPath, source.replace(setupCall, ""));
+  await run("python3", [
+    options.assemblerPath,
+    "--template",
+    options.templatePath,
+    "--publish",
+    options.publishDir,
+    "--pack",
+    options.packPath,
+    "--output",
+    options.outputPath,
+  ], path.dirname(options.packPath));
 }
 
 async function writeDotnetPublishManifest(directory: string): Promise<number> {
@@ -459,6 +441,7 @@ async function validateToolchain(
   ) as Manifest;
   if (
     manifest.schemaVersion !== 1 ||
+    manifest.dotnetHost !== "standard" ||
     manifest.release !== release.tag ||
     manifest.godotVersion !== release.godotVersion ||
     manifest.godotCommit !== release.godotCommit ||
@@ -585,15 +568,6 @@ async function listFiles(directory: string): Promise<string[]> {
     }
   }
   return files.sort();
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 async function sha256(file: string): Promise<string> {

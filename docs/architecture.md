@@ -846,7 +846,11 @@ validates them without installing another Godot editor or writing machine-local
 paths into the project. The template
 repository owns their build and release workflow. The templates use WebAssembly
 threads, so served Web content must be cross-origin isolated; `kirie dev web`
-supplies the isolation headers for development.
+supplies the isolation headers for development. The CLI uses the template's
+Python assembler to package the standard .NET host and application assemblies.
+It restores the bundled Godot packages with
+[NuGet PackageDownload](https://learn.microsoft.com/en-us/nuget/consume-packages/packagedownload-functionality)
+into a release-specific cache before resolving the application SDK.
 
 ### Data lane type mapping
 
