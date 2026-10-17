@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createViteBuildConfig } from "@gd-kirie/build";
 
+import sirv from "sirv";
 import { createServer, type InlineConfig, mergeConfig, type ViteDevServer } from "vite";
 
 export interface StartedViteServer {
@@ -15,6 +16,7 @@ export interface StartViteDevServerOptions {
   crossOriginIsolation?: boolean;
   force?: boolean;
   host?: string;
+  godotWebOutput?: string;
   logLevel?: "info" | "warn" | "error" | "silent";
   port?: number;
   preferNetworkUrl?: boolean;
@@ -63,18 +65,32 @@ function createViteConfig(
     viteConfig: config.web.vite,
     webRoot: config.web.root,
   });
-  let headers;
-  if (options.crossOriginIsolation) {
-    headers = {
-      "Cross-Origin-Embedder-Policy": "require-corp",
-      "Cross-Origin-Opener-Policy": "same-origin",
-    };
-  }
+  const headers = options.crossOriginIsolation ?
+      {
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+      } :
+    undefined;
 
   return mergeConfig(buildConfig, {
     clearScreen: options.clearScreen,
     force: options.force,
     logLevel: options.logLevel,
+    plugins: options.godotWebOutput ?
+        [{
+          name: "kirie-godot-web-host",
+          configureServer(server: ViteDevServer) {
+            server.middlewares.use("/@kirie", sirv(path.dirname(options.godotWebOutput!), {
+              dev: true,
+              setHeaders(response) {
+                for (const [name, value] of Object.entries(headers ?? {})) {
+                  response.setHeader(name, value);
+                }
+              },
+            }));
+          },
+        }] :
+        [],
     server: {
       headers,
       host: options.host ?? "127.0.0.1",

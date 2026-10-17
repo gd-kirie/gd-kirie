@@ -88,7 +88,7 @@ export class GdKirie extends Object {
     }
 
     if (this._web_backend !== null) {
-      this._web_backend.create_webview(initial_url);
+      this._web_backend.create_webview(initial_url, parent_node);
       return;
     }
 

@@ -10,12 +10,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveKirieConfig } from "../config.ts";
 import {
-  assembleDotnetWebExport,
   checkDotnetWebToolchain,
   type DotnetWebRelease,
   exportDotnetWebPack,
   installDotnetWebToolchain,
-  patchDotnetWebExport,
   publishDotnetWeb,
   resolveDotnetWebInstallDir,
   tryExportDotnetWeb,
@@ -26,6 +24,7 @@ const payloadFiles = [
   "Godot.SourceGenerators.4.7.2.nupkg",
   "GodotSharp.4.7.2.nupkg",
   "GodotSharpEditor.4.7.2.nupkg",
+  "assemble-export.py",
   "web_debug.zip",
   "web_release.zip",
 ] as const;
@@ -154,22 +153,22 @@ describe(".NET Web export", () => {
       platform: "linux",
       release,
     }), release);
-    const publish = vi.fn(async () => {});
+    const publish = vi.fn(async (_options: Parameters<typeof publishDotnetWeb>[0]) => {});
+    const assemble = vi.fn(async (_options: { publishDir: string }) => {});
     await expect(tryExportDotnetWeb({
       ...options,
-      runAssembly: async ({ outputPath: output }) => {
-        await fs.mkdir(path.dirname(output), { recursive: true });
-        await fs.writeFile(output.replace(/\.html$/, ".js"), "DOTNET.setup({});;\nafter\n");
-      },
+      runAssembly: assemble,
       runPack: async ({ outputPath: output }) => fs.writeFile(output, "pack"),
       runPublish: publish,
       runDotnetWorkloadList: async () => "wasm-tools",
     })).resolves.toBe(true);
 
     expect(publish).toHaveBeenCalledOnce();
-    await expect(fs.readFile(path.join(projectDir, "dist", "web", "index.js"), "utf8"))
-      .resolves
-      .toBe("after\n");
+    expect(assemble).toHaveBeenCalledWith(expect.objectContaining({
+      assemblerPath: expect.stringContaining("assemble-export.py"),
+      publishDir: expect.any(String),
+    }));
+    expect(assemble.mock.calls[0]?.[0].publishDir).toBe(publish.mock.calls[0]?.[0].outputDir);
     await expect(
       fs.readFile(path.join(projectDir, "dist", "web", "src-web", "dist", "index.html"), "utf8"),
     ).resolves.toBe("web");
@@ -185,6 +184,12 @@ describe(".NET Web export", () => {
       _args: string[],
       _options: { cwd: string; env: NodeJS.ProcessEnv },
     ) => {
+      if (_args[0] === "restore") {
+        const project = await fs.readFile(_args[1]!, "utf8");
+        expect(project).toContain("<PackageDownload Include=\"Godot.NET.Sdk\"");
+        expect(_args).toContain(path.join(projectDir, "toolchain"));
+        return;
+      }
       await fs.mkdir(path.join(outputDir, "culture"), { recursive: true });
       await fs.writeFile(path.join(outputDir, "Example.dll"), "assembly");
       await fs.writeFile(path.join(outputDir, "culture", "Example.dll"), "culture");
@@ -195,12 +200,13 @@ describe(".NET Web export", () => {
     await publishDotnetWeb({
       configuration: "ExportRelease",
       nugetPackagesDir: path.join(projectDir, "nuget-packages"),
+      nugetSourceDir: path.join(projectDir, "toolchain"),
       outputDir,
       projectFile,
       runDotnet,
     });
 
-    expect(runDotnet.mock.calls[0]?.[1]).toEqual(expect.arrayContaining([
+    expect(runDotnet.mock.calls[1]?.[1]).toEqual(expect.arrayContaining([
       "publish",
       projectFile,
       "browser-wasm",
@@ -213,24 +219,9 @@ describe(".NET Web export", () => {
     expect(manifest).not.toContain("runtime.wasm");
   });
 
-  it("packs, assembles, and patches the browser export", async () => {
+  it("exports the pack with the published assemblies", async () => {
     const directory = await tempDir();
-    const templateDir = path.join(directory, "template");
     const packPath = path.join(directory, "project.pck");
-    const outputPath = path.join(directory, "export", "index.html");
-    await fs.mkdir(templateDir);
-    await Promise.all([
-      fs.writeFile(path.join(templateDir, "godot.js"), "DOTNET.setup({});;\nengine\n"),
-      fs.writeFile(path.join(templateDir, "godot.wasm"), "wasm"),
-      fs.writeFile(path.join(templateDir, "godot.audio.worklet.js"), "audio"),
-      fs.writeFile(path.join(templateDir, "godot.audio.position.worklet.js"), "position"),
-      fs.writeFile(
-        path.join(templateDir, "godot.html"),
-        "<title>$GODOT_PROJECT_NAME</title><script src=\"$GODOT_URL\"></script>" +
-        "<script>const c=$GODOT_CONFIG;const t=$GODOT_THREADS_ENABLED;</script>" +
-        "$GODOT_HEAD_INCLUDE $GODOT_SPLASH_COLOR $GODOT_SPLASH_CLASSES $GODOT_SPLASH",
-      ),
-    ]);
     const runGodot = vi.fn(async (
       _command: string,
       _args: string[],
@@ -246,27 +237,12 @@ describe(".NET Web export", () => {
       publishDir: path.join(directory, "publish"),
       runGodot,
     });
-    await assembleDotnetWebExport({
-      extractArchive: async (_file, output) => fs.cp(templateDir, output, { recursive: true }),
-      outputPath,
-      packPath,
-      projectName: "A & B",
-      templatePath: "fixture.zip",
-    });
-    await patchDotnetWebExport(outputPath);
-
     expect(runGodot.mock.calls[0]?.[1]).toEqual(expect.arrayContaining([
       "--export-pack",
       "Web",
       `--kirie-dotnet-web-publish=${path.join(directory, "publish")}`,
     ]));
-    await expect(fs.readFile(outputPath, "utf8")).resolves.toContain("<title>A &amp; B</title>");
-    await expect(fs.readFile(path.join(directory, "export", "index.js"), "utf8"))
-      .resolves
-      .toBe("engine\n");
-    await expect(fs.readFile(path.join(directory, "export", "index.pck"), "utf8"))
-      .resolves
-      .toBe("pack");
+    await expect(fs.readFile(packPath, "utf8")).resolves.toBe("pack");
   });
 });
 
@@ -303,6 +279,7 @@ async function writeToolchain(directory: string, release: DotnetWebRelease): Pro
     };
   }
   await fs.writeFile(path.join(directory, "manifest.json"), JSON.stringify({
+    dotnetHost: "standard",
     draftCommit: release.draftCommit,
     files,
     godotCommit: release.godotCommit,
