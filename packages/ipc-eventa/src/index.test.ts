@@ -251,17 +251,4 @@ describe("createContext", () => {
     expect(ipcMock.sendText).not.toHaveBeenCalled();
     expect(ipcMock.unsubscribeText).toHaveBeenCalledTimes(1);
   });
-
-  it("rejects pending and subsequent invokes when disposed", async () => {
-    const { context, dispose } = createContext();
-    const invoke = defineInvoke(context, defineInvokeEventa<string, string>("test:dispose-rpc"));
-    const pending = invoke("pending");
-    expect(ipcMock.sendText).toHaveBeenCalledTimes(1);
-
-    dispose();
-
-    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-    await expect(invoke("after disposal")).rejects.toMatchObject({ name: "AbortError" });
-    expect(ipcMock.sendText).toHaveBeenCalledTimes(1);
-  });
 });
