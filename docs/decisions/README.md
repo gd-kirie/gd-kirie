@@ -53,6 +53,6 @@ architecture documentation.
 - [ADR-0014: Extract notifications into a Kirie plugin](0014-extract-notifications-into-a-kirie-plugin.md)
   — proposed, 2026-10-10
 - [ADR-0015: Load Tray through a GDExtension](0015-load-tray-through-a-gdextension.md)
-  — accepted, 2026-10-12
+  — API and lifecycle superseded by [kirie-plugins ADR-0016](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0016-forward-native-tray-and-menu-objects.md), 2026-10-12
 - [ADR-0016: Add an experimental Godot Web export target](0016-add-an-experimental-godot-web-export-target.md)
   — proposed, 2026-10-12

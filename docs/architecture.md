@@ -69,6 +69,8 @@ second WebView owner. Methods use C# naming, and Kirie signals are exposed as C#
 events. Internal Godot `Callable` usage exists only inside this wrapper. A
 borrowed node must outlive the client; disposing the client disconnects its
 callbacks but leaves node and WebView ownership with `KirieNode`.
+The wrapper derives from Godot `RefCounted`. Disposal also releases its own
+native wrapper object.
 
 Current signals should also stay narrow:
 
@@ -158,37 +160,22 @@ The choice is recorded in
 The Tray packages and native extension are maintained in
 [kirie-plugins](https://github.com/gd-kirie/kirie-plugins).
 
-System trays and native popup menus belong to the optional Tray plugin. Its
-dependency direction is:
+The plugin keeps native tray and menu objects separate from browser transport:
 
 ```text
 @gd-kirie/tray -> @gd-kirie/ipc-eventa -> @gd-kirie/ipc
-GdKirie.Tray -> GdKirie.EventaAdapter
+GdKirie.Tray.EventaAdapter -> GdKirie.EventaAdapter
+GdKirie.Tray.EventaAdapter -> GdKirie.Tray -> Rust GDExtension -> tray-icon / muda
 ```
 
-`@gd-kirie/tray/plugin` declares the `GdKirie.Tray` NuGet host and the bundled
-`addons/kirie_tray` GDExtension. The browser client and Godot host borrow the
-application's existing Eventa context. The descriptor supplies installation data.
+The C# SDK works without WebView or Eventa. The optional Eventa adapter borrows
+the application's context and forwards browser operations to the SDK.
+The npm plugin installs the adapter and the `addons/kirie_tray` GDExtension.
 
-The Rust extension uses
-[`tray-icon`](https://github.com/tauri-apps/tray-icon) and registers one
-`KirieTrayNative` class. The .NET host owns one native instance through Godot's
-`ClassDB`. It loads `res://` textures, converts them to RGBA pixels, and calls
-the native instance through Godot. Each native instance owns its tray.
-The host destroys the tray and releases the instance on Godot's main thread.
-
-The npm plugin bundles macOS, Windows, and Linux libraries for x64 and Arm64.
-Godot selects and exports the native library through `.gdextension` feature
-tags. The NuGet package contains only the managed host. Linux uses `tray-icon`'s
-KSNI backend.
-
-Browser calls use the `kirie:tray:*` contracts. The .NET package only adapts
-those contracts to the private Rust library: it passes menu JSON and scalar
-values through and emits activated menu IDs. `window.kirie.platform.os` may
-select inputs such as a macOS template icon; the .NET host rejects non-desktop
-systems, and the Rust library rejects template icons outside macOS. This design
-is recorded in
-[ADR-0015](decisions/0015-load-tray-through-a-gdextension.md).
+API, ownership, and platform behavior are documented in
+[kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/packages/tray/README.md).
+The [forwarding decision](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0017-keep-tray-a-thin-forwarding-layer.md)
+is maintained with the plugin.
 
 The public API is independent of Uninvoke. Any Uninvoke-specific names, event
 IDs, compatibility behavior, or unsupported-method policy belong in the

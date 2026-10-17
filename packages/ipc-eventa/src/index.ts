@@ -79,6 +79,7 @@ export function createContext(): KirieEventaContextHandle {
     dispose: () => {
       offOutbound();
       offInbound();
+      context.abort();
     },
   };
 }

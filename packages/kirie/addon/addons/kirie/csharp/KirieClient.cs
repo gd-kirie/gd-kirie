@@ -3,7 +3,7 @@
 using System;
 using Godot;
 
-public partial class KirieClient : GodotObject
+public partial class KirieClient : RefCounted
 {
     public const string PluginSingletonName = "Kirie";
 
