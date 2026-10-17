@@ -839,6 +839,9 @@ APIs. It performs the one required recursive conversion between Godot Variant
 containers and native JavaScript containers. Web lane traffic uses structured
 clone through the transferred port. Eventa remains an adapter above Kirie IPC.
 
+During development, a [Vite middleware](https://vite.dev/guide/api-plugin.html#configureserver)
+serves the Godot export unchanged at `/@kirie/`; the application keeps Vite hot updates.
+
 The Web backend supports same-origin content only. It maps
 `res://src-web/dist` to the Vite build beside the exported Godot page. Other
 `res://` roots are unavailable to the browser.

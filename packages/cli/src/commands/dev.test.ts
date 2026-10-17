@@ -97,6 +97,11 @@ describe("runDev", () => {
         hostUrl = url;
         const response = await fetch(url);
         expect(response.status).toBe(200);
+        const script = "globalThis.Engine = {}; import(\"./runtime.mjs\");";
+        await fs.writeFile(path.join(project, "dist/kirie/web/engine.js"), script);
+        const asset = await fetch(new URL("engine.js", url));
+        expect(await asset.text()).toBe(script);
+        expect(asset.headers.get("content-type")).toContain("javascript");
         expect(response.headers.get("cross-origin-embedder-policy")).toBe("require-corp");
         expect(response.headers.get("cross-origin-opener-policy")).toBe("same-origin");
       },
@@ -110,7 +115,7 @@ describe("runDev", () => {
       "--export-debug",
       "Web",
     ]);
-    expect(hostUrl).toContain("/@fs/");
+    expect(hostUrl).toContain("/@kirie/");
     expect(hostUrl).toContain("kirie-dev=1");
     expect(new URL(hostUrl).searchParams.get("kirie-web-url")).toMatch(
       /^http:\/\/127\.0\.0\.1:\d+\/$/,
@@ -124,7 +129,7 @@ describe("runDev", () => {
     );
 
     expect(url).toBe(
-      "http://127.0.0.1:5173/@fs/workspace/dist/kirie/web/index.html?kirie-dev=1&kirie-web-url=http%3A%2F%2F127.0.0.1%3A5173%2F",
+      "http://127.0.0.1:5173/@kirie/index.html?kirie-dev=1&kirie-web-url=http%3A%2F%2F127.0.0.1%3A5173%2F",
     );
   });
 

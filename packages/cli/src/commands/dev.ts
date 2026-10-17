@@ -76,6 +76,7 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
   const vite = await startViteDevServer(config, {
     clearScreen: options.clearScreen,
     crossOriginIsolation: target === "web",
+    godotWebOutput: webOutput || undefined,
     force: options.force,
     logLevel: options.logLevel,
     port: options.port,
@@ -157,8 +158,7 @@ async function runWebDev(
 }
 
 export function createWebDevHostUrl(webUrl: string, outputPath: string): string {
-  const filePath = path.resolve(outputPath).replaceAll("\\", "/").replace(/^\/+/, "");
-  const url = new URL(`/@fs/${filePath}`, webUrl);
+  const url = new URL(`/@kirie/${encodeURIComponent(path.basename(outputPath))}`, webUrl);
   url.searchParams.set("kirie-dev", "1");
   url.searchParams.set("kirie-web-url", webUrl);
   return url.toString();
