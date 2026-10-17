@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <IsAotCompatible>true</IsAotCompatible>
     <PackageId>GdKirie.EventaAdapter</PackageId>
-    <Version>0.14.1</Version>
+    <Version>0.14.2</Version>
     <Authors>Moeru AI</Authors>
     <Description>Eventa adapter for Kirie C# projects over Kirie text IPC.</Description>
     <PackageTags>godot;kirie;eventa;ipc;rpc;webview</PackageTags>
