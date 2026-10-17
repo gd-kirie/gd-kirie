@@ -826,6 +826,9 @@ Web exports keep the same `KirieNode` owner and lane API. C# borrows that owner
 through `KirieClient.FromNode()`.
 
 The DOM adapter creates, sizes, navigates, and destroys a same-origin iframe.
+For a Control owner, the backend maps its axis-aligned
+[`get_global_rect()`](https://docs.godotengine.org/en/stable/classes/class_control.html#class-control-method-get-global-rect)
+to the browser canvas and follows its visibility each frame.
 It transfers a private `MessagePort` after each document load. It must not grow
 container APIs, serialization, application protocols, or another JavaScript
 runtime. Those responsibilities stay in their existing packages.

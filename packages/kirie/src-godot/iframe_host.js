@@ -42,6 +42,7 @@
       let port = null;
       let tick = 0;
       let ready = false;
+      let bounds = { x: 0, y: 0, width: 1, height: 1, visible: true };
 
       const report = (error) => callback?.("error", String(error));
       const onPortMessage = (event) => {
@@ -84,11 +85,11 @@
         const rect = canvas.getBoundingClientRect();
         const style = getComputedStyle(canvas);
         Object.assign(frame.style, {
-          left: `${rect.left}px`,
-          top: `${rect.top}px`,
-          width: `${rect.width}px`,
-          height: `${rect.height}px`,
-          visibility: style.visibility,
+          left: `${rect.left + bounds.x * rect.width}px`,
+          top: `${rect.top + bounds.y * rect.height}px`,
+          width: `${bounds.width * rect.width}px`,
+          height: `${bounds.height * rect.height}px`,
+          visibility: bounds.visible ? style.visibility : "hidden",
           display: style.display === "none" ? "none" : "block",
         });
         tick = requestAnimationFrame(layout);
@@ -141,6 +142,9 @@
 
       navigate(url, html, baseUrl);
       return {
+        set_rect(x, y, width, height, visible) {
+          bounds = { x, y, width, height, visible };
+        },
         load_url: (nextUrl) => navigate(nextUrl),
         load_html: (nextHtml, nextBaseUrl) => navigate("", nextHtml, nextBaseUrl),
         send(lane, payload) {
