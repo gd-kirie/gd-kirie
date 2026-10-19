@@ -14,6 +14,7 @@ java = "temurin-21.0.10+7.0.LTS"
 dotnet = "10.0.402"
 ktlint = "1.8.0"
 swiftlint = { version = "0.62.2", os = ["macos", "linux"] }
+xcodegen = { version = "2.46.0", os = ["macos"] }
 pnpm = "12"
 
 [tasks.build]

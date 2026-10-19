@@ -751,6 +751,9 @@ final preferred backend hook.
 
 ## iOS packaging direction
 
+The native iOS backend requires iOS 16 or later. Application export presets
+must use the same minimum version or a later version.
+
 For the current milestone, iOS should follow the same addon-centered shape as
 Android:
 

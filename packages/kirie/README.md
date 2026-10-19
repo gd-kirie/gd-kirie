@@ -13,6 +13,8 @@ artifacts and the downloadable addon zip are built by the repository-level
 mise tasks documented in
 [docs/addon-release.md](../../docs/addon-release.md).
 
+The native iOS backend requires iOS 16 or later.
+
 Current layout:
 
 - `src-godot`: TypeScript source for the Godot-facing scripts

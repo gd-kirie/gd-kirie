@@ -18,7 +18,7 @@ export default antfu(
     toml: false,
     yaml: false,
     pnpm: false,
-    ignores: ["scripts/run-build-task.js"],
+    ignores: ["scripts/run-build-task.js", "**/.build/**", "**/.generated/**"],
   },
   {
     files: ["**/*.{js,ts,tsx}"],
