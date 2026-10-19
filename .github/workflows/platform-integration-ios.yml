@@ -40,6 +40,19 @@ jobs:
           install_args: --locked node pnpm xcodegen
           cache: true
 
+      - name: Start an available iPhone simulator
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | mise x -- node -e '
+            const fs = require("node:fs");
+            const { devices } = JSON.parse(fs.readFileSync(0, "utf8"));
+            const iphone = Object.values(devices).flat().find(device => device.name.startsWith("iPhone"));
+            if (!iphone) throw new Error("No available iPhone simulator");
+            process.stdout.write(iphone.udid);
+          ')
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+          echo "Selected simulator: $SIMULATOR_ID"
+          xcrun simctl boot "$SIMULATOR_ID"
+
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
         with:
@@ -88,19 +101,9 @@ jobs:
       - name: Build iOS debug XCFramework
         run: mise run build:ios-debug-xcframework
 
-      - name: Boot an available iPhone simulator
+      - name: Wait for simulator
         timeout-minutes: 5
-        run: |
-          SIMULATOR_ID=$(xcrun simctl list devices available --json | mise x -- node -e '
-            const fs = require("node:fs");
-            const { devices } = JSON.parse(fs.readFileSync(0, "utf8"));
-            const iphone = Object.values(devices).flat().find(device => device.name.startsWith("iPhone"));
-            if (!iphone) throw new Error("No available iPhone simulator");
-            process.stdout.write(iphone.udid);
-          ')
-          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          echo "Selected simulator: $SIMULATOR_ID"
-          xcrun simctl bootstatus "$SIMULATOR_ID" -b
+        run: xcrun simctl bootstatus "$SIMULATOR_ID" -b
 
       - name: Run integration tests
         timeout-minutes: 15

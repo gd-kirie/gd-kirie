@@ -168,8 +168,9 @@ keeps the generated scripts and the selected tests in the same application
 process.
 
 The iOS workflow uses one `macos-26` job with the runner's default Xcode.
-It builds the Godot simulator template and the debug XCFramework before it
-boots an available iPhone simulator. ViDot generates the test scripts before
+It starts an available iPhone simulator before installing dependencies and
+building native artifacts. It waits for the simulator to finish booting before
+running tests. ViDot generates the test scripts before
 the launcher exports the test app. GitHub retains setup and build output in
 the job log. The workflow uploads test output and the raw engine log as the
 `ios-integration-logs` artifact, including failed runs.
