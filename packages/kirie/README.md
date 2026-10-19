@@ -83,6 +83,23 @@ The borrowed node must outlive the client. Disposing the client disconnects its
 C# callbacks but does not free the node or destroy its WebView; `KirieNode`
 remains the scene-tree lifecycle owner.
 
+## WebView visibility
+
+`KirieNode` uses its effective Godot visibility to show or hide its WebView.
+An initially hidden node or a hidden CanvasItem ancestor keeps the WebView hidden.
+Hide and show preserve the loaded page, readiness, and IPC connection.
+A hidden WebView does not receive user input.
+
+```csharp
+var node = GetNode<Control>("Kirie");
+node.Hide();
+// Show another Godot view, then restore the existing web page.
+node.Show();
+```
+
+This behavior follows [Godot CanvasItem visibility](https://docs.godotengine.org/en/stable/classes/class_canvasitem.html#class-canvasitem-method-is-visible-in-tree).
+The direct `KirieClient()` constructor has no scene node or visibility inheritance.
+
 ## Pointer input forwarding
 
 `KirieNode.pointer_input_forwarding_enabled` is an opt-in policy for pages that

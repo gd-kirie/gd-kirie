@@ -62,6 +62,13 @@ public func kirie_swift_create_webview(
     }
 }
 
+@_cdecl("kirie_swift_set_webview_visible")
+public func kirie_swift_set_webview_visible(_ viewID: Int64, _ visible: Bool) {
+    DispatchQueue.main.async {
+        KirieManager.shared.setWebViewVisible(viewID: viewID, visible: visible)
+    }
+}
+
 @_cdecl("kirie_swift_destroy_webview")
 public func kirie_swift_destroy_webview(_ viewID: Int64) {
     kirieLogEntry("kirie_swift_destroy_webview viewID=\(viewID)")

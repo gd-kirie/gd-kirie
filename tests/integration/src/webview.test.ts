@@ -2,6 +2,57 @@ import { expect, test } from "@vidot/vitest";
 
 import { _IntegrationProbe } from "./integration_probe.ts";
 
+test("preserves a hidden WebView through node and ancestor visibility changes", async (context) => {
+  if (context.root === null) {
+    expect(context.root !== null).toBe(true);
+    return;
+  }
+
+  const parent = new Control();
+  parent.hide();
+  context.root.add_child(parent);
+  const probe = new _IntegrationProbe();
+  probe.node.hide();
+  probe.initialize(parent, context.tree);
+  probe.node.initial_url = "res://src-web/dist/?probe=visibility";
+  probe.node.create_webview();
+  if (!expect(await probe.wait_for_ready(context)).toBe(true)) {
+    return;
+  }
+  if (!expect(await probe.wait_for_text_message(context, "web_ready:visibility")).toBe(true)) {
+    return;
+  }
+
+  // Showing a node under a hidden CanvasItem must keep the WebView hidden.
+  probe.node.show();
+  let sequence = 0;
+  for (const visible of [false, true, false, true]) {
+    parent.visible = visible;
+    if (probe.node.get_child_count() > 0) {
+      const backend = probe.node.get_child(0);
+      if (backend instanceof Control) {
+        expect(backend.is_visible_in_tree()).toBe(visible);
+        expect(backend.is_processing_input()).toBe(visible);
+      }
+    }
+
+    const message = `visibility:${sequence}:${visible}`;
+    sequence++;
+    probe.node.send_text(message);
+    if (!expect(await probe.wait_for_text_message(context, `web_text_echo:${message}`)).toBe(true)) {
+      return;
+    }
+  }
+
+  probe.node.hide();
+  probe.node.send_text("hidden_node");
+  expect(await probe.wait_for_text_message(context, "web_text_echo:hidden_node")).toBe(true);
+  probe.node.show();
+  probe.node.send_text("restored_node");
+  expect(await probe.wait_for_text_message(context, "web_text_echo:restored_node")).toBe(true);
+  expect(probe.ready_count()).toBe(1);
+});
+
 test("round trips IPC lanes", async (context) => {
   if (context.root === null) {
     expect(context.root !== null).toBe(true);

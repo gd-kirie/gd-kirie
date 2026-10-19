@@ -8,6 +8,7 @@ export class _IntegrationProbe extends RefCounted {
   private _error = "";
   private _text_messages: Array<string> = [];
   private _webview_ready = false;
+  private _ready_count = 0;
 
   initialize(root: Node, tree: SceneTree): void {
     this.node.auto_create = false;
@@ -15,6 +16,7 @@ export class _IntegrationProbe extends RefCounted {
     root.add_child(this.node);
     this.node.webview_ready.connect((): void => {
       this._webview_ready = true;
+      this._ready_count++;
     });
     this.node.text_received.connect((message: string): void => {
       this._text_messages.append(message);
@@ -36,6 +38,11 @@ export class _IntegrationProbe extends RefCounted {
     this._error = "";
     this._text_messages.clear();
     this._webview_ready = false;
+    this._ready_count = 0;
+  }
+
+  ready_count(): int {
+    return this._ready_count;
   }
 
   clear_data_messages(): void {

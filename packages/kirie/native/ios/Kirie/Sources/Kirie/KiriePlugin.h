@@ -23,6 +23,7 @@ public:
 	static KiriePlugin *get_singleton();
 
 	void createWebView(int64_t view_id, String initial_url);
+	void setWebViewVisible(int64_t view_id, bool visible);
 	void destroyWebView(int64_t view_id);
 	void loadUrl(int64_t view_id, String url);
 	void loadHtmlString(int64_t view_id, String html, String base_url);

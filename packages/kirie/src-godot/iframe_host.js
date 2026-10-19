@@ -36,7 +36,7 @@
 
   globalThis.__kirieIframeHost = {
     launch_option: (key) => new URL(location.href).searchParams.get(key) ?? "",
-    create(callback, url, html = null, baseUrl = "") {
+    create(callback, url, visible = true, html = null, baseUrl = "") {
       const canvas = document.getElementById("canvas");
       let frame = null;
       let port = null;
@@ -88,8 +88,8 @@
           top: `${rect.top}px`,
           width: `${rect.width}px`,
           height: `${rect.height}px`,
-          visibility: style.visibility,
-          display: style.display === "none" ? "none" : "block",
+          visibility: visible ? style.visibility : "hidden",
+          display: visible && style.display !== "none" ? "block" : "none",
         });
         tick = requestAnimationFrame(layout);
       };
@@ -141,6 +141,14 @@
 
       navigate(url, html, baseUrl);
       return {
+        set_visible(value) {
+          visible = value;
+          if (!visible && document.activeElement === frame) {
+            frame.blur();
+          }
+          cancelAnimationFrame(tick);
+          layout();
+        },
         load_url: (nextUrl) => navigate(nextUrl),
         load_html: (nextHtml, nextBaseUrl) => navigate("", nextHtml, nextBaseUrl),
         send(lane, payload) {

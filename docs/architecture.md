@@ -72,6 +72,17 @@ callbacks but leaves node and WebView ownership with `KirieNode`.
 The wrapper derives from Godot `RefCounted`. Disposal also releases its own
 native wrapper object.
 
+`KirieNode` forwards its effective CanvasItem visibility to the existing WebView.
+This includes its initial state and visibility changes from CanvasItem ancestors.
+The node reads `is_visible_in_tree()` when `visibility_changed` fires.
+This follows the [Godot visibility contract](https://docs.godotengine.org/en/stable/classes/class_canvasitem.html#class-canvasitem-signal-visibility-changed).
+Android changes the native View visibility on the UI thread.
+iOS changes the container UIView visibility on the main actor.
+Desktop CEF uses Control visibility and disables its input processing while hidden.
+Web changes iframe visibility without replacing the DOM element or MessagePort.
+Hide and show preserve the loaded page, readiness, and transport.
+Hidden views suppress user input and forwarded pointer events.
+
 Current signals should also stay narrow:
 
 - `webview_ready`
