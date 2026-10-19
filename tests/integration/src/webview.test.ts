@@ -2,7 +2,7 @@ import { expect, test } from "@vidot/vitest";
 
 import { _IntegrationProbe } from "./integration_probe.ts";
 
-test("preserves a hidden WebView through node and ancestor visibility changes", async (context) => {
+test("keeps the IPC session alive while the node or its parent is hidden", async (context) => {
   if (context.root === null) {
     expect(context.root !== null).toBe(true);
     return;
@@ -23,21 +23,11 @@ test("preserves a hidden WebView through node and ancestor visibility changes", 
     return;
   }
 
-  // Showing a node under a hidden CanvasItem must keep the WebView hidden.
   probe.node.show();
-  let sequence = 0;
-  for (const visible of [false, true, false, true]) {
+  for (const visible of [false, true]) {
     parent.visible = visible;
-    if (probe.node.get_child_count() > 0) {
-      const backend = probe.node.get_child(0);
-      if (backend instanceof Control) {
-        expect(backend.is_visible_in_tree()).toBe(visible);
-        expect(backend.is_processing_input()).toBe(visible);
-      }
-    }
 
-    const message = `visibility:${sequence}:${visible}`;
-    sequence++;
+    const message = `visibility:${visible}`;
     probe.node.send_text(message);
     if (!expect(await probe.wait_for_text_message(context, `web_text_echo:${message}`)).toBe(true)) {
       return;

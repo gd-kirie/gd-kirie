@@ -64,7 +64,7 @@ NuGet checks and fixes when the Godot project has no `.csproj`.
 Capabilities such as the system tray are separate plugins. Import
 `@gd-kirie/tray/plugin`, add it beside `core`, and run
 `kirie doctor --fix plugin:tray` to install its GDExtension and
-`GdKirie.Tray.EventaAdapter`. The `GdKirie.Tray` C# SDK also works without IPC.
+`GdKirie.Tray` package. Its C# SDK also works without IPC.
 
 ## Repository Development
 
@@ -120,10 +120,10 @@ example, and regression-test areas:
 - `packages/GdKirie.EventaAdapter`: .NET 10 Eventa adapter over Kirie text IPC
 - [`GdKirie.Platform`](packages/GdKirie.Platform/README.md): Godot host for the
   Platform Eventa contract
-- [`kirie-plugins`](https://github.com/gd-kirie/kirie-plugins): optional Tray and
-  Notifications plugins, including their browser packages, Godot hosts, and native code
+- [`kirie-plugins`](https://github.com/gd-kirie/kirie-plugins): optional Tray,
+  Notifications, and QR plugins, including their browser packages, Godot hosts, and native code
 - [`kirie-examples`](https://github.com/gd-kirie/kirie-examples): runnable examples
-  for raw IPC, CLI workflows, Platform, Tray, notifications, C# Eventa, and
+  for raw IPC, CLI workflows, Platform, Tray, Notifications, QR, C# Eventa, and
   native-hosted Godot
 - `tests/integration`: exported-app platform integration tests
 - `scripts`: repository build, test, and release tasks

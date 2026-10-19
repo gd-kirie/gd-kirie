@@ -67,13 +67,6 @@ native registration behavior.
 - No keyboard suppression, arbitrary listener, physical-key API, text
   conversion, simulation, mouse hook, or process-lifetime hook is introduced.
 
-## Verification
-
-Manual Windows integration with `basic-platform` verifies shortcut delivery
-while the window is in pointer-passthrough mode and Escape restores normal
-input. Hook shutdown, restart, and paired transition checks remain part of the
-Windows release verification until a durable integration probe is adopted.
-
 ## Sources
 
 - [SetWindowsHookExW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw)

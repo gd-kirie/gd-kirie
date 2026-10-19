@@ -7,7 +7,6 @@ export class _IntegrationProbe extends RefCounted {
   private _data_messages: Array<unknown> = [];
   private _error = "";
   private _text_messages: Array<string> = [];
-  private _webview_ready = false;
   private _ready_count = 0;
 
   initialize(root: Node, tree: SceneTree): void {
@@ -15,7 +14,6 @@ export class _IntegrationProbe extends RefCounted {
     this.node.size = tree.root.get_visible_rect().size;
     root.add_child(this.node);
     this.node.webview_ready.connect((): void => {
-      this._webview_ready = true;
       this._ready_count++;
     });
     this.node.text_received.connect((message: string): void => {
@@ -37,7 +35,6 @@ export class _IntegrationProbe extends RefCounted {
     this._data_messages.clear();
     this._error = "";
     this._text_messages.clear();
-    this._webview_ready = false;
     this._ready_count = 0;
   }
 
@@ -90,7 +87,7 @@ export class _IntegrationProbe extends RefCounted {
 
   async wait_for_ready(context: TestContext): Promise<boolean> {
     const ready = await context.waitUntil(
-      () => !this._error.is_empty() || this._webview_ready,
+      () => !this._error.is_empty() || this._ready_count > 0,
       this.timeout_milliseconds(),
     );
     return ready && this._error.is_empty();

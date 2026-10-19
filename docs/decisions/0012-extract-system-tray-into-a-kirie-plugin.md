@@ -51,33 +51,6 @@ Eventa owner, or a Godot addon. Existing Tray behavior, including
 - The core plugin continues to install Platform for its remaining capabilities;
   extracting those capabilities is outside this decision.
 
-## Implementation Plan
-
-- Add `packages/tray/` and `packages/GdKirie.Tray/`.
-- Remove Tray contracts and lifecycle code from `packages/platform/` and
-  `packages/GdKirie.Platform/`.
-- Configure `examples/tray/` with `[core, tray]` and initialize only the Tray
-  runtime API.
-- Add both packages to workspace release, publishing, and architecture docs.
-- Keep both package versions aligned with the repository release version; add
-  no third-party runtime dependency.
-- Follow the existing Eventa `Register`/`Attach` host pattern and declarative
-  plugin descriptor. Avoid compatibility forwarding and runtime plugin hooks.
-- Keep one TypeScript request/response contract test and compile the C# host
-  against the Godot .NET SDK.
-
-## Verification
-
-- [x] `mise run lint:eslint`
-- [x] `mise run lint:csharp`
-- [x] `mise run typecheck`
-- [x] `mise run test:unit`
-- [x] `mise run test:dotnet`
-- [x] `mise run build:packages`
-- [x] `mise x -- pnpm -C examples/tray exec kirie build dotnet`
-- [x] No Tray symbols or `kirie:platform:tray:*` wire IDs remain in either
-  Platform package.
-
 ## Rejected Alternatives
 
 - **Add only a plugin descriptor**: installation would look optional while the

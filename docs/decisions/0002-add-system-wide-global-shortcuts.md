@@ -139,6 +139,17 @@ Native backends use the narrowest platform facility that meets the contract:
   compositor-owned confirmation UI. The library reports success, cancellation,
   or failure; the terminal product decides how to explain and respond to it.
 
+The Wayland backend uses
+[`Tmds.DBus.Protocol` 0.95.0](https://www.nuget.org/packages/Tmds.DBus.Protocol/0.95.0)
+for low-level D-Bus access without a generated portal-specific facade.
+Its upstream [protocol API](https://github.com/tmds/Tmds.DBus/blob/main/docs/protocol.md)
+provides the D-Bus boundary.
+macOS and X11 use system frameworks and libraries.
+
+Native callbacks reach Godot's main thread before emitting Eventa state changes.
+The feature preserves the existing Platform dependency direction and host-window
+behavior.
+
 ### Consequences
 
 * Good, because applications can use a focused feature shortcut without keeping
@@ -156,67 +167,6 @@ Native backends use the narrowest platform facility that meets the contract:
   library's control.
 * Neutral, because a future Godot global-shortcut API may allow native backends
   to be replaced without changing the public Platform contract.
-
-## Implementation Plan
-
-* **Affected paths**:
-  * Extend `packages/platform/src/index.ts` with the structured shortcut,
-    key-event handler, and `globalShortcuts.register`/`unregister` API, aligned
-    Eventa definitions, event routing, and duplicate-registration handling.
-  * Add focused TypeScript contract and event-routing tests under
-    `packages/platform/src/`.
-  * Extend `packages/GdKirie.Platform/src/PlatformContracts.cs`,
-    `GdKiriePlatform.cs`, and `GdKiriePlatformHost.cs` with the matching payloads,
-    handlers, state event, and host-owned lifetime.
-  * Add platform backends under
-    `packages/GdKirie.Platform/src/GlobalShortcuts/`; extend
-    `packages/GdKirie.Platform/NativeMethods.txt` for required Windows imports.
-  * Add `tests/GdKirie.Platform.Tests/` to `GdKirie.slnx` for contract,
-    canonicalization, duplicate, lifecycle, and backend-independent tests.
-  * Update both Platform package READMEs, `docs/architecture.md`, and
-    `docs/references.md` with the public contract and primary platform sources.
-* **Dependencies**: use existing source generation/P/Invoke support on Windows.
-  Add
-  [`Tmds.DBus.Protocol`](https://www.nuget.org/packages/Tmds.DBus.Protocol/0.95.0)
-  `0.95.0` for the Wayland portal; its upstream
-  [protocol API](https://github.com/tmds/Tmds.DBus/blob/main/docs/protocol.md)
-  supports low-level D-Bus access without a generated portal-specific facade.
-  Use system frameworks/libraries for macOS and X11 rather than adding general
-  input-hook dependencies.
-* **Patterns to follow**: preserve
-  `@gd-kirie/platform -> @gd-kirie/ipc-eventa -> @gd-kirie/ipc` and
-  `GdKirie.Platform -> GdKirie.EventaAdapter`; follow the existing host-window
-  invoke registration and `GdKiriePlatformHost` disposal ownership. Marshal
-  native callbacks to Godot's main thread before emitting Eventa state changes.
-* **Patterns to avoid**: do not add global keyboard hooks, physical-key APIs,
-  string parsing, a GDScript facade, a second Eventa owner, or process-global
-  registrations that outlive `GdKiriePlatformHost`. Do not hide or reinterpret
-  platform registration errors.
-* **Configuration**: no `project.godot`, export preset, permission prompt, or
-  product settings change is part of the library feature. Wayland portal UI is
-  compositor-owned.
-* **Migration steps**: the API is additive. Existing `hostWindow` behavior and
-  consumers remain unchanged.
-
-### Verification
-
-- [ ] On macOS, Windows, Linux X11, and Linux Wayland, an explicitly registered
-  shortcut calls `onKeyEvent` with `pressed` and `released` states while the
-  Godot window is hidden or unfocused.
-- [ ] Holding a registered shortcut does not produce repeated `onKeyEvent`
-  calls.
-- [ ] After `unregister` resolves, the shortcut produces no more `onKeyEvent`
-  calls.
-- [ ] Duplicate registration and host-system conflicts reject with observable
-  errors and leave local and native registration state consistent.
-- [ ] Disposing `GdKiriePlatformHost` releases every remaining native
-  registration, event loop, portal session, and callback.
-- [ ] X11 and Wayland are exercised separately rather than treating Linux as one
-  backend.
-- [ ] TypeScript and C# tests verify identical wire IDs, shortcut fields, and
-  key-event state values.
-- [ ] Existing Platform host-window tests and integration behavior continue to
-  pass.
 
 ## Pros and Cons of the Options
 

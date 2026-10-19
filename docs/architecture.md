@@ -72,9 +72,7 @@ callbacks but leaves node and WebView ownership with `KirieNode`.
 The wrapper derives from Godot `RefCounted`. Disposal also releases its own
 native wrapper object.
 
-`KirieNode` forwards its effective CanvasItem visibility to the existing WebView.
-This includes its initial state and visibility changes from CanvasItem ancestors.
-The node reads `is_visible_in_tree()` when `visibility_changed` fires.
+`KirieNode` forwards its effective CanvasItem visibility, including initial and ancestor visibility, to the existing WebView.
 This follows the [Godot visibility contract](https://docs.godotengine.org/en/stable/classes/class_canvasitem.html#class-canvasitem-signal-visibility-changed).
 Android changes the native View visibility on the UI thread.
 iOS changes the container UIView visibility on the main actor.
@@ -105,7 +103,7 @@ low-level API independent of Godot CEF while avoiding a global allow policy.
 
 Higher-level invocation APIs do not enter Kirie core. Confirmed application
 capabilities are implemented above it through packages such as Platform, Tray,
-and Notifications.
+Notifications, and QR.
 
 For the current milestone, Kirie should treat `KirieNode` as the public
 scene-tree ownership unit for a platform WebView. A user may place a
@@ -181,11 +179,12 @@ GdKirie.Tray.EventaAdapter -> GdKirie.Tray -> Rust GDExtension -> tray-icon / mu
 
 The C# SDK works without WebView or Eventa. The optional Eventa adapter borrows
 the application's context and forwards browser operations to the SDK.
-The npm plugin installs the adapter and the `addons/kirie_tray` GDExtension.
+Both APIs ship in the `GdKirie.Tray` NuGet package.
+The npm plugin installs that package and the `addons/kirie_tray` GDExtension.
 
 API, ownership, and platform behavior are documented in
 [kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/packages/tray/README.md).
-The [forwarding decision](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0017-keep-tray-a-thin-forwarding-layer.md)
+The [forwarding decision](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0001-keep-tray-a-thin-forwarding-layer.md)
 is maintained with the plugin.
 
 The public API is independent of Uninvoke. Any Uninvoke-specific names, event
@@ -219,6 +218,15 @@ it does not add a second notification implementation or a project-root
 the live host that published them, and richer scheduling APIs remain outside
 the current contract. This boundary is recorded in
 [ADR-0014](decisions/0014-extract-notifications-into-a-kirie-plugin.md).
+
+## QR plugin
+
+The optional [QR plugin](https://github.com/gd-kirie/kirie-plugins/blob/main/packages/qr/README.md)
+borrows the application's Eventa context and KirieNode.
+It hides the existing WebView while Godot shows the camera preview.
+Core provides WebView visibility forwarding; camera ownership, permissions, and native dependencies stay in the QR plugin.
+
+## Scene ownership and resources
 
 Windows pointer passthrough is the one initial native exception. Godot's current
 Windows hit-test path returns `HTTRANSPARENT`, whose forwarding scope is limited
@@ -796,14 +804,14 @@ iOS plugin and Apple embedded platform export APIs.
 
 GitHub Release addon publishing is configured through the `Addon Release`
 workflow. Keep it separate from npm package publishing. The npm packages contain
-browser APIs, CLI tools, and bundled addons. Optional Tray and Notifications
+browser APIs, CLI tools, and bundled addons. Optional Tray, Notifications, and QR
 packages are built and published from kirie-plugins.
 
 The release artifact shape and workflow modes live in
 [Addon Release](./addon-release.md).
 
 The .NET Eventa adapter and Platform host use a separate NuGet release lane.
-The Tray and Notifications hosts are published from kirie-plugins.
+The Tray, Notifications, and QR hosts are published from kirie-plugins.
 Keep NuGet publishing separate from addon zip publishing and npm publishing.
 
 ## IPC and adapter split

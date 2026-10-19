@@ -20,7 +20,7 @@ The tests cover:
 - WebView destruction and recreation
 - packaged `res://` web assets
 - routing between two `KirieNode` instances
-- IPC readiness and round trips through initial, node, and ancestor visibility changes
+- IPC session continuity while a node or its parent is hidden
 
 The browser fixture uses `@gd-kirie/ipc`. Eventa behavior has separate tests.
 

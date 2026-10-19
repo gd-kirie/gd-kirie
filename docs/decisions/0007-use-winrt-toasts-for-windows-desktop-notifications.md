@@ -47,31 +47,21 @@ Linux remains unimplemented.
 - The Godot editor and an exported game have different notification identities
   because each identity follows that process's executable, and the identity is
   hashed from the executable path rather than from the project or the game name.
-  Verified on Windows 11 26200 with one example exported to two directories: the
-  editor registered `GdKirie.81B13CF14E5646A224E33F5AEAB5C2C2` and displayed as
-  `Godot_v4.7.2-stable_mono_win64`, while the debug and release exports registered
-  two further ids and both displayed as `KirieBasicPlatform` (the executable file
-  name). Renaming or moving the executable changes the identity, and the per-app
-  notification setting and notification history stay with the old one.
+  Renaming or moving the executable changes the identity. Notification settings
+  and history stay with the old identity.
 - Windows does not show a permission prompt. When notifications are turned off,
   `show()` fails. `IToastNotifier::get_Setting` is not a reliable pre-flight
   check on Windows 11: before the identity has ever delivered, the query itself
   fails with `ERROR_NOT_FOUND` (`0x80070490`) rather than reporting a value. The
   implementation therefore delivers first and only rejects a setting that was
   actually reported as something other than `Allowed`.
-- The per-user `AppUserModelId` and `CLSID` registrations are created when a
-  host first publishes and removed with the last host. Verified on Windows 11
-  26200: a click is delivered to the live host process through the registered
-  class object, and no second process is started.
 - Platform hosts share one process notification listener. Kirie routes each
   click to the host that published it.
 - Elevated processes are not supported by this Windows API.
 - A crash can leave the per-user registration behind until the next successful
-  shutdown removes it. A click in that window starts the executable: verified that
-  the shell launches it through `LocalServer32` with `-Embedding` from a
-  `svchost.exe` parent while no host was running. The activation is not delivered
-  at that moment, because the class object is registered only when a process
-  publishes its first notification. COM holds the native activation until then.
+  shutdown removes it. A later click can start the executable through
+  `LocalServer32` with `-Embedding`. COM holds the activation until the process
+  publishes its first notification and registers the class object.
   A fresh process has no route for the old native ID and ignores it.
 - The implementation calls WinRT by vtable and does not take a dependency on
   the Windows App SDK, the archived toolkit, or MicroCom.

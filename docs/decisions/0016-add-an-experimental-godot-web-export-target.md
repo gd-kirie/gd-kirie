@@ -57,29 +57,6 @@ Android, or iOS backends.
 - The experimental code is isolated as a research path and is not a precedent
   for stable features.
 
-## Implementation Plan
-
-- **Affected paths**: `packages/kirie/src-godot/`, `packages/ipc/src/`,
-  `packages/cli/src/commands/doctor/`, `packages/cli/src/commands/dev.ts`,
-  `packages/cli/src/commands/export.ts`, and Web export examples.
-- **Dependencies**: use releases from `gd-kirie/godot-dotnet-web-templates`;
-  do not move their build scripts into this repository.
-- **Patterns to follow**: keep `KirieNode` as the WebView owner, keep the three
-  IPC lanes explicit, and keep Eventa above the low-level IPC package.
-- **Patterns to avoid**: do not use this experimental implementation as a
-  reference for unrelated stable features, add a second serialization path, or
-  grow the iframe adapter into a JavaScript runtime library.
-
-### Verification
-
-- [x] `kirie doctor --fix web` installs and validates the experimental
-  toolchain from the template repository.
-- [x] `kirie export web` exports a C# example and packages its Web content.
-- [x] `kirie dev web` prints a local URL without opening a browser.
-- [x] A browser run completes bidirectional Eventa requests through the
-  same-origin iframe with no runtime errors.
-- [x] The iframe is removed when its owning `KirieNode` is released.
-
 ## Alternatives Considered
 
 - Wait for official Godot .NET Web support: lower maintenance cost, but it does
