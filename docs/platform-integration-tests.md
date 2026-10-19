@@ -173,7 +173,7 @@ fixture. Platform tasks generate and run tests without repeating these checks.
 The fixture's `pnpm -C tests/integration test` command still includes typechecks
 for standalone use.
 
-The iOS workflow uses one `macos-26` job with the runner's default Xcode.
+The iOS workflow uses one `macos-latest` job with the runner's default Xcode.
 It starts an available iPhone simulator before installing dependencies and
 building native artifacts. It waits for the simulator to finish booting before
 running tests. The workflow caches only the Godot editor and `ios.zip`.
