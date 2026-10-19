@@ -134,6 +134,7 @@ and [Godot pull request 121701](https://github.com/godotengine/godot/pull/121701
 Build the iOS debug addon artifact, start a simulator, and run the suite:
 
 ```sh
+mise run typecheck
 mise run build:ios-debug-xcframework
 mise run test:integration-ios
 ```
@@ -167,10 +168,23 @@ The launcher exports mobile apps after ViDot generates the test scripts. This
 keeps the generated scripts and the selected tests in the same application
 process.
 
+The Typecheck job runs `mise run typecheck`, which includes the integration
+fixture. Platform tasks generate and run tests without repeating these checks.
+The fixture's `pnpm -C tests/integration test` command still includes typechecks
+for standalone use.
+
 The iOS workflow uses one `macos-26` job with the runner's default Xcode.
 It starts an available iPhone simulator before installing dependencies and
 building native artifacts. It waits for the simulator to finish booting before
-running tests. ViDot generates the test scripts before
-the launcher exports the test app. GitHub retains setup and build output in
-the job log. The workflow uploads test output and the raw engine log as the
+running tests. The workflow caches only the Godot editor and `ios.zip`.
+The first template download uses the
+official Godot export archive and extracts only `templates/ios.zip`.
+
+The debug addon build retains the device archive and limits the simulator
+archive to `arm64`. Release builds keep their default architectures. See
+[Xcode build settings](https://developer.apple.com/documentation/xcode/configuring-the-build-settings-of-a-target/).
+
+ViDot generates the test scripts before the launcher exports the test app.
+GitHub retains setup and build output in the job log. The workflow uploads
+test output and the raw engine log as the
 `ios-integration-logs` artifact, including failed runs.

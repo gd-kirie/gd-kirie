@@ -58,7 +58,23 @@ jobs:
         with:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
-          include-templates: true
+
+      - name: Cache Godot iOS export template
+        id: ios-export-template-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable/ios.zip
+          key: ${{ runner.os }}-godot-${{ env.GODOT_VERSION }}-ios-export-template
+
+      - name: Install Godot iOS export template
+        if: steps.ios-export-template-cache.outputs.cache-hit != 'true'
+        run: |
+          TEMPLATES_DIR="$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          curl --fail --location \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" \
+            -o "$RUNNER_TEMP/export_templates.tpz"
+          mkdir -p "$TEMPLATES_DIR"
+          unzip -p "$RUNNER_TEMP/export_templates.tpz" templates/ios.zip > "$TEMPLATES_DIR/ios.zip"
 
       - name: Record Xcode version
         id: xcode
@@ -99,6 +115,8 @@ jobs:
             -j"$(sysctl -n hw.logicalcpu)"
 
       - name: Build iOS debug XCFramework
+        env:
+          KIRIE_IOS_SIMULATOR_ARCHS: arm64
         run: mise run build:ios-debug-xcframework
 
       - name: Wait for simulator

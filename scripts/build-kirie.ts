@@ -73,6 +73,7 @@ async function archiveIosFramework(
   configuration: string,
   destination: string,
   archivePath: string,
+  architectures?: string,
 ): Promise<void> {
   await execa(
     "xcodebuild",
@@ -94,6 +95,7 @@ async function archiveIosFramework(
       destination,
       "-archivePath",
       archivePath,
+      ...(architectures ? [`ARCHS=${architectures}`] : []),
     ],
     {
       cwd: rootDir,
@@ -106,6 +108,7 @@ async function createIosXcframework(
   configuration: string,
   name: string,
   outputPath: string,
+  simulatorArchitectures?: string,
 ): Promise<void> {
   const deviceArchivePath = `${iosBuildDir}/Kirie-${name}-iOS.xcarchive`;
   const simulatorArchivePath = `${iosBuildDir}/Kirie-${name}-Simulator.xcarchive`;
@@ -115,7 +118,12 @@ async function createIosXcframework(
   fs.rmSync(outputPath, { force: true, recursive: true });
 
   await archiveIosFramework(configuration, "generic/platform=iOS", deviceArchivePath);
-  await archiveIosFramework(configuration, "generic/platform=iOS Simulator", simulatorArchivePath);
+  await archiveIosFramework(
+    configuration,
+    "generic/platform=iOS Simulator",
+    simulatorArchivePath,
+    simulatorArchitectures,
+  );
 
   await execa(
     "xcodebuild",
@@ -207,7 +215,12 @@ export async function buildIosDebugXcframework(): Promise<void> {
   prepareIosBuildDirs();
   await generateIosProject();
 
-  await createIosXcframework("ReleaseDebug", "debug", iosDebugOutputXcframework);
+  await createIosXcframework(
+    "ReleaseDebug",
+    "debug",
+    iosDebugOutputXcframework,
+    process.env.KIRIE_IOS_SIMULATOR_ARCHS,
+  );
 }
 
 // mise task entrypoint.
