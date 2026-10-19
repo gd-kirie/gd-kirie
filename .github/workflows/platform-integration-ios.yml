@@ -16,7 +16,11 @@ concurrency:
 jobs:
   ios:
     name: iOS
-    runs-on: macos-latest
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     env:
       GODOT_VERSION: 4.7.2
       HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -29,11 +33,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install Node and pnpm
+      - name: Install Node, pnpm, and XcodeGen
         uses: jdx/mise-action@v3
         with:
           install: true
-          install_args: --locked node pnpm
+          install_args: --locked node pnpm xcodegen
           cache: true
 
       - name: Setup Godot
@@ -43,30 +47,24 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Setup Xcode version
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Get Xcode version
+      - name: Record Xcode version
         id: xcode
         run: |
           xcodebuild -version
           echo "version=$(xcodebuild -version | tr ' \n' '--')" >> "$GITHUB_OUTPUT"
 
-      - name: Install XcodeGen and SCons
-        run: brew install xcodegen scons
-
-      - name: Download and Prepare Godot Source Headers
+      - name: Install SCons and package dependencies
         run: |
-          rm -rf godot "${GODOT_VERSION}-stable.tar.gz" "godot-${GODOT_VERSION}-stable"
-          curl -LO "https://github.com/godotengine/godot/archive/refs/tags/${GODOT_VERSION}-stable.tar.gz"
-          tar -xzf "${GODOT_VERSION}-stable.tar.gz"
-          mv "godot-${GODOT_VERSION}-stable" godot
+          brew install scons
+          mise x -- pnpm install --frozen-lockfile
 
+      - name: Prepare Godot source headers
+        run: |
+          mkdir -p godot
+          curl --fail --location "https://github.com/godotengine/godot/archive/refs/tags/${GODOT_VERSION}-stable.tar.gz" \
+            | tar -xz --strip-components=1 -C godot
           cd godot
-
-          scons platform=macos target=editor \
+          mise x -- scons platform=macos target=editor \
             vulkan=no \
             core/version_generated.gen.h \
             core/disabled_classes.gen.h \
@@ -74,37 +72,57 @@ jobs:
             core/object/gdvirtual.gen.h
 
       - name: Cache Godot iOS simulator template
+        id: template-cache
         uses: actions/cache@v5
         with:
           path: godot/bin/libgodot.ios.template_debug.arm64.simulator.a
           key: ${{ runner.os }}-${{ runner.arch }}-godot-${{ env.GODOT_VERSION }}-${{ steps.xcode.outputs.version }}-ios-template_debug-arm64-simulator
 
-      - name: Get pnpm store path
-        id: pnpm-store
-        run: echo "path=$(mise x -- pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-pnpm-store-
-
-      - name: Install pnpm dependencies
-        run: mise x -- pnpm install --frozen-lockfile
+      - name: Build Godot iOS simulator template
+        if: steps.template-cache.outputs.cache-hit != 'true'
+        working-directory: godot
+        run: |
+          mise x -- scons platform=ios target=template_debug arch=arm64 simulator=yes \
+            -j"$(sysctl -n hw.logicalcpu)"
 
       - name: Build iOS debug XCFramework
         run: mise run build:ios-debug-xcframework
 
-      - name: Start iOS Simulator
+      - name: Boot an available iPhone simulator
         timeout-minutes: 5
         run: |
-          DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 "iPhone 16" | awk -F '[()]' '{print $2}')
-          xcrun simctl boot "$DEVICE_ID"
-          xcrun simctl bootstatus "$DEVICE_ID"
-          echo "SIMULATOR_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | mise x -- node -e '
+            const fs = require("node:fs");
+            const { devices } = JSON.parse(fs.readFileSync(0, "utf8"));
+            const iphone = Object.values(devices).flat().find(device => device.name.startsWith("iPhone"));
+            if (!iphone) throw new Error("No available iPhone simulator");
+            process.stdout.write(iphone.udid);
+          ')
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+          echo "Selected simulator: $SIMULATOR_ID"
+          xcrun simctl bootstatus "$SIMULATOR_ID" -b
 
       - name: Run integration tests
         timeout-minutes: 15
-        run: mise run test:integration-ios
+        run: |
+          mkdir -p artifacts/ios
+          mise run test:integration-ios 2>&1 | tee artifacts/ios/integration.log
+
+      - name: Collect simulator engine log
+        if: always() && env.SIMULATOR_ID != ''
+        run: |
+          APP=tests/integration/dist/kirie/ios/debug.app
+          if [[ -f "$APP/Info.plist" ]]; then
+            BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+            CONTAINER=$(xcrun simctl get_app_container "$SIMULATOR_ID" "$BUNDLE_ID" data)
+            if [[ -f "$CONTAINER/tmp/kirie.log" ]]; then
+              cp "$CONTAINER/tmp/kirie.log" artifacts/ios/engine.log
+            fi
+          fi
+
+      - name: Upload iOS logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-integration-logs
+          path: artifacts/ios

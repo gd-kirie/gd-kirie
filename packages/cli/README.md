@@ -15,6 +15,10 @@ pnpm kirie export web
 pnpm kirie doctor
 ```
 
+`kirie run ios` and `kirie dev ios` stream engine logs from the simulator
+app's `tmp/kirie.log` file. The CLI passes Godot's `--log-file` option and
+reads the file from startup through exit.
+
 `kirie dev web` exports the Godot Web host once, starts the Vite development
 server, and prints its URL. C# projects require the experimental .NET
 Web templates:

@@ -121,10 +121,6 @@ templates do not enable extended options. The integration project's main scene
 therefore attaches the staged ViDot runner to its `SceneTree` on mobile exports.
 See the [Godot command-line tutorial](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html).
 
-On iOS, Godot sends `print` to Apple's unified log instead of standard output.
-The CLI streams the application's unified log so the adapter receives ViDot
-events. See Godot's [OsLogLogger implementation](https://github.com/godotengine/godot/blob/4.7.2-stable/drivers/apple/os_log_logger.cpp).
-
 The Android package name is `ai.moeru.kirie.integrationtests`.
 
 The fixture disables Android Swappy frame pacing for Godot 4.7.2. That Godot
@@ -147,7 +143,11 @@ physical device.
 
 The adapter stages the generated tests, invokes `kirie export ios`, and then
 invokes `kirie run ios`. The CLI installs the app and forwards its console
-output.
+output. On the simulator, the CLI passes Godot's `--log-file` option with
+the app's `tmp/kirie.log` path. It streams engine logs and ViDot events from
+this file and reads the remaining output after process exit. This retains
+events without a separate unified-log subscription. See the
+[Godot command-line reference](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html).
 
 Godot 4.7.2 uses Compatibility rendering in the iOS Simulator. The tests cover
 the WebView and IPC paths. They do not verify Mobile or Metal rendering.
@@ -166,3 +166,10 @@ mise run test:integration-ios
 The launcher exports mobile apps after ViDot generates the test scripts. This
 keeps the generated scripts and the selected tests in the same application
 process.
+
+The iOS workflow uses one `macos-26` job with the runner's default Xcode.
+It builds the Godot simulator template and the debug XCFramework before it
+boots an available iPhone simulator. ViDot generates the test scripts before
+the launcher exports the test app. GitHub retains setup and build output in
+the job log. The workflow uploads test output and the raw engine log as the
+`ios-integration-logs` artifact, including failed runs.

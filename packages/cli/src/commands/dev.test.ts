@@ -248,33 +248,91 @@ describe("runDev", () => {
     }
 
     const invocations = await readFakeXcrunInvocations(project);
-    const logRun = invocations.find((invocation) => invocation.argv[1] === "spawn");
     const launchRun = invocations.find((invocation) => invocation.argv[1] === "launch");
 
-    expect(logRun?.argv).toEqual([
-      "simctl",
-      "spawn",
-      "booted",
-      "log",
-      "stream",
-      "--style",
-      "compact",
-      "--level",
-      "info",
-      "--predicate",
-      "subsystem == \"org.gd-kirie.cli-test\"",
-    ]);
-
-    expect(launchRun?.argv.slice(0, 6)).toEqual([
+    expect(launchRun?.argv.slice(0, 7)).toEqual([
       "simctl",
       "launch",
       "--console",
       "--terminate-running-process",
       "booted",
       "org.gd-kirie.cli-test",
+      "--log-file",
     ]);
+    expect(launchRun?.argv[7]).toBe(path.join(project, "simulator-data", "tmp", "kirie.log"));
     expect(launchRun?.argv).toContain("--kirie-dev=1");
     expect(launchRun?.argv).toContain("--kirie-web-url=http://127.0.0.1:5173/");
+  });
+
+  it("forwards simulator output from startup through process exit", async () => {
+    const project = await projects.copy();
+    await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
+    await installFakeXcrun(project);
+
+    const child = execa(process.execPath, [
+      cliPath,
+      "run",
+      "ios",
+      "--project",
+      project,
+      "--device",
+      "booted",
+    ], {
+      env: {
+        FAKE_XCRUN_WAIT_FOR_READER: "1",
+        PATH: `${path.join(project, "fake-bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      reject: false,
+      timeout: 5000,
+    });
+
+    const lines: string[] = [];
+    try {
+      for await (const line of child.iterable()) {
+        lines.push(line);
+        if (lines.length === 1) {
+          expect(child.exitCode).toBeNull();
+          await fs.writeFile(path.join(project, "reader-ready"), "");
+        }
+      }
+
+      expect((await child).exitCode).toBe(0);
+    } finally {
+      child.kill("SIGTERM");
+      await child;
+    }
+
+    expect(lines).toEqual([
+      "VIDOT {\"type\":\"file_collected\",\"name\":\"启动\"}",
+      "VIDOT {\"type\":\"run_finish\"}",
+    ]);
+  });
+
+  it("reports simulator launch failures", async () => {
+    const project = await projects.copy();
+    await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
+    await installFakeXcrun(project);
+
+    const result = await execa(process.execPath, [
+      cliPath,
+      "run",
+      "ios",
+      "--project",
+      project,
+      "--device",
+      "booted",
+    ], {
+      env: {
+        FAKE_XCRUN_FAIL_LAUNCH: "1",
+        PATH: `${path.join(project, "fake-bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+      },
+      reject: false,
+      timeout: 5000,
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("simulator launch failed");
+    expect(result.timedOut).toBe(false);
   });
 
   it("rejects Kirie-owned Vite options", async () => {
@@ -365,15 +423,35 @@ async function installFakeXcrun(project: string): Promise<void> {
   await fs.writeFile(
     fakeXcrunPath,
     `#!/usr/bin/env node
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 const file = "${FAKE_XCRUN_INVOCATIONS_FILE}";
 const argv = process.argv.slice(2);
 
 appendFileSync(file, JSON.stringify({ argv, cwd: process.cwd() }) + "\\n");
 
-if (argv.includes("stream")) {
-  setInterval(() => {}, 1000);
+if (argv[1] === "get_app_container") {
+  const container = resolve("simulator-data");
+  mkdirSync(join(container, "tmp"), { recursive: true });
+  writeFileSync(join(container, "tmp", "kirie.log"), "previous run\\n");
+  process.stdout.write(container);
+}
+
+if (argv[1] === "launch" && argv.includes("--log-file")) {
+  if (process.env.FAKE_XCRUN_FAIL_LAUNCH) {
+    process.stderr.write("simulator launch failed\\n");
+    process.exit(7);
+  }
+
+  const logPath = argv[argv.indexOf("--log-file") + 1];
+  appendFileSync(logPath, 'VIDOT {"type":"file_collected","name":"启动"}\\n');
+  while (process.env.FAKE_XCRUN_WAIT_FOR_READER && !existsSync("reader-ready")) {
+    await delay(10);
+  }
+
+  appendFileSync(logPath, 'VIDOT {"type":"run_finish"}\\n');
 }
 `,
   );
