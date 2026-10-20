@@ -38,6 +38,10 @@ run = "dotnet build GdKirie.slnx --configuration Release"
 description = "Build integration web assets"
 run = "pnpm -F @gd-kirie/integration-web run build"
 
+[tasks."build:integration"]
+description = "Build integration test dependencies and web assets"
+run = 'pnpm -r --filter "@gd-kirie/integration-tests^..." --filter "@gd-kirie/integration-web..." run build'
+
 [tasks."build:ios-xcframework"]
 description = "Build iOS xcframework artifact"
 run = "./scripts/run-build-task.js buildIosXcframework"
@@ -134,7 +138,7 @@ run = "pnpm -C tests/integration run test:run"
 
 [tasks."test:integration-ios"]
 description = "Run the iOS platform integration suite"
-depends = ["build:packages", "build:integration-web"]
+depends = ["build:integration"]
 env = { KIRIE_TEST_TARGET = "ios" }
 run = "pnpm -C tests/integration run test:run"
 

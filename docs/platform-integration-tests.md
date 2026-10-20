@@ -155,8 +155,8 @@ the WebView and IPC paths. They do not verify Mobile or Metal rendering.
 
 ## CI
 
-The platform workflows build the required native addon first. Each workflow
-then runs one command for the full suite:
+The platform workflows build the required native addon first. These tasks build
+the test prerequisites and run the full suite:
 
 ```sh
 mise run test:integration-desktop
@@ -173,18 +173,42 @@ fixture. Platform tasks generate and run tests without repeating these checks.
 The fixture's `pnpm -C tests/integration test` command still includes typechecks
 for standalone use.
 
-The iOS workflow uses one `macos-latest` job with the runner's default Xcode.
-It starts an available iPhone simulator before installing dependencies and
-building native artifacts. It waits for the simulator to finish booting before
-running tests. The workflow caches only the Godot editor and `ios.zip`.
-The first template download uses the
-official Godot export archive and extracts only `templates/ios.zip`.
+The iOS workflow uses one `xcode-27` job on macOS 27 with the image's default
+Xcode 27 version. It records the selected tool versions in `toolchain.log`.
+See the
+[runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
+
+The workflow installs SCons 4.11.1 with uv and the project's pinned Python.
+uv installs SCons in an isolated environment. The workflow adds its executable
+directory to `PATH` for later steps. See the [uv tools guide](https://docs.astral.sh/uv/guides/tools/).
+Dependency installation, Godot source download, and header generation use separate
+steps so their costs remain visible.
+
+The workflow caches the Godot editor, `ios.zip`, and the Godot simulator library.
+The simulator library cache key includes the Godot version, Xcode version, and
+runner architecture. The first template download uses the official Godot export
+archive and extracts only `templates/ios.zip`.
 
 The debug addon build retains the device archive and limits the simulator
 archive to `arm64`. Release builds keep their default architectures. See
 [Xcode build settings](https://developer.apple.com/documentation/xcode/configuring-the-build-settings-of-a-target/).
 
+The workflow starts the iPhone 16 Pro simulator with iOS 27.0 before installing
+tools and dependencies. The simulator boots in the background while the workflow
+installs dependencies and builds the addon and test prerequisites. Before running
+tests, the workflow waits for startup to finish with `simctl bootstatus -b`.
+See CircleCI's [simulator pre-start guidance](https://circleci.com/docs/guides/execution-managed/using-macos/#pre-start-the-simulator).
+
+`mise run build:integration` builds the integration fixture's package dependencies
+and web assets. It uses pnpm's dependency selection instead of building all
+publishable packages. See [pnpm filtering](https://pnpm.io/filtering).
+The iOS workflow then runs `mise run --skip-deps test:integration-ios` to avoid
+repeating those builds. Use `--skip-deps` only after building the prerequisites.
+
 ViDot generates the test scripts before the launcher exports the test app.
-GitHub retains setup and build output in the job log. The workflow uploads
-test output and the raw engine log as the
+The workflow records command duration and resource use with `/usr/bin/time -l`.
+It also records memory and free disk space at the start and end of the job.
+Xcode build logs include task timing through `-showBuildTimingSummary`.
+See Apple's [build timing guidance](https://developer.apple.com/videos/play/wwdc2018/408/).
+The workflow uploads setup, build, simulator, test, and engine logs as the
 `ios-integration-logs` artifact, including failed runs.
