@@ -3,7 +3,7 @@ import { KirieGodotCefConfig } from "./godot_cef_config";
 import { _PointerInputForwarder } from "./pointer_input_forwarder";
 import { _WebIframeBackend } from "./web_iframe_backend";
 
-export class GdKirie extends Object {
+export class GdKirie extends GodotObject {
   webview_ready = gd.signal();
   text_received = gd.signal<[message: string]>();
   binary_received = gd.signal<[bytes: PackedByteArray]>();
