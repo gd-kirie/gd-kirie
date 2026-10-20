@@ -16,7 +16,7 @@ concurrency:
 jobs:
   ios:
     name: iOS
-    runs-on: macos-latest
+    runs-on: self-hosted
     env:
       GODOT_VERSION: 4.7.2
       HOMEBREW_NO_AUTO_UPDATE: "1"
