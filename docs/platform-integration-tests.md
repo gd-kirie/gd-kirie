@@ -143,6 +143,10 @@ Set `SIMULATOR_ID` to select a simulator. Set `IOS_DEVICE_ID` to run on a
 physical device.
 
 The native framework and integration app require iOS 15 or later with Xcode 27.
+Simulator exports also require a matching arm64 Godot library at
+`godot/bin/libgodot.ios.template_debug.arm64.simulator.a` in this repository
+(`template_release` for release exports). Prepare it before running the suite;
+the CLI does not build the engine. CI uses the community archive described below.
 
 The adapter stages the generated tests, invokes `kirie export ios`, and then
 invokes `kirie run ios`. The CLI installs the app and forwards its console
@@ -185,8 +189,9 @@ ordinary-edition arm64 simulator debug library from the
 [Godot Mobile Plugins release](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
 Versions and SHA-256 checksums are pinned in `scripts/ios-ci-runtime.env`.
 Both archives are verified before extraction. Missing or invalid downloads fail
-before tool installation. There is no source build fallback in PR CI, so an empty
-Actions cache cannot trigger a full Godot compilation.
+before tool installation. The CLI requires a prepared simulator library and
+reports a missing file instead of compiling Godot. An empty Actions cache cannot
+trigger an engine build.
 
 The official Godot build process does not produce an arm64 simulator library.
 The community release supplies that missing slice and generated headers without
@@ -194,8 +199,10 @@ requiring Kirie to maintain a separate engine build or release process.
 See the [official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh).
 
 PR jobs install only Node, pnpm, and XcodeGen through mise, plus the ordinary
-Godot editor. The mise cache key uses the tool lockfile rather than the task
-definitions, so documentation and task edits do not invalidate installed tools.
+Godot editor. The mise cache key uses a direct SHA-256 digest of the tool lockfile
+rather than the task definitions, so documentation and task edits do not
+invalidate installed tools. The workflow extracts the verified headers after
+tool installation.
 The community archives are pinned dependencies downloaded on every run. The
 official ordinary-edition `ios.zip` is restored from cache or extracted from the
 checksum-verified official export archive. It is saved immediately after a
@@ -205,10 +212,10 @@ The debug addon build retains the device archive and limits the simulator
 archive to `arm64`. Release builds keep their default architectures. See
 [Xcode build settings](https://developer.apple.com/documentation/xcode/configuring-the-build-settings-of-a-target/).
 
-The workflow starts the iPhone 16 Pro simulator with iOS 27.0 before installing
-tools and dependencies. The simulator boots in the background while the workflow
-installs dependencies and builds the addon and test prerequisites. Before running
-tests, the workflow waits for startup to finish with `simctl bootstatus -b`.
+The workflow starts the iPhone 16 Pro simulator with iOS 27.0 after installing
+dependencies. The simulator boots in the background while the workflow builds the
+addon and test prerequisites. Before running tests, the workflow waits for
+startup to finish with `simctl bootstatus -b`.
 See CircleCI's [simulator pre-start guidance](https://circleci.com/docs/guides/execution-managed/using-macos/#pre-start-the-simulator).
 
 `mise run build:integration` builds the integration fixture's package dependencies

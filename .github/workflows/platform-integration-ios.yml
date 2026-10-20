@@ -32,11 +32,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download pinned Godot headers and simulator library
+        id: runtime
         timeout-minutes: 2
         run: |
           source scripts/ios-ci-runtime.env
-          mkdir -p artifacts/ios godot "$RUNNER_TEMP/ios-runtime"
+          mkdir -p artifacts/ios "$RUNNER_TEMP/ios-runtime"
           cat scripts/ios-ci-runtime.env >> "$GITHUB_ENV"
+          echo "toolchain-lock=$(shasum -a 256 mise.lock | awk '{print $1}')" >> "$GITHUB_OUTPUT"
           RELEASE_URL="https://github.com/godot-mobile-plugins/godot-ios-builds/releases/download/$GODOT_VERSION-stable"
           /usr/bin/time -l curl --fail --location --connect-timeout 15 --max-time 90 \
             "$RELEASE_URL/godot-headers-$GODOT_VERSION-stable.zip" \
@@ -48,12 +50,6 @@ jobs:
             2>&1 | tee -a artifacts/ios/runtime-download.log
           echo "$GODOT_IOS_HEADERS_SHA256  $RUNNER_TEMP/ios-runtime/headers.zip" | shasum -a 256 -c -
           echo "$GODOT_IOS_SIMULATOR_SHA256  $RUNNER_TEMP/ios-runtime/simulator.zip" | shasum -a 256 -c -
-          unzip -q "$RUNNER_TEMP/ios-runtime/headers.zip" -d godot
-          unzip -q "$RUNNER_TEMP/ios-runtime/simulator.zip" -d "$RUNNER_TEMP/ios-runtime/simulator"
-          cp -R "$RUNNER_TEMP/ios-runtime/simulator/godot-$GODOT_VERSION-stable/bin" godot/bin
-          test -s godot/bin/libgodot.ios.template_debug.arm64.simulator.a
-          xcrun lipo -info godot/bin/libgodot.ios.template_debug.arm64.simulator.a \
-            | tee artifacts/ios/runtime-architecture.log
           cp scripts/ios-ci-runtime.env artifacts/ios/runtime-pins.env
 
       - name: Record runner resources
@@ -65,22 +61,22 @@ jobs:
             df -h "$GITHUB_WORKSPACE"
           } 2>&1 | tee artifacts/ios/runner-start.log
 
-      - name: Start iPhone 16 Pro simulator (iOS 27.0)
-        run: |
-          SIMULATOR_ID=$(xcrun simctl create "iPhone 16 Pro" \
-            com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro \
-            com.apple.CoreSimulator.SimRuntime.iOS-27-0)
-          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          /usr/bin/time -l xcrun simctl boot "$SIMULATOR_ID" \
-            2>&1 | tee artifacts/ios/simulator-boot.log
-
       - name: Install Node, pnpm, and XcodeGen
         uses: jdx/mise-action@v3
         with:
           version: 2026.10.15
           install_args: --locked node pnpm xcodegen
           cache: true
-          cache_key: ios-tools-v1-${{ runner.arch }}-${{ hashFiles('mise.lock') }}
+          cache_key: ios-tools-v1-${{ runner.arch }}-${{ steps.runtime.outputs.toolchain-lock }}
+
+      - name: Install prebuilt Godot headers and simulator library
+        run: |
+          unzip -q "$RUNNER_TEMP/ios-runtime/headers.zip" -d godot
+          unzip -q "$RUNNER_TEMP/ios-runtime/simulator.zip" -d "$RUNNER_TEMP/ios-runtime/simulator"
+          cp -R "$RUNNER_TEMP/ios-runtime/simulator/godot-$GODOT_VERSION-stable/bin" godot/bin
+          test -s godot/bin/libgodot.ios.template_debug.arm64.simulator.a
+          xcrun lipo -info godot/bin/libgodot.ios.template_debug.arm64.simulator.a \
+            | tee artifacts/ios/runtime-architecture.log
 
       - name: Install package dependencies
         run: |
@@ -131,6 +127,15 @@ jobs:
             mise x -- pnpm --version
             mise x -- xcodegen --version
           } 2>&1 | tee artifacts/ios/toolchain.log
+
+      - name: Start iPhone 16 Pro simulator (iOS 27.0)
+        run: |
+          SIMULATOR_ID=$(xcrun simctl create "iPhone 16 Pro" \
+            com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro \
+            com.apple.CoreSimulator.SimRuntime.iOS-27-0)
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+          /usr/bin/time -l xcrun simctl boot "$SIMULATOR_ID" \
+            2>&1 | tee artifacts/ios/simulator-boot.log
 
       - name: Build iOS debug XCFramework
         env:
