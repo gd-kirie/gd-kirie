@@ -37,9 +37,9 @@ impact.
   rewriting its history.
 - Consult accepted ADRs before architecture or implementation work in their
   scope.
-- Track the ADR authoring skill through the repository's Agent Package Manager
-  (APM) manifest and lock file, while keeping the generated skill installation
-  out of Git.
+- Pin the upstream [ADR authoring skill](https://github.com/skillrecordings/adr-skill)
+  through the repository's Agent Package Manager (APM) manifest and lock file.
+  Keep the generated skill installation out of Git.
 
 ADRs do not replace issues, implementation plans, package documentation,
 release documentation, or `docs/architecture.md`. Routine bug fixes, formatting
@@ -57,29 +57,6 @@ choices, and local implementation details do not require ADRs.
   supersedes them.
 * Neutral, because current-state documentation remains authoritative for how the
   repository works now; ADRs explain why it arrived there.
-
-## Implementation Plan
-
-* **Affected paths**: add `docs/decisions/README.md` and numbered ADR files;
-  point `AGENTS.md` to the index; track APM configuration in `apm.yml` and
-  `apm.lock.yaml`; ignore generated APM and skill directories in `.gitignore`.
-* **Dependencies**: pin the upstream
-  [skillrecordings/adr-skill](https://github.com/skillrecordings/adr-skill)
-  source through APM. The generated installation is tooling, not repository
-  source.
-* **Patterns to follow**: use the conventions in `docs/decisions/README.md` and
-  link related ADRs and primary sources where they help establish the decision.
-* **Patterns to avoid**: do not use ADRs as mutable project status reports, copy
-  current architecture into every ADR, or require an ADR for routine work.
-
-### Verification
-
-- [x] `docs/decisions/README.md` documents the location, naming, statuses, and
-  workflow and indexes every ADR.
-- [x] `AGENTS.md` points contributors and agents to the ADR index.
-- [x] The APM manifest and lock file are tracked while generated skill contents
-  are ignored.
-- [x] This ADR and ADR-0002 contain no unresolved template placeholders.
 
 ## Alternatives Considered
 

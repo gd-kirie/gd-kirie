@@ -1,10 +1,11 @@
 interface KirieIframeHost extends JavaScriptObject {
-  create(callback: JavaScriptObject | null, url: string): unknown;
+  create(callback: JavaScriptObject | null, url: string, visible: boolean): unknown;
   launch_option(key: string): unknown;
 }
 
 interface KirieIframeSession extends JavaScriptObject {
   destroy(): void;
+  set_visible(visible: boolean): void;
   load_html(html: string, base_url: string): void;
   load_url(url: string): void;
   send(lane: string, value: unknown): void;
@@ -56,7 +57,7 @@ export class _WebIframeBackend extends RefCounted {
     return this._host !== null;
   }
 
-  create_webview(url: string): void {
+  create_webview(url: string, visible: boolean): void {
     this.destroy_webview();
     if (this._host === null) {
       this.ipc_error.emit("Kirie Web requires JavaScriptBridge and iframe_host.js");
@@ -64,7 +65,7 @@ export class _WebIframeBackend extends RefCounted {
     }
 
     this._callback = JavaScriptBridge.create_callback(this._on_message);
-    const session = this._host.create(this._callback, url);
+    const session = this._host.create(this._callback, url, visible);
     if (!(session instanceof JavaScriptObject)) {
       this.ipc_error.emit("Kirie iframe host did not return a session");
       this._callback = null;
@@ -72,6 +73,12 @@ export class _WebIframeBackend extends RefCounted {
     }
 
     this._session = session as KirieIframeSession;
+  }
+
+  set_webview_visible(visible: boolean): void {
+    if (this._session !== null) {
+      this._session.set_visible(visible);
+    }
   }
 
   destroy_webview(): void {

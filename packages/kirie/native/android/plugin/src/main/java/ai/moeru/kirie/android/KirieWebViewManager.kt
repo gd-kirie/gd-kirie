@@ -2,6 +2,7 @@ package ai.moeru.kirie.android
 
 import android.app.Activity
 import android.graphics.Color
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.FrameLayout
@@ -19,6 +20,7 @@ class KirieWebViewManager(
     private val onIpcError: (viewId: Long, message: String) -> Unit,
 ) {
     private val webViews = LinkedHashMap<Long, WebViewSession>()
+    private val visibility = LinkedHashMap<Long, Boolean>()
     private var hostView: ViewGroup? = null
     private var usesExplicitHost = false
 
@@ -104,6 +106,7 @@ class KirieWebViewManager(
                     assetRequestHandler = KirieAssetRequestHandler(activity.assets),
                 )
 
+            createdWebView.visibility = if (visibility[viewId] != false) View.VISIBLE else View.GONE
             rootView?.addView(createdWebView)
             webViews[viewId] = WebViewSession(webView = createdWebView)
             onWebViewReady(viewId)
@@ -111,6 +114,20 @@ class KirieWebViewManager(
             if (!initialUrl.isNullOrBlank()) {
                 loadResolvedUrl(viewId, createdWebView, initialUrl)
             }
+        }
+    }
+
+    fun setWebViewVisible(
+        viewId: Long,
+        visible: Boolean,
+    ) {
+        runOnUiThread {
+            visibility[viewId] = visible
+            val webView = webViews[viewId]?.webView ?: return@runOnUiThread
+            if (!visible) {
+                webView.clearFocus()
+            }
+            webView.visibility = if (visible) View.VISIBLE else View.GONE
         }
     }
 
@@ -122,6 +139,7 @@ class KirieWebViewManager(
         }
 
         runOnUiThread {
+            visibility.remove(viewId)
             val existingWebView = webViews.remove(viewId)?.webView ?: return@runOnUiThread
             existingWebView.stopLoading()
             existingWebView.removeFromSuperview()
@@ -138,6 +156,7 @@ class KirieWebViewManager(
                 session.webView.destroy()
             }
             webViews.clear()
+            visibility.clear()
         }
     }
 

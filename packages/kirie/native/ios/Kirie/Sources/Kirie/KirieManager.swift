@@ -69,6 +69,7 @@ final class KirieManager: NSObject {
     private weak var hostViewOverride: UIView?
     private var usesExplicitHost = false
     private var sessions: [Int64: (containerView: UIView, webView: WKWebView)] = [:]
+    private var visibility: [Int64: Bool] = [:]
 
     private override init() {
         super.init()
@@ -135,6 +136,7 @@ final class KirieManager: NSObject {
 
         let containerView = ensureContainerView(viewID: viewID, attachedTo: hostView)
         let webView = ensureWebView(viewID: viewID, attachedTo: containerView)
+        containerView.isHidden = visibility[viewID] == false
         hostView?.layoutIfNeeded()
 
         DispatchQueue.main.async { [weak self, weak webView] in
@@ -150,8 +152,21 @@ final class KirieManager: NSObject {
         }
     }
 
+    func setWebViewVisible(viewID: Int64, visible: Bool) {
+        visibility[viewID] = visible
+        guard let session = sessions[viewID] else {
+            return
+        }
+
+        if !visible {
+            session.webView.endEditing(true)
+        }
+        session.containerView.isHidden = !visible
+    }
+
     func destroyWebView(viewID: Int64) {
         logInfo("Destroying WebView viewID=\(viewID)")
+        visibility.removeValue(forKey: viewID)
 
         guard let session = sessions.removeValue(forKey: viewID) else {
             return
@@ -165,6 +180,7 @@ final class KirieManager: NSObject {
     }
 
     func destroyAllWebViews() {
+        visibility.removeAll()
         for viewID in Array(sessions.keys) {
             destroyWebView(viewID: viewID)
         }

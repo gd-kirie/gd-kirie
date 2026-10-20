@@ -10,6 +10,7 @@
 
 extern "C" void kirie_swift_create_webview(int64_t view_id, const char *initial_url, void *default_host_view);
 extern "C" void kirie_swift_destroy_webview(int64_t view_id);
+extern "C" void kirie_swift_set_webview_visible(int64_t view_id, bool visible);
 extern "C" void kirie_swift_load_url(int64_t view_id, const char *url);
 extern "C" void kirie_swift_load_html_string(int64_t view_id, const char *html, const char *base_url);
 extern "C" void kirie_swift_send_text(int64_t view_id, const char *message);
@@ -207,6 +208,10 @@ void KiriePlugin::createWebView(int64_t view_id, String initial_url) {
 	kirie_swift_create_webview(view_id, encoded_initial_url.get_data(), default_host_view);
 }
 
+void KiriePlugin::setWebViewVisible(int64_t view_id, bool visible) {
+	kirie_swift_set_webview_visible(view_id, visible);
+}
+
 void KiriePlugin::destroyWebView(int64_t view_id) {
 	kirie_swift_destroy_webview(view_id);
 }
@@ -275,6 +280,7 @@ KiriePlugin *KiriePlugin::get_singleton() {
 
 void KiriePlugin::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("createWebView", "view_id", "initial_url"), &KiriePlugin::createWebView);
+	ClassDB::bind_method(D_METHOD("setWebViewVisible", "view_id", "visible"), &KiriePlugin::setWebViewVisible);
 	ClassDB::bind_method(D_METHOD("destroyWebView", "view_id"), &KiriePlugin::destroyWebView);
 	ClassDB::bind_method(D_METHOD("loadUrl", "view_id", "url"), &KiriePlugin::loadUrl);
 	ClassDB::bind_method(D_METHOD("loadHtmlString", "view_id", "html", "base_url"), &KiriePlugin::loadHtmlString);

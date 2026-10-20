@@ -9,7 +9,7 @@ informed: "Kirie contributors"
 # Load Tray through a GDExtension
 
 The API and lifecycle choices are superseded by
-[ADR-0016 in kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0016-forward-native-tray-and-menu-objects.md). The GDExtension loader
+[ADR-0001 in kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/decisions/0001-keep-tray-a-thin-forwarding-layer.md). The GDExtension loader
 and distribution choices remain in effect.
 
 ## Context
@@ -54,23 +54,6 @@ Platform capabilities into GDExtension.
 - The C# host owns a Godot object and must release it on the main thread.
 - Native Tray installation requires the plugin addon as well as the NuGet host.
 - Acceptance testing uses the existing Tray example on each desktop platform.
-
-## Implementation Plan
-
-- **Native boundary**: Replace the C ABI in `packages/GdKirie.Tray/native/src/lib.rs` with the registered native class.
-- **Managed host**: Replace `packages/GdKirie.Tray/src/TrayNative.cs` and update host cleanup in `GdKirieTrayHost.cs`.
-- **NuGet package**: Remove native assets from `packages/GdKirie.Tray/GdKirie.Tray.csproj`.
-- **Plugin distribution**: Add the bundled addon to `packages/tray/src/plugin.ts` and package staging to `packages/tray`.
-- **Build tasks**: Update `scripts/build-tray-native.ts` and `mise.toml` for addon staging and managed NuGet packaging.
-- **Release workflows**: Move the native build matrix from `nuget-release.yml` to `npm-publish.yml`.
-- **Documentation**: Update the package READMEs, Tray example, architecture, and release instructions.
-
-### Verification
-
-- [x] Run Rust tests and lint, TypeScript checks, and the .NET build and tests.
-- [x] Build and type-check `examples/tray` with the staged GDExtension.
-- [ ] Exercise lifecycle, menu updates, and activation through `examples/tray` on supported desktops.
-- [x] Check that release packaging requires the six real desktop libraries.
 
 ## Rejected Alternatives
 

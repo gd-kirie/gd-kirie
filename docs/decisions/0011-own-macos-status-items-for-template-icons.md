@@ -66,32 +66,6 @@ the public GDScript API, or Godot.
   submenus, accelerators, and activation mapping already provided by
   `NativeMenu`.
 
-## Implementation Plan
-
-- `packages/tray/src/index.ts` and `index.test.ts`: define and verify the
-  optional wire field.
-- `packages/GdKirie.Tray/src/TrayController.cs`: retain existing public
-  signatures, select the macOS backend, and keep the Godot path inline.
-- `packages/GdKirie.Tray/src/Tray/MacOsTrayBackend.cs`: own the AppKit status
-  item, image conversion, callback target, and `NativeMenu` resources.
-- `examples/tray/`: use monochrome template artwork only on macOS.
-- Tray package READMEs and architecture documents: describe the platform
-  behavior.
-
-Do not introduce a general backend interface, a second AppKit menu model, a
-second Eventa owner, or access to Godot's private native state. No caller
-migration, environment variable, project setting, package dependency, or
-distributed binary is required.
-
-## Verification
-
-- [x] `mise run lint:eslint`
-- [x] `mise run lint:csharp`
-- [x] `mise run typecheck`
-- [x] `mise run test:unit`
-- [x] `mise run test:dotnet`
-- [x] `mise x -- pnpm -C examples/tray exec kirie build dotnet`
-
 ## References
 
 - [Apple `NSStatusBar` documentation](https://developer.apple.com/documentation/appkit/nsstatusbar)

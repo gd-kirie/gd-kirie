@@ -2,6 +2,47 @@ import { expect, test } from "@vidot/vitest";
 
 import { _IntegrationProbe } from "./integration_probe.ts";
 
+test("keeps the IPC session alive while the node or its parent is hidden", async (context) => {
+  if (context.root === null) {
+    expect(context.root !== null).toBe(true);
+    return;
+  }
+
+  const parent = new Control();
+  parent.hide();
+  context.root.add_child(parent);
+  const probe = new _IntegrationProbe();
+  probe.node.hide();
+  probe.initialize(parent, context.tree);
+  probe.node.initial_url = "res://src-web/dist/?probe=visibility";
+  probe.node.create_webview();
+  if (!expect(await probe.wait_for_ready(context)).toBe(true)) {
+    return;
+  }
+  if (!expect(await probe.wait_for_text_message(context, "web_ready:visibility")).toBe(true)) {
+    return;
+  }
+
+  probe.node.show();
+  for (const visible of [false, true]) {
+    parent.visible = visible;
+
+    const message = `visibility:${visible}`;
+    probe.node.send_text(message);
+    if (!expect(await probe.wait_for_text_message(context, `web_text_echo:${message}`)).toBe(true)) {
+      return;
+    }
+  }
+
+  probe.node.hide();
+  probe.node.send_text("hidden_node");
+  expect(await probe.wait_for_text_message(context, "web_text_echo:hidden_node")).toBe(true);
+  probe.node.show();
+  probe.node.send_text("restored_node");
+  expect(await probe.wait_for_text_message(context, "web_text_echo:restored_node")).toBe(true);
+  expect(probe.ready_count()).toBe(1);
+});
+
 test("round trips IPC lanes", async (context) => {
   if (context.root === null) {
     expect(context.root !== null).toBe(true);

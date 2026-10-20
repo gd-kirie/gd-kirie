@@ -13,6 +13,8 @@ artifacts and the downloadable addon zip are built by the repository-level
 mise tasks documented in
 [docs/addon-release.md](../../docs/addon-release.md).
 
+The native iOS backend requires iOS 16 or later.
+
 Current layout:
 
 - `src-godot`: TypeScript source for the Godot-facing scripts
@@ -25,8 +27,7 @@ The goal of this package is to keep the Godot addon tree and native sources
 close together while package-published JavaScript lives in the sibling
 workspace packages.
 
-Run `pnpm kirie doctor --fix` to install Kirie and Godot CEF. Select
-`kirie-addon` or `godot-cef` to repair only that addon. See
+Run `pnpm kirie doctor --fix plugin:core` to install Kirie and Godot CEF. See
 [installation instructions](../../README.md#installation).
 
 ## C# binding
@@ -82,6 +83,23 @@ public override void _ExitTree()
 The borrowed node must outlive the client. Disposing the client disconnects its
 C# callbacks but does not free the node or destroy its WebView; `KirieNode`
 remains the scene-tree lifecycle owner.
+
+## WebView visibility
+
+`KirieNode` uses its effective Godot visibility to show or hide its WebView.
+An initially hidden node or a hidden CanvasItem ancestor keeps the WebView hidden.
+Hide and show preserve the loaded page, readiness, and IPC connection.
+A hidden WebView does not receive user input.
+
+```csharp
+var node = GetNode<Control>("Kirie");
+node.Hide();
+// Show another Godot view, then restore the existing web page.
+node.Show();
+```
+
+This behavior follows [Godot CanvasItem visibility](https://docs.godotengine.org/en/stable/classes/class_canvasitem.html#class-canvasitem-method-is-visible-in-tree).
+The direct `KirieClient()` constructor has no scene node or visibility inheritance.
 
 ## Pointer input forwarding
 

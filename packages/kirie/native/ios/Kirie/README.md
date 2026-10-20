@@ -25,8 +25,10 @@ behavior.
 ## Tooling
 
 - `xcodebuild`
-- `xcodegen`
+- `xcodegen` (pinned through mise)
 - Apple toolchain from the installed Xcode
+
+The native framework requires iOS 16 or later.
 
 The project definition lives in [project.yml](./project.yml). The generated `.xcodeproj` is intentionally not committed.
 

@@ -94,6 +94,14 @@ class KirieAndroidPlugin(
     }
 
     @UsedByGodot
+    fun setWebViewVisible(
+        viewId: Long,
+        visible: Boolean,
+    ) {
+        webViewManager.setWebViewVisible(viewId, visible)
+    }
+
+    @UsedByGodot
     fun destroyWebView(viewId: Long) {
         webViewManager.destroyWebView(viewId)
     }

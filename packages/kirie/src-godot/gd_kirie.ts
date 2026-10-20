@@ -26,6 +26,7 @@ export class GdKirie extends GodotObject {
   }
 
   _web_backend: _WebIframeBackend | null = null;
+  _webview_visible = true;
 
   _notification(what: int): void {
     if (what === Object.NOTIFICATION_PREDELETE && this._web_backend !== null) {
@@ -88,7 +89,7 @@ export class GdKirie extends GodotObject {
     }
 
     if (this._web_backend !== null) {
-      this._web_backend.create_webview(initial_url);
+      this._web_backend.create_webview(initial_url, this._webview_visible);
       return;
     }
 
@@ -103,7 +104,31 @@ export class GdKirie extends GodotObject {
       return;
     }
 
+    plugin.call("setWebViewVisible", this._view_id, this._webview_visible);
     plugin.call("createWebView", this._view_id, initial_url);
+  }
+
+  _set_webview_visible(visible: boolean): void {
+    this._webview_visible = visible;
+    const cef_control = this._plugin_singleton instanceof Control ? this._plugin_singleton : null;
+    if (!visible) {
+      this._pointer_input_forwarder.reset(cef_control);
+    }
+
+    if (this._web_backend !== null) {
+      this._web_backend.set_webview_visible(visible);
+      return;
+    }
+
+    if (cef_control !== null) {
+      cef_control.visible = visible;
+      cef_control.set_process_input(visible);
+      return;
+    }
+
+    if (this._plugin_singleton !== null) {
+      this._plugin_singleton.call("setWebViewVisible", this._view_id, visible);
+    }
   }
 
   destroy_webview(): void {
@@ -504,6 +529,7 @@ export class GdKirie extends GodotObject {
       owner.add_child(browser);
     }
 
+    this._set_webview_visible(this._webview_visible);
     this._configure_cef_layout();
     if (initial_url !== "") {
       browser.set("url", initial_url);
@@ -690,7 +716,7 @@ export class GdKirie extends GodotObject {
     if (
       this._pointer_input_forwarder.try_forward_pointer_input(
         value,
-        this.pointer_input_forwarding_enabled,
+        this.pointer_input_forwarding_enabled && this._webview_visible,
         cef_control,
       )
     ) {

@@ -5,7 +5,7 @@ npm trusted publishing. The workflow avoids long-lived npm write tokens and
 lets npm issue short-lived publish credentials through GitHub Actions OIDC.
 
 This flow is separate from the core addon zip and the NuGet publishing lane
-for .NET hosts. Tray and Notifications are published from
+for .NET hosts. Tray, Notifications, and QR are published from
 [kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/npm-publishing.md).
 
 ## Current Packages

@@ -31,6 +31,8 @@ export class KirieNode extends Control {
   _kirie = new GdKirie();
 
   _ready(): void {
+    this.visibility_changed.connect(this._sync_webview_visibility);
+    this._sync_webview_visibility();
     this._kirie.pointer_input_forwarding_enabled = this.pointer_input_forwarding_enabled;
     this._kirie.webview_ready.connect((): void => {
       this.webview_ready.emit();
@@ -60,6 +62,10 @@ export class KirieNode extends Control {
   }
 
   _exit_tree(): void {
+    if (this.visibility_changed.is_connected(this._sync_webview_visibility)) {
+      this.visibility_changed.disconnect(this._sync_webview_visibility);
+    }
+
     if (!is_instance_valid(this._kirie)) {
       return;
     }
@@ -78,7 +84,12 @@ export class KirieNode extends Control {
       create_options.set("initial_url", this.initial_url);
     }
 
+    this._sync_webview_visibility();
     this._kirie.create_webview(create_options);
+  }
+
+  _sync_webview_visibility(): void {
+    this._kirie._set_webview_visible(this.is_visible_in_tree());
   }
 
   destroy_webview(): void {

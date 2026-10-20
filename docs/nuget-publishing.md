@@ -3,7 +3,7 @@
 This lane publishes
 [`GdKirie.EventaAdapter`](../packages/GdKirie.EventaAdapter/README.md) and
 [`GdKirie.Platform`](../packages/GdKirie.Platform/README.md).
-The Tray and Notifications hosts are published from
+The Tray, Notifications, and QR hosts are published from
 [kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/nuget-publishing.md).
 This flow is separate from addon zip and npm publishing.
 
