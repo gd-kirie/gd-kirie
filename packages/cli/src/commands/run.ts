@@ -67,7 +67,6 @@ export type RunIosOptions = RunIosSimulatorOptions & RunIosDeviceOptions;
 
 const androidDeviceWaitTimeoutMs = 10_000;
 const simulatorLookupTimeoutMs = 30_000;
-const simulatorBootTimeoutMs = 240_000;
 
 export async function runDesktop(options: RunDesktopOptions = {}): Promise<void> {
   const config = await loadKirieConfig({
@@ -200,7 +199,6 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
   await execa("xcrun", ["simctl", "bootstatus", simulatorId, "-b"], {
     cwd: config.cwd,
     stdio: "inherit",
-    timeout: simulatorBootTimeoutMs,
   });
   console.error(`[${new Date().toISOString()}] [iOS] Simulator ready`);
 
