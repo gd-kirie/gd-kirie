@@ -142,6 +142,8 @@ mise run test:integration-ios
 Set `SIMULATOR_ID` to select a simulator. Set `IOS_DEVICE_ID` to run on a
 physical device.
 
+The native framework and integration app require iOS 15 or later with Xcode 27.
+
 The adapter stages the generated tests, invokes `kirie export ios`, and then
 invokes `kirie run ios`. The CLI installs the app and forwards its console
 output. On the simulator, the CLI passes Godot's `--log-file` option with
@@ -178,16 +180,26 @@ Xcode 27 version. It records the selected tool versions in `toolchain.log`.
 See the
 [runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
-The workflow installs SCons 4.11.1 with uv and the project's pinned Python.
-uv installs SCons in an isolated environment. The workflow adds its executable
-directory to `PATH` for later steps. See the [uv tools guide](https://docs.astral.sh/uv/guides/tools/).
-Dependency installation, Godot source download, and header generation use separate
-steps so their costs remain visible.
+The job has a ten-minute limit. It first downloads Godot 4.7.2 headers and the
+ordinary-edition arm64 simulator debug library from the
+[Godot Mobile Plugins release](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
+Versions and SHA-256 checksums are pinned in `scripts/ios-ci-runtime.env`.
+Both archives are verified before extraction. Missing or invalid downloads fail
+before tool installation. There is no source build fallback in PR CI, so an empty
+Actions cache cannot trigger a full Godot compilation.
 
-The workflow caches the Godot editor, `ios.zip`, and the Godot simulator library.
-The simulator library cache key includes the Godot version, Xcode version, and
-runner architecture. The first template download uses the official Godot export
-archive and extracts only `templates/ios.zip`.
+The official Godot build process does not produce an arm64 simulator library.
+The community release supplies that missing slice and generated headers without
+requiring Kirie to maintain a separate engine build or release process.
+See the [official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh).
+
+PR jobs install only Node, pnpm, and XcodeGen through mise, plus the ordinary
+Godot editor. The mise cache key uses the tool lockfile rather than the task
+definitions, so documentation and task edits do not invalidate installed tools.
+The community archives are pinned dependencies downloaded on every run. The
+official ordinary-edition `ios.zip` is restored from cache or extracted from the
+checksum-verified official export archive. It is saved immediately after a
+successful installation, independently of later build and test results.
 
 The debug addon build retains the device archive and limits the simulator
 archive to `arm64`. Release builds keep their default architectures. See
@@ -212,3 +224,9 @@ Xcode build logs include task timing through `-showBuildTimingSummary`.
 See Apple's [build timing guidance](https://developer.apple.com/videos/play/wwdc2018/408/).
 The workflow uploads setup, build, simulator, test, and engine logs as the
 `ios-integration-logs` artifact, including failed runs.
+
+When upgrading Godot, verify that the community release provides matching headers
+and an arm64 simulator debug archive before changing the pins. Check the archive's
+actual architecture and simulator platform with `lipo` and `otool`, then run the
+full integration suite. These archives are test dependencies; production addon
+builds and official Godot export templates retain their existing responsibilities.
