@@ -32,9 +32,6 @@ The native framework requires iOS 16 or later.
 
 The project definition lives in [project.yml](./project.yml). The generated `.xcodeproj` is intentionally not committed.
 
-The native framework requires iOS 15 or later. Applications linking Kirie must
-also set their minimum iOS version to 15 or later to build with Xcode 27.
-
 ## Test
 
 Run the Swift unit tests from the repository root:

@@ -40,15 +40,19 @@ run = "pnpm -F @gd-kirie/integration-web run build"
 
 [tasks."build:integration"]
 description = "Build integration test dependencies and web assets"
-run = 'pnpm -r --filter "@gd-kirie/integration-tests^..." --filter "@gd-kirie/integration-web..." run build'
+run = [
+  "pnpm -C packages/kirie run generate:godot",
+  "pnpm -C packages/cli run build",
+  "pnpm -F @gd-kirie/integration-web run build",
+]
 
 [tasks."build:ios-xcframework"]
 description = "Build iOS xcframework artifact"
 run = "./scripts/run-build-task.js buildIosXcframework"
 
-[tasks."build:ios-debug-xcframework"]
-description = "Build iOS debug xcframework artifact"
-run = "./scripts/run-build-task.js buildIosDebugXcframework"
+[tasks."build:ios-simulator-xcframework"]
+description = "Build arm64 iOS Simulator debug xcframework"
+run = "./scripts/run-build-task.js buildIosSimulatorXcframework"
 
 [tasks."install:godot-cef"]
 description = "Install pinned Godot CEF desktop addon into a Godot project"

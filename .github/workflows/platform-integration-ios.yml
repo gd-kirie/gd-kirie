@@ -26,7 +26,6 @@ jobs:
       GODOT_VERSION: 4.7.2
       GODOT_IOS_HEADERS_SHA256: 5e3d897df72fd5cca1979b024380d74f965802fc7388874e57a40d6a48c84610
       GODOT_IOS_SIMULATOR_SHA256: bd354e44bb77d9f887ab42639031fdf7f7edaad16367014e2e0ea6938b6c387d
-      GODOT_EXPORT_TEMPLATES_SHA256: f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011
       MISE_EXEC_AUTO_INSTALL: "false"
       MISE_NOT_FOUND_AUTO_INSTALL: "false"
       MISE_TASK_RUN_AUTO_INSTALL: "false"
@@ -40,6 +39,12 @@ jobs:
         with:
           version: 2026.10.15
           install_args: --locked node pnpm xcodegen
+
+      - name: Install package dependencies
+        run: mise x -- pnpm install --frozen-lockfile
+
+      - name: Run Swift unit tests
+        run: mise run test:swift
 
       - name: Install prebuilt Godot headers and simulator library
         run: |
@@ -57,52 +62,21 @@ jobs:
         with:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
+          include-templates: true
 
-      - name: Cache Godot iOS export template
-        id: export-template
-        uses: actions/cache@v5
-        with:
-          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable/ios.zip
-          key: ${{ runner.os }}-godot-${{ env.GODOT_VERSION }}-ios-export-template-${{ env.GODOT_EXPORT_TEMPLATES_SHA256 }}
+      - name: Build iOS simulator XCFramework
+        run: mise run build:ios-simulator-xcframework
 
-      - name: Install official iOS export template
-        if: steps.export-template.outputs.cache-hit != 'true'
+      - name: Select iPhone 18 Pro simulator (iOS 27.0)
         run: |
-          TEMPLATES_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION.stable"
-          curl --fail --location \
-            "https://github.com/godotengine/godot-builds/releases/download/$GODOT_VERSION-stable/Godot_v$GODOT_VERSION-stable_export_templates.tpz" \
-            -o "$RUNNER_TEMP/export_templates.tpz"
-          echo "$GODOT_EXPORT_TEMPLATES_SHA256  $RUNNER_TEMP/export_templates.tpz" | shasum -a 256 -c -
-          mkdir -p "$TEMPLATES_DIR"
-          unzip -p "$RUNNER_TEMP/export_templates.tpz" templates/ios.zip > "$TEMPLATES_DIR/ios.zip"
-
-      - name: Install package dependencies
-        run: mise x -- pnpm install --frozen-lockfile
-
-      - name: Build iOS debug XCFramework
-        env:
-          KIRIE_IOS_SIMULATOR_ARCHS: arm64
-        run: mise run build:ios-debug-xcframework
-
-      - name: Create iPhone 16 Pro simulator (iOS 27.0)
-        run: |
-          SIMULATOR_ID=$(xcrun simctl create "iPhone 16 Pro" \
-            com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro \
-            com.apple.CoreSimulator.SimRuntime.iOS-27-0)
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
+            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
+              | select(.name == "iPhone 18 Pro")) | .udid')
           echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
 
       - name: Run integration tests
-        run: |
-          mkdir -p artifacts/ios
-          mise run test:integration-ios 2>&1 | tee artifacts/ios/integration.log
+        run: mise run test:integration-ios
 
       - name: Shut down simulator
         if: always() && env.SIMULATOR_ID != ''
         run: xcrun simctl shutdown "$SIMULATOR_ID"
-
-      - name: Upload integration log
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: ios-integration-logs
-          path: artifacts/ios

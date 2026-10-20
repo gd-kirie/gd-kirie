@@ -131,18 +131,19 @@ and [Godot pull request 121701](https://github.com/godotengine/godot/pull/121701
 
 ## iOS
 
-Build the iOS debug addon artifact and run the suite:
+Build the iOS simulator addon artifact and run the suite:
 
 ```sh
 mise run typecheck
-mise run build:ios-debug-xcframework
+mise run build:ios-simulator-xcframework
 mise run test:integration-ios
 ```
 
 Set `SIMULATOR_ID` to select a simulator, or start one before running the suite.
-Set `IOS_DEVICE_ID` to run on a physical device.
+For a physical device, build with `mise run build:ios-xcframework` instead and
+set `IOS_DEVICE_ID`.
 
-The native framework and integration app require iOS 15 or later with Xcode 27.
+The native framework and integration app require iOS 16 or later.
 Simulator exports also require a matching arm64 Godot library at
 `godot/bin/libgodot.ios.template_debug.arm64.simulator.a` in this repository
 (`template_release` for release exports). Prepare it before running the suite;
@@ -183,26 +184,28 @@ for standalone use.
 
 The [iOS workflow](../.github/workflows/platform-integration-ios.yml) runs on
 `xcode-27` with a fifteen-minute limit to allow for simulator startup. It installs
-Node, pnpm, and XcodeGen through mise and uses the ordinary Godot editor.
+Node, pnpm, and XcodeGen through mise. Swift unit tests run in this same job.
 See the [runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
 CI downloads matching headers and the arm64 simulator debug library from
 [Godot Mobile Plugins](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
 The workflow pins their version and SHA-256 checksums and verifies both archives
 before extraction. The [official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh)
-does not provide that simulator slice. The official `ios.zip` export template is
-cached separately and verified when downloaded. CI never compiles Godot.
+does not provide that simulator slice. The ordinary Godot editor and official
+export templates are installed and cached by
+[`setup-godot`](https://github.com/chickensoft-games/setup-godot).
+CI never compiles Godot.
 
-The debug XCFramework includes device and arm64 simulator archives. Release
-builds retain their default architectures. `test:integration-ios` builds only
-the fixture's package dependencies and web assets through `build:integration`,
-using [pnpm filtering](https://pnpm.io/filtering).
+`build:ios-simulator-xcframework` creates a debug XCFramework containing only
+the arm64 simulator framework. The release task `build:ios-xcframework` still
+builds both device and simulator frameworks. `test:integration-ios` prepares
+the addon scripts, CLI bundle, and test web assets through `build:integration`.
+Other workspace packages are imported from source and need no separate bundles.
 
-CI creates an iPhone 16 Pro with iOS 27.0. The CLI boots it after app compilation,
-with a four-minute readiness timeout (`xcrun simctl help bootstatus`). The workflow
-shuts down that simulator after the tests and uploads `integration.log`, which
-includes export, simulator startup, and engine output. Setup and native build
-output remain in the Actions step logs.
+CI selects the runner's existing iPhone 18 Pro with iOS 27.0. The CLI boots it
+after app compilation, with a four-minute readiness timeout
+(`xcrun simctl help bootstatus`). An `always()` step shuts down the selected
+simulator after the tests. All output remains in the Actions step logs.
 
 When upgrading Godot, verify the matching community archives, their architecture
 and simulator platform (`lipo` and `otool`), then run the full integration suite.
