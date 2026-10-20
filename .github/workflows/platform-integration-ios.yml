@@ -77,6 +77,30 @@ jobs:
       - name: Run integration tests
         run: mise run test:integration-ios
 
+      - name: Inspect iOS app bundle
+        if: always()
+        run: |
+          APP_PATH=tests/integration/dist/kirie/ios/debug.app
+          if [ -d "$APP_PATH" ]; then
+            du -sh "$APP_PATH"
+            find "$APP_PATH" -type f -exec stat -f '%z %N' {} + | sort -nr
+          else
+            echo "No exported iOS app bundle was produced."
+          fi
+
+      - name: Show simulator installation logs
+        if: always() && env.SIMULATOR_ID != ''
+        run: |
+          xcrun simctl spawn "$SIMULATOR_ID" log show \
+            --last 15m --style compact --info --debug \
+            --predicate 'process == "installd" OR process == "installcoordinationd" OR process == "lsd" OR subsystem CONTAINS[c] "install"'
+
+      - name: Show host simulator logs
+        if: always() && env.SIMULATOR_ID != ''
+        run: |
+          /usr/bin/log show --last 15m --style compact --info --debug \
+            --predicate 'process == "simctl" OR process CONTAINS "CoreSimulator"'
+
       - name: Shut down simulator
         if: always() && env.SIMULATOR_ID != ''
         run: xcrun simctl shutdown "$SIMULATOR_ID"
