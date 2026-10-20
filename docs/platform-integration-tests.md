@@ -202,10 +202,13 @@ builds both device and simulator frameworks. `test:integration-ios` prepares
 the addon scripts, CLI bundle, and test web assets through `build:integration`.
 Other workspace packages are imported from source and need no separate bundles.
 
-CI selects the runner's existing iPhone 18 Pro with iOS 27.0. The CLI boots it
-after app compilation, with a four-minute readiness timeout
+CI starts the runner's existing iPhone 18 Pro with iOS 27.0 before installing
+dependencies, so simulator startup overlaps dependency setup and builds
+(`xcrun simctl help boot`). The CLI waits for readiness after app compilation,
+with a four-minute timeout
 (`xcrun simctl help bootstatus`). An `always()` step shuts down the selected
-simulator after the tests. All output remains in the Actions step logs.
+simulator after the tests. Timestamped CLI messages mark readiness, installation,
+container lookup, and launch. All output remains in the Actions step logs.
 
 When upgrading Godot, verify the matching community archives, their architecture
 and simulator platform (`lipo` and `otool`), then run the full integration suite.

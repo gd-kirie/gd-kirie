@@ -196,13 +196,16 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
         await readIosAppBundleId(path.resolve(config.cwd, options.appPath)) :
         readIosBundleId(config.godot.project));
 
+  console.error(`[${new Date().toISOString()}] [iOS] Waiting for simulator ${simulatorId}`);
   await execa("xcrun", ["simctl", "bootstatus", simulatorId, "-b"], {
     cwd: config.cwd,
     stdio: "inherit",
     timeout: simulatorBootTimeoutMs,
   });
+  console.error(`[${new Date().toISOString()}] [iOS] Simulator ready`);
 
   if (options.appPath) {
+    console.error(`[${new Date().toISOString()}] [iOS] Installing ${bundleId}`);
     await execa(
       "xcrun",
       ["simctl", "install", simulatorId, path.resolve(config.cwd, options.appPath)],
@@ -211,8 +214,10 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
         stdio: "inherit",
       },
     );
+    console.error(`[${new Date().toISOString()}] [iOS] App installed`);
   }
 
+  console.error(`[${new Date().toISOString()}] [iOS] Resolving app container`);
   const { stdout: containerPath } = await execa(
     "xcrun",
     ["simctl", "get_app_container", simulatorId, bundleId, "data"],
@@ -232,6 +237,7 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
     ...iosLaunchOptionArgs(options.launchOptions),
     ...(options.appArgs ?? []),
   ];
+  console.error(`[${new Date().toISOString()}] [iOS] Launching ${bundleId} and streaming output`);
   const launch = execa("xcrun", launchArgs, {
     cwd: config.cwd,
     reject: false,
