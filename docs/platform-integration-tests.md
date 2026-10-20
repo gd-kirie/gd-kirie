@@ -131,7 +131,7 @@ and [Godot pull request 121701](https://github.com/godotengine/godot/pull/121701
 
 ## iOS
 
-Build the iOS debug addon artifact, start a simulator, and run the suite:
+Build the iOS debug addon artifact and run the suite:
 
 ```sh
 mise run typecheck
@@ -139,8 +139,8 @@ mise run build:ios-debug-xcframework
 mise run test:integration-ios
 ```
 
-Set `SIMULATOR_ID` to select a simulator. Set `IOS_DEVICE_ID` to run on a
-physical device.
+Set `SIMULATOR_ID` to select a simulator, or start one before running the suite.
+Set `IOS_DEVICE_ID` to run on a physical device.
 
 The native framework and integration app require iOS 15 or later with Xcode 27.
 Simulator exports also require a matching arm64 Godot library at
@@ -181,69 +181,28 @@ fixture. Platform tasks generate and run tests without repeating these checks.
 The fixture's `pnpm -C tests/integration test` command still includes typechecks
 for standalone use.
 
-The iOS workflow uses one `xcode-27` job on macOS 27 with the image's default
-Xcode 27 version. It records the selected tool versions in `toolchain.log`.
-See the
-[runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
+The [iOS workflow](../.github/workflows/platform-integration-ios.yml) runs on
+`xcode-27` with a fifteen-minute limit to allow for simulator startup. It installs
+Node, pnpm, and XcodeGen through mise and uses the ordinary Godot editor.
+See the [runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
-The job has a ten-minute limit. It first downloads Godot 4.7.2 headers and the
-ordinary-edition arm64 simulator debug library from the
-[Godot Mobile Plugins release](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
-Versions and SHA-256 checksums are pinned in `scripts/ios-ci-runtime.env`.
-Both archives are verified before extraction. Missing or invalid downloads fail
-before tool installation. The CLI requires a prepared simulator library and
-reports a missing file instead of compiling Godot. An empty Actions cache cannot
-trigger an engine build.
+CI downloads matching headers and the arm64 simulator debug library from
+[Godot Mobile Plugins](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
+The workflow pins their version and SHA-256 checksums and verifies both archives
+before extraction. The [official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh)
+does not provide that simulator slice. The official `ios.zip` export template is
+cached separately and verified when downloaded. CI never compiles Godot.
 
-The official Godot build process does not produce an arm64 simulator library.
-The community release supplies that missing slice and generated headers without
-requiring Kirie to maintain a separate engine build or release process.
-See the [official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh).
+The debug XCFramework includes device and arm64 simulator archives. Release
+builds retain their default architectures. `test:integration-ios` builds only
+the fixture's package dependencies and web assets through `build:integration`,
+using [pnpm filtering](https://pnpm.io/filtering).
 
-PR jobs install only Node, pnpm, and XcodeGen through mise, plus the ordinary
-Godot editor. The mise cache key uses a direct SHA-256 digest of the tool lockfile
-rather than the task definitions, so documentation and task edits do not
-invalidate installed tools. The workflow extracts the verified headers after
-tool installation.
-The community archives are pinned dependencies downloaded on every run. The
-official ordinary-edition `ios.zip` is restored from cache or extracted from the
-checksum-verified official export archive. It is saved immediately after a
-successful installation, independently of later build and test results.
+CI creates an iPhone 16 Pro with iOS 27.0. The CLI boots it after app compilation,
+with a four-minute readiness timeout (`xcrun simctl help bootstatus`). The workflow
+shuts down that simulator after the tests and uploads `integration.log`, which
+includes export, simulator startup, and engine output. Setup and native build
+output remain in the Actions step logs.
 
-The debug addon build retains the device archive and limits the simulator
-archive to `arm64`. Release builds keep their default architectures. See
-[Xcode build settings](https://developer.apple.com/documentation/xcode/configuring-the-build-settings-of-a-target/).
-
-The workflow creates an iPhone 16 Pro simulator with iOS 27.0 and leaves it shut
-down. The test step completes fixture conversion, ViDot test generation, Godot
-export, and Xcode app linking before the CLI starts the simulator. This keeps
-simulator startup from competing with those builds on the standard runner.
-`kirie run ios` calls `simctl bootstatus -b` before installation, with a
-four-minute startup timeout inside the overall ten-minute job limit. Run
-`xcrun simctl help bootstatus` for the command contract. Simulator startup output
-is included in `integration.log`.
-
-Simulator exports and tests still run on the same runner. After collecting the
-engine log, the workflow shuts down simulators before uploading diagnostics.
-The test step includes conversion, export, linking, simulator startup, and test
-execution, so it uses the remaining job budget rather than a separate cutoff.
-
-`mise run build:integration` builds the integration fixture's package dependencies
-and web assets. It uses pnpm's dependency selection instead of building all
-publishable packages. See [pnpm filtering](https://pnpm.io/filtering).
-The iOS workflow then runs `mise run --skip-deps test:integration-ios` to avoid
-repeating those builds. Use `--skip-deps` only after building the prerequisites.
-
-ViDot generates the test scripts before the launcher exports the test app.
-The workflow records command duration and resource use with `/usr/bin/time -l`.
-It also records memory and free disk space at the start and end of the job.
-Xcode build logs include task timing through `-showBuildTimingSummary`.
-See Apple's [build timing guidance](https://developer.apple.com/videos/play/wwdc2018/408/).
-The workflow uploads setup, build, simulator, test, and engine logs as the
-`ios-integration-logs` artifact, including failed runs.
-
-When upgrading Godot, verify that the community release provides matching headers
-and an arm64 simulator debug archive before changing the pins. Check the archive's
-actual architecture and simulator platform with `lipo` and `otool`, then run the
-full integration suite. These archives are test dependencies; production addon
-builds and official Godot export templates retain their existing responsibilities.
+When upgrading Godot, verify the matching community archives, their architecture
+and simulator platform (`lipo` and `otool`), then run the full integration suite.

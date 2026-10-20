@@ -18,11 +18,15 @@ jobs:
   ios:
     name: iOS
     runs-on: xcode-27
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         shell: bash
     env:
+      GODOT_VERSION: 4.7.2
+      GODOT_IOS_HEADERS_SHA256: 5e3d897df72fd5cca1979b024380d74f965802fc7388874e57a40d6a48c84610
+      GODOT_IOS_SIMULATOR_SHA256: bd354e44bb77d9f887ab42639031fdf7f7edaad16367014e2e0ea6938b6c387d
+      GODOT_EXPORT_TEMPLATES_SHA256: f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011
       MISE_EXEC_AUTO_INSTALL: "false"
       MISE_NOT_FOUND_AUTO_INSTALL: "false"
       MISE_TASK_RUN_AUTO_INSTALL: "false"
@@ -31,57 +35,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Download pinned Godot headers and simulator library
-        id: runtime
-        timeout-minutes: 2
-        run: |
-          source scripts/ios-ci-runtime.env
-          mkdir -p artifacts/ios "$RUNNER_TEMP/ios-runtime"
-          cat scripts/ios-ci-runtime.env >> "$GITHUB_ENV"
-          echo "toolchain-lock=$(shasum -a 256 mise.lock | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          RELEASE_URL="https://github.com/godot-mobile-plugins/godot-ios-builds/releases/download/$GODOT_VERSION-stable"
-          /usr/bin/time -l curl --fail --location --connect-timeout 15 --max-time 90 \
-            "$RELEASE_URL/godot-headers-$GODOT_VERSION-stable.zip" \
-            -o "$RUNNER_TEMP/ios-runtime/headers.zip" \
-            2>&1 | tee artifacts/ios/runtime-download.log
-          /usr/bin/time -l curl --fail --location --connect-timeout 15 --max-time 90 \
-            "$RELEASE_URL/godot-ios-simulator-debug-$GODOT_VERSION-stable.zip" \
-            -o "$RUNNER_TEMP/ios-runtime/simulator.zip" \
-            2>&1 | tee -a artifacts/ios/runtime-download.log
-          echo "$GODOT_IOS_HEADERS_SHA256  $RUNNER_TEMP/ios-runtime/headers.zip" | shasum -a 256 -c -
-          echo "$GODOT_IOS_SIMULATOR_SHA256  $RUNNER_TEMP/ios-runtime/simulator.zip" | shasum -a 256 -c -
-          cp scripts/ios-ci-runtime.env artifacts/ios/runtime-pins.env
-
-      - name: Record runner resources
-        run: |
-          {
-            sw_vers
-            sysctl hw.logicalcpu hw.memsize vm.swapusage
-            vm_stat
-            df -h "$GITHUB_WORKSPACE"
-          } 2>&1 | tee artifacts/ios/runner-start.log
-
       - name: Install Node, pnpm, and XcodeGen
         uses: jdx/mise-action@v4
         with:
           version: 2026.10.15
           install_args: --locked node pnpm xcodegen
-          cache: true
-          cache_key: ios-tools-v1-${{ runner.arch }}-${{ steps.runtime.outputs.toolchain-lock }}
 
       - name: Install prebuilt Godot headers and simulator library
         run: |
-          unzip -q "$RUNNER_TEMP/ios-runtime/headers.zip" -d godot
-          unzip -q "$RUNNER_TEMP/ios-runtime/simulator.zip" -d "$RUNNER_TEMP/ios-runtime/simulator"
-          cp -R "$RUNNER_TEMP/ios-runtime/simulator/godot-$GODOT_VERSION-stable/bin" godot/bin
-          test -s godot/bin/libgodot.ios.template_debug.arm64.simulator.a
-          xcrun lipo -info godot/bin/libgodot.ios.template_debug.arm64.simulator.a \
-            | tee artifacts/ios/runtime-architecture.log
-
-      - name: Install package dependencies
-        run: |
-          /usr/bin/time -l mise x -- pnpm install --frozen-lockfile \
-            2>&1 | tee artifacts/ios/package-install.log
+          RELEASE_URL="https://github.com/godot-mobile-plugins/godot-ios-builds/releases/download/$GODOT_VERSION-stable"
+          curl --fail --location "$RELEASE_URL/godot-headers-$GODOT_VERSION-stable.zip" -o "$RUNNER_TEMP/headers.zip"
+          curl --fail --location "$RELEASE_URL/godot-ios-simulator-debug-$GODOT_VERSION-stable.zip" -o "$RUNNER_TEMP/simulator.zip"
+          echo "$GODOT_IOS_HEADERS_SHA256  $RUNNER_TEMP/headers.zip" | shasum -a 256 -c -
+          echo "$GODOT_IOS_SIMULATOR_SHA256  $RUNNER_TEMP/simulator.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/headers.zip" -d godot
+          unzip -q "$RUNNER_TEMP/simulator.zip" -d "$RUNNER_TEMP/simulator"
+          cp -R "$RUNNER_TEMP/simulator/godot-$GODOT_VERSION-stable/bin" godot/bin
 
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
@@ -89,56 +58,31 @@ jobs:
           version: ${{ env.GODOT_VERSION }}
           use-dotnet: false
 
-      - name: Restore Godot iOS export template
+      - name: Cache Godot iOS export template
         id: export-template
-        uses: actions/cache/restore@v5
+        uses: actions/cache@v5
         with:
           path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable/ios.zip
           key: ${{ runner.os }}-godot-${{ env.GODOT_VERSION }}-ios-export-template-${{ env.GODOT_EXPORT_TEMPLATES_SHA256 }}
 
       - name: Install official iOS export template
         if: steps.export-template.outputs.cache-hit != 'true'
-        timeout-minutes: 2
         run: |
-          source scripts/ios-ci-runtime.env
           TEMPLATES_DIR="$HOME/Library/Application Support/Godot/export_templates/$GODOT_VERSION.stable"
-          /usr/bin/time -l curl --fail --location --connect-timeout 15 --max-time 90 \
+          curl --fail --location \
             "https://github.com/godotengine/godot-builds/releases/download/$GODOT_VERSION-stable/Godot_v$GODOT_VERSION-stable_export_templates.tpz" \
-            -o "$RUNNER_TEMP/export_templates.tpz" \
-            2>&1 | tee artifacts/ios/export-template.log
+            -o "$RUNNER_TEMP/export_templates.tpz"
           echo "$GODOT_EXPORT_TEMPLATES_SHA256  $RUNNER_TEMP/export_templates.tpz" | shasum -a 256 -c -
           mkdir -p "$TEMPLATES_DIR"
           unzip -p "$RUNNER_TEMP/export_templates.tpz" templates/ios.zip > "$TEMPLATES_DIR/ios.zip"
 
-      - name: Save Godot iOS export template
-        if: steps.export-template.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ~/Library/Application Support/Godot/export_templates/${{ env.GODOT_VERSION }}.stable/ios.zip
-          key: ${{ steps.export-template.outputs.cache-primary-key }}
-
-      - name: Record toolchain
-        run: |
-          {
-            xcodebuild -version
-            xcode-select -p
-            "$GODOT" --version
-            mise x -- node --version
-            mise x -- pnpm --version
-            mise x -- xcodegen --version
-          } 2>&1 | tee artifacts/ios/toolchain.log
+      - name: Install package dependencies
+        run: mise x -- pnpm install --frozen-lockfile
 
       - name: Build iOS debug XCFramework
         env:
           KIRIE_IOS_SIMULATOR_ARCHS: arm64
-        run: |
-          /usr/bin/time -l mise run build:ios-debug-xcframework \
-            2>&1 | tee artifacts/ios/kirie-xcframework.log
-
-      - name: Build integration prerequisites
-        run: |
-          /usr/bin/time -l mise run build:integration \
-            2>&1 | tee artifacts/ios/integration-build.log
+        run: mise run build:ios-debug-xcframework
 
       - name: Create iPhone 16 Pro simulator (iOS 27.0)
         run: |
@@ -149,35 +93,14 @@ jobs:
 
       - name: Run integration tests
         run: |
-          /usr/bin/time -l mise run --skip-deps test:integration-ios \
-            2>&1 | tee artifacts/ios/integration.log
+          mkdir -p artifacts/ios
+          mise run test:integration-ios 2>&1 | tee artifacts/ios/integration.log
 
-      - name: Collect simulator engine log
+      - name: Shut down simulator
         if: always() && env.SIMULATOR_ID != ''
-        run: |
-          APP=tests/integration/dist/kirie/ios/debug.app
-          if [[ -f "$APP/Info.plist" ]]; then
-            BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
-            CONTAINER=$(xcrun simctl get_app_container "$SIMULATOR_ID" "$BUNDLE_ID" data)
-            if [[ -f "$CONTAINER/tmp/kirie.log" ]]; then
-              cp "$CONTAINER/tmp/kirie.log" artifacts/ios/engine.log
-            fi
-          fi
+        run: xcrun simctl shutdown "$SIMULATOR_ID"
 
-      - name: Shut down simulators
-        if: always() && env.SIMULATOR_ID != ''
-        run: xcrun simctl shutdown all
-
-      - name: Record final runner resources
-        if: always()
-        run: |
-          {
-            sysctl vm.swapusage
-            vm_stat
-            df -h "$GITHUB_WORKSPACE"
-          } 2>&1 | tee artifacts/ios/runner-end.log
-
-      - name: Upload iOS logs
+      - name: Upload integration log
         if: always()
         uses: actions/upload-artifact@v7
         with:

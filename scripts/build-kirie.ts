@@ -79,7 +79,6 @@ async function archiveIosFramework(
     "xcodebuild",
     [
       "archive",
-      "-showBuildTimingSummary",
       "-project",
       iosProjectPath,
       "-scheme",

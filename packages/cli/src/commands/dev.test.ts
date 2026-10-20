@@ -229,47 +229,10 @@ describe("runDev", () => {
     expect(devRun?.argv.slice(0, 4)).toEqual(["--path", project, "--", "--kirie-dev=1"]);
   });
 
-  it("launches iOS simulators with console output attached", async () => {
-    const project = await projects.copy();
-
-    await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
-    await installFakeXcrun(project);
-
-    const originalPath = process.env.PATH;
-    process.env.PATH = `${path.join(project, "fake-bin")}${path.delimiter}${originalPath ?? ""}`;
-    try {
-      await runIosSimulator({
-        cwd: project,
-        launchOptions: createKirieDevLaunchOptions("http://127.0.0.1:5173/"),
-        simulatorId: "booted",
-        terminateExisting: true,
-      });
-    } finally {
-      process.env.PATH = originalPath;
-    }
-
-    const invocations = await readFakeXcrunInvocations(project);
-    const launchRun = invocations.find((invocation) => invocation.argv[1] === "launch");
-
-    expect(invocations[0]?.argv).toEqual(["simctl", "bootstatus", "booted", "-b"]);
-    expect(launchRun?.argv.slice(0, 7)).toEqual([
-      "simctl",
-      "launch",
-      "--console",
-      "--terminate-running-process",
-      "booted",
-      "org.gd-kirie.cli-test",
-      "--log-file",
-    ]);
-    expect(launchRun?.argv[7]).toBe(path.join(project, "simulator-data", "tmp", "kirie.log"));
-    expect(launchRun?.argv).toContain("--kirie-dev=1");
-    expect(launchRun?.argv).toContain("--kirie-web-url=http://127.0.0.1:5173/");
-  });
-
   it.each([
     { simulatorId: "selected-simulator", expectedId: "selected-simulator" },
     { simulatorId: undefined, expectedId: "environment-simulator" },
-  ])("waits for $expectedId before installing the simulator app", async ({ simulatorId, expectedId }) => {
+  ])("boots and installs on $expectedId before launching with dev options", async ({ simulatorId, expectedId }) => {
     const project = await projects.copy();
     await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
     await installFakeXcrun(project);
@@ -281,10 +244,14 @@ describe("runDev", () => {
       appPath: "test.app",
       bundleId: "org.gd-kirie.cli-test",
       cwd: project,
+      launchOptions: createKirieDevLaunchOptions("http://127.0.0.1:5173/"),
       simulatorId,
+      terminateExisting: true,
     });
 
     const invocations = await readFakeXcrunInvocations(project);
+    const launchRun = invocations.find((invocation) => invocation.argv[1] === "launch");
+
     expect(invocations.map((invocation) => invocation.argv[1])).toEqual([
       "bootstatus",
       "install",
@@ -298,6 +265,18 @@ describe("runDev", () => {
       expectedId,
       path.join(project, "test.app"),
     ]);
+    expect(launchRun?.argv.slice(0, 7)).toEqual([
+      "simctl",
+      "launch",
+      "--console",
+      "--terminate-running-process",
+      expectedId,
+      "org.gd-kirie.cli-test",
+      "--log-file",
+    ]);
+    expect(launchRun?.argv[7]).toBe(path.join(project, "simulator-data", "tmp", "kirie.log"));
+    expect(launchRun?.argv).toContain("--kirie-dev=1");
+    expect(launchRun?.argv).toContain("--kirie-web-url=http://127.0.0.1:5173/");
   });
 
   it("stops before installing or launching when simulator boot fails", async () => {

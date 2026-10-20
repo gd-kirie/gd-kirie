@@ -245,6 +245,7 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
 
   try {
     while (true) {
+      // Drain once more after exit, including output written during the last read.
       const exitedBeforeRead = exited;
       const buffer = Buffer.alloc(64 * 1024);
       const { bytesRead } = await log.read(buffer);

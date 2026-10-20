@@ -112,7 +112,6 @@ async function buildExportedIosApp(options: {
     [
       "-project",
       options.xcodeProjectPath,
-      "-showBuildTimingSummary",
       "-scheme",
       scheme,
       "-sdk",
