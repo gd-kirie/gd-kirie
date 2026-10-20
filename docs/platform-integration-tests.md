@@ -212,11 +212,11 @@ The debug addon build retains the device archive and limits the simulator
 archive to `arm64`. Release builds keep their default architectures. See
 [Xcode build settings](https://developer.apple.com/documentation/xcode/configuring-the-build-settings-of-a-target/).
 
-The workflow starts the iPhone 16 Pro simulator with iOS 27.0 after installing
-dependencies. The simulator boots in the background while the workflow builds the
-addon and test prerequisites. Before running tests, the workflow waits for
-startup to finish with `simctl bootstatus -b`.
-See CircleCI's [simulator pre-start guidance](https://circleci.com/docs/guides/execution-managed/using-macos/#pre-start-the-simulator).
+The workflow starts the iPhone 16 Pro simulator with iOS 27.0 after building
+the addon and test prerequisites. This keeps simulator startup from competing
+with those builds on the standard runner. Before running tests, the workflow
+waits for startup to finish with `simctl bootstatus -b`. Simulator exports and
+tests still run on the same runner.
 
 `mise run build:integration` builds the integration fixture's package dependencies
 and web assets. It uses pnpm's dependency selection instead of building all

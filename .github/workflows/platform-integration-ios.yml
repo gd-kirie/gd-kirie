@@ -128,15 +128,6 @@ jobs:
             mise x -- xcodegen --version
           } 2>&1 | tee artifacts/ios/toolchain.log
 
-      - name: Start iPhone 16 Pro simulator (iOS 27.0)
-        run: |
-          SIMULATOR_ID=$(xcrun simctl create "iPhone 16 Pro" \
-            com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro \
-            com.apple.CoreSimulator.SimRuntime.iOS-27-0)
-          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          /usr/bin/time -l xcrun simctl boot "$SIMULATOR_ID" \
-            2>&1 | tee artifacts/ios/simulator-boot.log
-
       - name: Build iOS debug XCFramework
         env:
           KIRIE_IOS_SIMULATOR_ARCHS: arm64
@@ -148,6 +139,15 @@ jobs:
         run: |
           /usr/bin/time -l mise run build:integration \
             2>&1 | tee artifacts/ios/integration-build.log
+
+      - name: Start iPhone 16 Pro simulator (iOS 27.0)
+        run: |
+          SIMULATOR_ID=$(xcrun simctl create "iPhone 16 Pro" \
+            com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro \
+            com.apple.CoreSimulator.SimRuntime.iOS-27-0)
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+          /usr/bin/time -l xcrun simctl boot "$SIMULATOR_ID" \
+            2>&1 | tee artifacts/ios/simulator-boot.log
 
       - name: Wait for simulator
         timeout-minutes: 2
