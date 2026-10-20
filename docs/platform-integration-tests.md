@@ -184,7 +184,8 @@ for standalone use.
 
 The [iOS workflow](../.github/workflows/platform-integration-ios.yml) runs on
 `xcode-27` with a fifteen-minute limit to allow for simulator startup. It installs
-Node, pnpm, and XcodeGen through mise. Swift unit tests run in this same job.
+Node, pnpm, and XcodeGen through mise with the action's cache disabled. Swift
+unit tests run in this same job.
 See the [runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
 CI downloads matching headers and the arm64 simulator debug library from

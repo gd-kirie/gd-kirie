@@ -47,6 +47,7 @@ jobs:
         with:
           version: 2026.10.15
           install_args: --locked node pnpm xcodegen
+          cache: false
 
       - name: Install package dependencies
         run: mise x -- pnpm install --frozen-lockfile
