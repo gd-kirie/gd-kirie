@@ -149,11 +149,13 @@ Simulator exports also require a matching arm64 Godot library at
 the CLI does not build the engine. CI uses the community archive described below.
 
 The adapter stages the generated tests, invokes `kirie export ios`, and then
-invokes `kirie run ios`. The CLI installs the app and forwards its console
-output. On the simulator, the CLI passes Godot's `--log-file` option with
-the app's `tmp/kirie.log` path. It streams engine logs and ViDot events from
-this file and reads the remaining output after process exit. This retains
-events without a separate unified-log subscription. See the
+invokes `kirie run ios`. For simulator runs, the CLI boots the selected device
+if needed and waits for readiness before installing the app. Conversion, export,
+and Xcode app linking finish before this startup command. The CLI then installs
+the app and forwards its console output. On the simulator, it passes Godot's
+`--log-file` option with the app's `tmp/kirie.log` path. It streams engine logs
+and ViDot events from this file and reads the remaining output after process
+exit. This retains events without a separate unified-log subscription. See the
 [Godot command-line reference](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html).
 
 Godot 4.7.2 uses Compatibility rendering in the iOS Simulator. The tests cover
@@ -212,15 +214,19 @@ The debug addon build retains the device archive and limits the simulator
 archive to `arm64`. Release builds keep their default architectures. See
 [Xcode build settings](https://developer.apple.com/documentation/xcode/configuring-the-build-settings-of-a-target/).
 
-The workflow starts the iPhone 16 Pro simulator with iOS 27.0 after building
-the addon and test prerequisites. This keeps simulator startup from competing
-with those builds on the standard runner. `simctl bootstatus -b` boots the device
-and waits for startup to finish, with a four-minute step limit inside the overall
-ten-minute job limit. Run `xcrun simctl help bootstatus` for the command contract.
+The workflow creates an iPhone 16 Pro simulator with iOS 27.0 and leaves it shut
+down. The test step completes fixture conversion, ViDot test generation, Godot
+export, and Xcode app linking before the CLI starts the simulator. This keeps
+simulator startup from competing with those builds on the standard runner.
+`kirie run ios` calls `simctl bootstatus -b` before installation, with a
+four-minute startup timeout inside the overall ten-minute job limit. Run
+`xcrun simctl help bootstatus` for the command contract. Simulator startup output
+is included in `integration.log`.
+
 Simulator exports and tests still run on the same runner. After collecting the
 engine log, the workflow shuts down simulators before uploading diagnostics.
-The test step includes Godot export and Xcode app linking, so it uses the
-remaining job budget rather than a separate four-minute cutoff.
+The test step includes conversion, export, linking, simulator startup, and test
+execution, so it uses the remaining job budget rather than a separate cutoff.
 
 `mise run build:integration` builds the integration fixture's package dependencies
 and web assets. It uses pnpm's dependency selection instead of building all

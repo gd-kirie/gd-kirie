@@ -67,6 +67,7 @@ export type RunIosOptions = RunIosSimulatorOptions & RunIosDeviceOptions;
 
 const androidDeviceWaitTimeoutMs = 10_000;
 const simulatorLookupTimeoutMs = 30_000;
+const simulatorBootTimeoutMs = 240_000;
 
 export async function runDesktop(options: RunDesktopOptions = {}): Promise<void> {
   const config = await loadKirieConfig({
@@ -194,6 +195,12 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
     (options.appPath ?
         await readIosAppBundleId(path.resolve(config.cwd, options.appPath)) :
         readIosBundleId(config.godot.project));
+
+  await execa("xcrun", ["simctl", "bootstatus", simulatorId, "-b"], {
+    cwd: config.cwd,
+    stdio: "inherit",
+    timeout: simulatorBootTimeoutMs,
+  });
 
   if (options.appPath) {
     await execa(

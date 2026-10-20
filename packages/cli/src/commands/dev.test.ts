@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execa } from "execa";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWebDevHostUrl, resolveAndroidReverseWebUrl, runDev } from "./dev.ts";
 import { createKirieDevLaunchOptions, runIosSimulator } from "./run.ts";
@@ -36,6 +36,7 @@ interface XcrunInvocation {
 }
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await projects.cleanup();
 });
 
@@ -250,6 +251,7 @@ describe("runDev", () => {
     const invocations = await readFakeXcrunInvocations(project);
     const launchRun = invocations.find((invocation) => invocation.argv[1] === "launch");
 
+    expect(invocations[0]?.argv).toEqual(["simctl", "bootstatus", "booted", "-b"]);
     expect(launchRun?.argv.slice(0, 7)).toEqual([
       "simctl",
       "launch",
@@ -262,6 +264,60 @@ describe("runDev", () => {
     expect(launchRun?.argv[7]).toBe(path.join(project, "simulator-data", "tmp", "kirie.log"));
     expect(launchRun?.argv).toContain("--kirie-dev=1");
     expect(launchRun?.argv).toContain("--kirie-web-url=http://127.0.0.1:5173/");
+  });
+
+  it.each([
+    { simulatorId: "selected-simulator", expectedId: "selected-simulator" },
+    { simulatorId: undefined, expectedId: "environment-simulator" },
+  ])("waits for $expectedId before installing the simulator app", async ({ simulatorId, expectedId }) => {
+    const project = await projects.copy();
+    await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
+    await installFakeXcrun(project);
+    await fs.mkdir(path.join(project, "test.app"));
+    vi.stubEnv("PATH", `${path.join(project, "fake-bin")}${path.delimiter}${process.env.PATH ?? ""}`);
+    vi.stubEnv("SIMULATOR_ID", "environment-simulator");
+
+    await runIosSimulator({
+      appPath: "test.app",
+      bundleId: "org.gd-kirie.cli-test",
+      cwd: project,
+      simulatorId,
+    });
+
+    const invocations = await readFakeXcrunInvocations(project);
+    expect(invocations.map((invocation) => invocation.argv[1])).toEqual([
+      "bootstatus",
+      "install",
+      "get_app_container",
+      "launch",
+    ]);
+    expect(invocations[0]?.argv).toEqual(["simctl", "bootstatus", expectedId, "-b"]);
+    expect(invocations[1]?.argv).toEqual([
+      "simctl",
+      "install",
+      expectedId,
+      path.join(project, "test.app"),
+    ]);
+  });
+
+  it("stops before installing or launching when simulator boot fails", async () => {
+    const project = await projects.copy();
+    await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
+    await installFakeXcrun(project);
+    vi.stubEnv("PATH", `${path.join(project, "fake-bin")}${path.delimiter}${process.env.PATH ?? ""}`);
+    vi.stubEnv("FAKE_XCRUN_FAIL_BOOT", "1");
+
+    await expect(runIosSimulator({
+      appPath: "test.app",
+      bundleId: "org.gd-kirie.cli-test",
+      cwd: project,
+      simulatorId: "failed-simulator",
+    })).rejects.toThrow("bootstatus");
+
+    const invocations = await readFakeXcrunInvocations(project);
+    expect(invocations.map((invocation) => invocation.argv)).toEqual([
+      ["simctl", "bootstatus", "failed-simulator", "-b"],
+    ]);
   });
 
   it("forwards simulator output from startup through process exit", async () => {
@@ -431,6 +487,11 @@ const file = "${FAKE_XCRUN_INVOCATIONS_FILE}";
 const argv = process.argv.slice(2);
 
 appendFileSync(file, JSON.stringify({ argv, cwd: process.cwd() }) + "\\n");
+
+if (argv[1] === "bootstatus" && process.env.FAKE_XCRUN_FAIL_BOOT) {
+  process.stderr.write("simulator boot failed\\n");
+  process.exit(8);
+}
 
 if (argv[1] === "get_app_container") {
   const container = resolve("simulator-data");
