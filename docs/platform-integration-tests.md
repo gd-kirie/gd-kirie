@@ -214,9 +214,11 @@ archive to `arm64`. Release builds keep their default architectures. See
 
 The workflow starts the iPhone 16 Pro simulator with iOS 27.0 after building
 the addon and test prerequisites. This keeps simulator startup from competing
-with those builds on the standard runner. Before running tests, the workflow
-waits for startup to finish with `simctl bootstatus -b`. Simulator exports and
-tests still run on the same runner.
+with those builds on the standard runner. `simctl bootstatus -b` boots the device
+and waits for startup to finish, with a four-minute step limit inside the overall
+ten-minute job limit. Run `xcrun simctl help bootstatus` for the command contract.
+Simulator exports and tests still run on the same runner. After collecting the
+engine log, the workflow shuts down simulators before uploading diagnostics.
 
 `mise run build:integration` builds the integration fixture's package dependencies
 and web assets. It uses pnpm's dependency selection instead of building all

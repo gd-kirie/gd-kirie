@@ -140,20 +140,15 @@ jobs:
           /usr/bin/time -l mise run build:integration \
             2>&1 | tee artifacts/ios/integration-build.log
 
-      - name: Start iPhone 16 Pro simulator (iOS 27.0)
+      - name: Boot iPhone 16 Pro simulator (iOS 27.0) and wait
+        timeout-minutes: 4
         run: |
           SIMULATOR_ID=$(xcrun simctl create "iPhone 16 Pro" \
             com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro \
             com.apple.CoreSimulator.SimRuntime.iOS-27-0)
           echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          /usr/bin/time -l xcrun simctl boot "$SIMULATOR_ID" \
-            2>&1 | tee artifacts/ios/simulator-boot.log
-
-      - name: Wait for simulator
-        timeout-minutes: 2
-        run: |
           /usr/bin/time -l xcrun simctl bootstatus "$SIMULATOR_ID" -b \
-            2>&1 | tee -a artifacts/ios/simulator-boot.log
+            2>&1 | tee artifacts/ios/simulator-boot.log
 
       - name: Run integration tests
         timeout-minutes: 4
@@ -172,6 +167,10 @@ jobs:
               cp "$CONTAINER/tmp/kirie.log" artifacts/ios/engine.log
             fi
           fi
+
+      - name: Shut down simulators
+        if: always() && env.SIMULATOR_ID != ''
+        run: xcrun simctl shutdown all
 
       - name: Record final runner resources
         if: always()
