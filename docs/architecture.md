@@ -813,6 +813,9 @@ Web exports keep the same `KirieNode` owner and lane API. C# borrows that owner
 through `KirieClient.FromNode()`.
 
 The DOM adapter creates, sizes, navigates, and destroys a same-origin iframe.
+For a Control owner, the backend maps its axis-aligned
+[`get_global_rect()`](https://docs.godotengine.org/en/stable/classes/class_control.html#class-control-method-get-global-rect)
+to the browser canvas and follows its visibility each frame.
 It transfers a private `MessagePort` after each document load. It must not grow
 container APIs, serialization, application protocols, or another JavaScript
 runtime. Those responsibilities stay in their existing packages.
@@ -822,6 +825,9 @@ The Godot backend uses official
 APIs. It performs the one required recursive conversion between Godot Variant
 containers and native JavaScript containers. Web lane traffic uses structured
 clone through the transferred port. Eventa remains an adapter above Kirie IPC.
+
+During development, a [Vite middleware](https://vite.dev/guide/api-plugin.html#configureserver)
+serves the Godot export unchanged at `/@kirie/`; the application keeps Vite hot updates.
 
 The Web backend supports same-origin content only. It maps
 `res://src-web/dist` to the Vite build beside the exported Godot page. Other
@@ -833,7 +839,11 @@ validates them without installing another Godot editor or writing machine-local
 paths into the project. The template
 repository owns their build and release workflow. The templates use WebAssembly
 threads, so served Web content must be cross-origin isolated; `kirie dev web`
-supplies the isolation headers for development.
+supplies the isolation headers for development. The CLI uses the template's
+Python assembler to package the standard .NET host and application assemblies.
+It restores the bundled Godot packages with
+[NuGet PackageDownload](https://learn.microsoft.com/en-us/nuget/consume-packages/packagedownload-functionality)
+into a release-specific cache before resolving the application SDK.
 
 ### Data lane type mapping
 

@@ -17,7 +17,7 @@ pnpm kirie doctor
 
 `kirie dev web` exports the Godot Web host once, starts the Vite development
 server, and prints its URL. C# projects require the experimental .NET
-Web templates:
+Web templates and Python 3.9 or newer:
 
 ```sh
 pnpm kirie doctor --fix web

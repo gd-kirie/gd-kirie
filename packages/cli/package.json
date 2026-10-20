@@ -37,6 +37,7 @@
     "citty": "catalog:",
     "execa": "catalog:",
     "giget": "3.3.0",
+    "sirv": "^3.0.2",
     "takanawa-node": "0.9.0",
     "vite": "catalog:"
   },

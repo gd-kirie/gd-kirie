@@ -5,6 +5,7 @@ interface KirieIframeHost extends JavaScriptObject {
 
 interface KirieIframeSession extends JavaScriptObject {
   destroy(): void;
+  set_rect(x: float, y: float, width: float, height: float, visible: boolean): void;
   load_html(html: string, base_url: string): void;
   load_url(url: string): void;
   send(lane: string, value: unknown): void;
@@ -37,6 +38,8 @@ export class _WebIframeBackend extends RefCounted {
   data_received = gd.signal<[value: unknown]>();
   ipc_error = gd.signal<[error: string]>();
 
+  _owner: Control | null = null;
+  _tree: SceneTree | null = null;
   _host: KirieIframeHost | null = null;
   _session: KirieIframeSession | null = null;
   _array_constructor: JavaScriptArrayConstructor | null = null;
@@ -56,7 +59,7 @@ export class _WebIframeBackend extends RefCounted {
     return this._host !== null;
   }
 
-  create_webview(url: string): void {
+  create_webview(url: string, parent_node: Node | null): void {
     this.destroy_webview();
     if (this._host === null) {
       this.ipc_error.emit("Kirie Web requires JavaScriptBridge and iframe_host.js");
@@ -72,9 +75,42 @@ export class _WebIframeBackend extends RefCounted {
     }
 
     this._session = session as KirieIframeSession;
+    if (parent_node instanceof Control) {
+      this._owner = parent_node;
+      this._tree = parent_node.get_tree();
+      this._tree.process_frame.connect(this._update_rect);
+      this._update_rect();
+    }
+  }
+
+  _update_rect(): void {
+    if (!is_instance_valid(this._owner)) {
+      this.destroy_webview();
+      return;
+    }
+
+    if (this._owner === null || this._session === null) {
+      return;
+    }
+
+    const rect = this._owner.get_global_rect();
+    const viewport_size = this._owner.get_viewport_rect().size;
+    this._session.set_rect(
+      rect.position.x / viewport_size.x,
+      rect.position.y / viewport_size.y,
+      rect.size.x / viewport_size.x,
+      rect.size.y / viewport_size.y,
+      this._owner.is_visible_in_tree(),
+    );
   }
 
   destroy_webview(): void {
+    if (this._tree !== null) {
+      this._tree.process_frame.disconnect(this._update_rect);
+      this._tree = null;
+    }
+
+    this._owner = null;
     if (this._session !== null) {
       this._session.destroy();
       this._session = null;
