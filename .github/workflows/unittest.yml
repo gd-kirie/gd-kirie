@@ -34,7 +34,11 @@ jobs:
           cache: true
 
       - name: Repair empty NuGet configuration
-        run: test -s "$HOME/.nuget/NuGet/NuGet.Config" || mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
+        run: |
+          if [ ! -s "$HOME/.nuget/NuGet/NuGet.Config" ]; then
+            mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
+            mv "$HOME/.nuget/NuGet/nuget.config" "$HOME/.nuget/NuGet/NuGet.Config"
+          fi
 
       - name: Get pnpm store path
         id: pnpm-store
@@ -74,7 +78,11 @@ jobs:
           cache: true
 
       - name: Repair empty NuGet configuration
-        run: test -s "$HOME/.nuget/NuGet/NuGet.Config" || mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
+        run: |
+          if [ ! -s "$HOME/.nuget/NuGet/NuGet.Config" ]; then
+            mise x -- dotnet new nugetconfig --force --output "$HOME/.nuget/NuGet"
+            mv "$HOME/.nuget/NuGet/nuget.config" "$HOME/.nuget/NuGet/NuGet.Config"
+          fi
 
       - name: Run .NET tests
         run: mise run test:dotnet
