@@ -43,14 +43,6 @@ jobs:
       - name: Install package dependencies
         run: mise x -- pnpm install --frozen-lockfile
 
-      - name: Start iPhone 18 Pro simulator (iOS 27.0)
-        run: |
-          SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
-            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
-              | select(.name == "iPhone 18 Pro")) | .udid')
-          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          xcrun simctl boot "$SIMULATOR_ID"
-
       - name: Run Swift unit tests
         run: mise run test:swift
 
@@ -74,6 +66,13 @@ jobs:
 
       - name: Build iOS simulator XCFramework
         run: mise run build:ios-simulator-xcframework
+
+      - name: Select iPhone 18 Pro simulator (iOS 27.0)
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
+            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
+              | select(.name == "iPhone 18 Pro")) | .udid')
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
 
       - name: Run integration tests
         run: mise run test:integration-ios
