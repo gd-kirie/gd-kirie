@@ -67,12 +67,13 @@ jobs:
       - name: Build iOS simulator XCFramework
         run: mise run build:ios-simulator-xcframework
 
-      - name: Select iPhone 17 Pro simulator (iOS 26.5)
+      - name: Start iPhone 17 Pro simulator (iOS 26.5)
         run: |
           SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
             first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-26-5"][]
               | select(.name == "iPhone 17 Pro")) | .udid')
           echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$SIMULATOR_ID"
 
       - name: Run integration tests
         run: mise run test:integration-ios
