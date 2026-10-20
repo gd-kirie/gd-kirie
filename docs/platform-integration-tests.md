@@ -184,8 +184,8 @@ for standalone use.
 
 The [iOS workflow](../.github/workflows/platform-integration-ios.yml) runs on
 `xcode-27` with a fifteen-minute limit to allow for simulator startup. It installs
-Node, pnpm, and XcodeGen through mise with the action's cache disabled. Swift
-unit tests run in this same job.
+Node, pnpm, and XcodeGen through mise with the action's default cache. Swift unit
+tests run in this same job.
 See the [runner image software list](https://github.com/actions/runner-images/blob/main/images/macos/xcode-27-arm64-Readme.md).
 
 CI downloads matching headers and the arm64 simulator debug library from
@@ -203,10 +203,9 @@ builds both device and simulator frameworks. `test:integration-ios` prepares
 the addon scripts, CLI bundle, and test web assets through `build:integration`.
 Other workspace packages are imported from source and need no separate bundles.
 
-CI starts the runner's existing iPhone 18 Pro with iOS 27.0 before installing
-dependencies, so simulator startup overlaps dependency setup and builds
-(`xcrun simctl help boot`). The CLI waits for readiness after app compilation,
-with a four-minute timeout
+CI selects the runner's existing iPhone 18 Pro with iOS 27.0. The CLI boots it
+after app compilation, so simulator startup does not compete with dependency
+setup or builds. It waits for readiness with a four-minute timeout
 (`xcrun simctl help bootstatus`). An `always()` step shuts down the selected
 simulator after the tests. Timestamped CLI messages mark readiness, installation,
 container lookup, and launch. All output remains in the Actions step logs.
