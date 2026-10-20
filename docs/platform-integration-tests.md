@@ -219,6 +219,8 @@ and waits for startup to finish, with a four-minute step limit inside the overal
 ten-minute job limit. Run `xcrun simctl help bootstatus` for the command contract.
 Simulator exports and tests still run on the same runner. After collecting the
 engine log, the workflow shuts down simulators before uploading diagnostics.
+The test step includes Godot export and Xcode app linking, so it uses the
+remaining job budget rather than a separate four-minute cutoff.
 
 `mise run build:integration` builds the integration fixture's package dependencies
 and web assets. It uses pnpm's dependency selection instead of building all

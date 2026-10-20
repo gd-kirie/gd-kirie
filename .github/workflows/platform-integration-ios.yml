@@ -62,7 +62,7 @@ jobs:
           } 2>&1 | tee artifacts/ios/runner-start.log
 
       - name: Install Node, pnpm, and XcodeGen
-        uses: jdx/mise-action@v3
+        uses: jdx/mise-action@v4
         with:
           version: 2026.10.15
           install_args: --locked node pnpm xcodegen
@@ -151,7 +151,6 @@ jobs:
             2>&1 | tee artifacts/ios/simulator-boot.log
 
       - name: Run integration tests
-        timeout-minutes: 4
         run: |
           /usr/bin/time -l mise run --skip-deps test:integration-ios \
             2>&1 | tee artifacts/ios/integration.log
