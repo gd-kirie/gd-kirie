@@ -16,6 +16,7 @@ concurrency:
 jobs:
   ios:
     name: iOS
+    # Try to use self-hosted runner
     runs-on: self-hosted
     env:
       GODOT_VERSION: 4.7.2
