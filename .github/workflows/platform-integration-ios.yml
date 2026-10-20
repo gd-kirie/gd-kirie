@@ -17,12 +17,11 @@ concurrency:
 jobs:
   ios:
     name: iOS
-    runs-on: macos-26
+    runs-on: xcode-27
     defaults:
       run:
         shell: bash
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       GODOT_VERSION: 4.7.2
       GODOT_IOS_HEADERS_SHA256: 5e3d897df72fd5cca1979b024380d74f965802fc7388874e57a40d6a48c84610
       GODOT_IOS_SIMULATOR_SHA256: bd354e44bb77d9f887ab42639031fdf7f7edaad16367014e2e0ea6938b6c387d
@@ -67,13 +66,12 @@ jobs:
       - name: Build iOS simulator XCFramework
         run: mise run build:ios-simulator-xcframework
 
-      - name: Start iPhone 17 Pro simulator (iOS 26.5)
+      - name: Select iPhone 18 Pro simulator (iOS 27.0)
         run: |
           SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
-            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-26-5"][]
-              | select(.name == "iPhone 17 Pro")) | .udid')
+            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
+              | select(.name == "iPhone 18 Pro")) | .udid')
           echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          xcrun simctl boot "$SIMULATOR_ID"
 
       - name: Run integration tests
         run: mise run test:integration-ios
