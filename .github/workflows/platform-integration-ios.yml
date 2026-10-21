@@ -60,20 +60,13 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Start iPhone 18 Pro simulator (iOS 27.0)
-        run: |
-          SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
-            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
-              | select(.name == "iPhone 18 Pro")) | .udid')
-          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
-          xcrun simctl boot "$SIMULATOR_ID"
-
       - name: Build iOS simulator XCFramework
         run: mise run build:ios-simulator-xcframework
 
       - name: Run integration tests
-        run: mise run test:integration-ios
-
-      - name: Shut down simulator
-        if: always() && env.SIMULATOR_ID != ''
-        run: xcrun simctl shutdown "$SIMULATOR_ID"
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
+            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
+              | select(.name == "iPhone 18 Pro")) | .udid')
+          export SIMULATOR_ID
+          mise run test:integration-ios
