@@ -401,8 +401,12 @@ starting the app, and iOS `run` installs the selected `.app` before launching
 it. `kirie export ios` first asks Godot for the Xcode project and then invokes
 `xcodebuild` to produce an installable `.app`; without `--device` it builds for
 the iOS Simulator, while `--device <UDID>` selects a physical-device build
-and lets Xcode use the local Apple Development signing configuration. `build`,
-`export`, and `run` default to `production` mode and
+and lets Xcode use the local Apple Development signing configuration.
+Simulator runs stream Godot's file log from the app's data container.
+See [platform integration tests](platform-integration-tests.md#ios) for the
+log lifecycle and upstream reference.
+
+`build`, `export`, and `run` default to `production` mode and
 should accept `--mode <mode>` for `development`, `staging`, or other
 user-defined modes once that option is implemented. `dev` should never run the
 production web build because it owns the Vite hot-reload server; desktop

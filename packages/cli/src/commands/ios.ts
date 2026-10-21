@@ -102,7 +102,7 @@ async function buildExportedIosApp(options: {
     }
 
     fs.copyFileSync(
-      await ensureIosArm64SimulatorLibgodot(options.cwd, options.release ?? false),
+      resolveIosArm64SimulatorLibgodot(options.cwd, options.release ?? false),
       simulatorLibgodot,
     );
   }
@@ -168,11 +168,11 @@ function findSimulatorLibgodot(dirPath: string): string | undefined {
   return undefined;
 }
 
-async function ensureIosArm64SimulatorLibgodot(cwd: string, release: boolean): Promise<string> {
+function resolveIosArm64SimulatorLibgodot(cwd: string, release: boolean): string {
   const target = release ? "release" : "debug";
-  const godotSourceRoot = resolveRepositoryGodotSourceRoot(cwd);
+  const godotRoot = resolveRepositoryGodotRoot(cwd);
   const arm64Source = path.join(
-    godotSourceRoot,
+    godotRoot,
     `bin/libgodot.ios.template_${target}.arm64.simulator.a`,
   );
 
@@ -180,25 +180,13 @@ async function ensureIosArm64SimulatorLibgodot(cwd: string, release: boolean): P
     return arm64Source;
   }
 
-  await execa(
-    "scons",
-    [
-      "platform=ios",
-      `target=template_${target}`,
-      "arch=arm64",
-      "simulator=yes",
-      `-j${os.availableParallelism()}`,
-    ],
-    {
-      cwd: godotSourceRoot,
-      stdio: "inherit",
-    },
+  throw new Error(
+    `Missing prebuilt Godot ARM64 iOS simulator library: ${arm64Source}. ` +
+    "Install the matching Godot version and build configuration before exporting.",
   );
-
-  return arm64Source;
 }
 
-function resolveRepositoryGodotSourceRoot(cwd: string): string {
+function resolveRepositoryGodotRoot(cwd: string): string {
   let directory = path.resolve(cwd);
 
   while (path.dirname(directory) !== directory) {

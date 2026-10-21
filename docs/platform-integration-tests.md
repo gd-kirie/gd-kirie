@@ -121,10 +121,6 @@ templates do not enable extended options. The integration project's main scene
 therefore attaches the staged ViDot runner to its `SceneTree` on mobile exports.
 See the [Godot command-line tutorial](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html).
 
-On iOS, Godot sends `print` to Apple's unified log instead of standard output.
-The CLI streams the application's unified log so the adapter receives ViDot
-events. See Godot's [OsLogLogger implementation](https://github.com/godotengine/godot/blob/4.7.2-stable/drivers/apple/os_log_logger.cpp).
-
 The Android package name is `ai.moeru.kirie.integrationtests`.
 
 The fixture disables Android Swappy frame pacing for Godot 4.7.2. That Godot
@@ -135,27 +131,38 @@ and [Godot pull request 121701](https://github.com/godotengine/godot/pull/121701
 
 ## iOS
 
-Build the iOS debug addon artifact, start a simulator, and run the suite:
+Build the iOS simulator addon artifact and run the suite:
 
 ```sh
-mise run build:ios-debug-xcframework
+mise run typecheck
+mise run build:ios-simulator-xcframework
 mise run test:integration-ios
 ```
 
-Set `SIMULATOR_ID` to select a simulator. Set `IOS_DEVICE_ID` to run on a
-physical device.
+Set `SIMULATOR_ID` to select a simulator, or start one before running the suite.
+For a physical device, build with `mise run build:ios-xcframework` instead and
+set `IOS_DEVICE_ID`.
+
+The native framework and integration app require iOS 16 or later.
+Simulator exports also require a matching arm64 Godot library at
+`godot/bin/libgodot.ios.template_debug.arm64.simulator.a` in this repository
+(`template_release` for release exports). Prepare it before running the suite;
+the CLI does not build the engine. CI uses the community archive described below.
 
 The adapter stages the generated tests, invokes `kirie export ios`, and then
-invokes `kirie run ios`. The CLI installs the app and forwards its console
-output.
+invokes `kirie run ios`. The CLI waits for simulator readiness before installing
+and launching the app. It streams Godot logs and ViDot events from
+`tmp/kirie.log`, including remaining output after process exit, using Godot's
+`--log-file` option. See the
+[Godot command-line reference](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html).
 
 Godot 4.7.2 uses Compatibility rendering in the iOS Simulator. The tests cover
 the WebView and IPC paths. They do not verify Mobile or Metal rendering.
 
 ## CI
 
-The platform workflows build the required native addon first. Each workflow
-then runs one command for the full suite:
+The platform workflows build the required native addon first. These tasks build
+the test prerequisites and run the full suite:
 
 ```sh
 mise run test:integration-desktop
@@ -166,3 +173,29 @@ mise run test:integration-ios
 The launcher exports mobile apps after ViDot generates the test scripts. This
 keeps the generated scripts and the selected tests in the same application
 process.
+
+The Typecheck job runs `mise run typecheck`, which includes the integration
+fixture. Platform tasks generate and run tests without repeating these checks.
+The fixture's `pnpm -C tests/integration test` command still includes typechecks
+for standalone use.
+
+Swift unit tests run independently in the [unit-test workflow](../.github/workflows/unittest.yml).
+The [iOS integration workflow](../.github/workflows/platform-integration-ios.yml)
+downloads matching headers and the arm64 simulator debug library from
+[Godot Mobile Plugins](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
+The archives are version-pinned and SHA-256 verified because the
+[official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh)
+does not provide that simulator slice. CI does not compile Godot.
+
+`build:ios-simulator-xcframework` creates a debug XCFramework containing only
+the arm64 simulator framework. The release task `build:ios-xcframework` still
+builds both device and simulator frameworks. `test:integration-ios` prepares
+the addon scripts, CLI bundle, and test web assets.
+Other workspace packages are imported from source and need no separate bundles.
+
+The integration step selects the simulator. After the test app is built, the CLI
+starts the simulator and waits for readiness using `simctl bootstatus -b` (see
+`xcrun simctl help bootstatus`).
+
+When upgrading Godot, verify the matching community archives, their architecture
+and simulator platform (`lipo` and `otool`), then run the full integration suite.

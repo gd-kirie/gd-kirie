@@ -15,6 +15,11 @@ pnpm kirie export web
 pnpm kirie doctor
 ```
 
+For simulator runs, `kirie run ios` and `kirie dev ios` select the device with
+`--device` or `SIMULATOR_ID`, defaulting to an already booted simulator.
+See [iOS integration testing](../../docs/platform-integration-tests.md#ios)
+for simulator prerequisites and log behavior.
+
 `kirie dev web` exports the Godot Web host once, starts the Vite development
 server, and prints its URL. C# projects require the experimental .NET
 Web templates:

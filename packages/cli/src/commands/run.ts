@@ -1,4 +1,6 @@
+import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { readExportPresetValue } from "@gd-kirie/build";
 import { execa } from "execa";
 
@@ -193,6 +195,11 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
         await readIosAppBundleId(path.resolve(config.cwd, options.appPath)) :
         readIosBundleId(config.godot.project));
 
+  await execa("xcrun", ["simctl", "bootstatus", simulatorId, "-b"], {
+    cwd: config.cwd,
+    stdio: "inherit",
+  });
+
   if (options.appPath) {
     await execa(
       "xcrun",
@@ -204,6 +211,13 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
     );
   }
 
+  const { stdout: containerPath } = await execa(
+    "xcrun",
+    ["simctl", "get_app_container", simulatorId, bundleId, "data"],
+    { cwd: config.cwd },
+  );
+  const logPath = path.join(containerPath, "tmp", "kirie.log");
+  await using log = await fs.open(logPath, "w+");
   const launchArgs = [
     "simctl",
     "launch",
@@ -211,62 +225,47 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
     ...(options.terminateExisting ? ["--terminate-running-process"] : []),
     simulatorId,
     bundleId,
+    "--log-file",
+    logPath,
     ...iosLaunchOptionArgs(options.launchOptions),
     ...(options.appArgs ?? []),
   ];
-  const launchDeadline = Date.now() + 20_000;
-  const logs = execa(
-    "xcrun",
-    [
-      "simctl",
-      "spawn",
-      simulatorId,
-      "log",
-      "stream",
-      "--style",
-      "compact",
-      "--level",
-      "info",
-      "--predicate",
-      `subsystem == "${bundleId}"`,
-    ],
-    {
-      buffer: { stdout: false, stderr: true },
-      cwd: config.cwd,
-      reject: false,
-    },
-  );
-  logs.stdout?.pipe(process.stdout, { end: false });
-  logs.stderr?.pipe(process.stderr, { end: false });
+  const launch = execa("xcrun", launchArgs, {
+    cwd: config.cwd,
+    reject: false,
+    stdio: "inherit",
+  });
+  let exited = false;
+  const completion = launch.then((result) => {
+    exited = true;
+    return result;
+  });
 
   try {
     while (true) {
-      const launch = execa("xcrun", launchArgs, {
-        buffer: { stdout: false, stderr: true },
-        cwd: config.cwd,
-      });
-      launch.stdout?.pipe(process.stdout, { end: false });
-      launch.stderr?.pipe(process.stderr, { end: false });
-
-      try {
-        await launch;
-        return;
-      } catch (error) {
-        const simulatorNotReady =
-          error instanceof Error &&
-          /\bBusy\b.+\binstalling or uninstalling\b|\bNotFound\b.+\bunknown to FrontBoard\b/s.test(
-            error.message,
-          );
-        if (!simulatorNotReady || Date.now() >= launchDeadline) {
-          throw error;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
+      // Drain once more after exit, including output written during the last read.
+      const exitedBeforeRead = exited;
+      const buffer = Buffer.alloc(64 * 1024);
+      const { bytesRead } = await log.read(buffer);
+      if (bytesRead > 0) {
+        process.stdout.write(buffer.subarray(0, bytesRead));
+        continue;
       }
+
+      if (exitedBeforeRead) {
+        break;
+      }
+
+      await delay(50);
     }
   } finally {
-    logs.kill("SIGTERM");
-    await logs;
+    launch.kill("SIGTERM");
+    await completion;
+  }
+
+  const result = await completion;
+  if (result.failed) {
+    throw result;
   }
 }
 

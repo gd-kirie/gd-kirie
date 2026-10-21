@@ -1,6 +1,6 @@
 export {
   buildAndroidAar,
-  buildIosDebugXcframework,
+  buildIosSimulatorXcframework,
   buildIosXcframework,
   checkAddonPack,
   packAddon,

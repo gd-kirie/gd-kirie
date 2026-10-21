@@ -54,7 +54,7 @@ packaging, or platform WebView bridge details.
   Entry point for Godot iOS plugin documentation.
 - [Creating iOS plugins](https://docs.godotengine.org/en/stable/tutorials/platform/ios/ios_plugin.html)
   Reference for Godot native iOS plugin entry points and `.xcframework`
-  support. Kirie uses addon export hooks instead of a project-local `.gdip`
+  support. The Kirie core addon uses export hooks instead of a project-local `.gdip`
   shim.
 - [Godot iOS plugins repository](https://github.com/godot-sdk-integrations/godot-ios-plugins)
   Upstream reference for Godot's official iOS plugin build model, including

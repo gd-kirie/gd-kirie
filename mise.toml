@@ -42,9 +42,9 @@ run = "pnpm -F @gd-kirie/integration-web run build"
 description = "Build iOS xcframework artifact"
 run = "./scripts/run-build-task.js buildIosXcframework"
 
-[tasks."build:ios-debug-xcframework"]
-description = "Build iOS debug xcframework artifact"
-run = "./scripts/run-build-task.js buildIosDebugXcframework"
+[tasks."build:ios-simulator-xcframework"]
+description = "Build arm64 iOS Simulator debug xcframework"
+run = "./scripts/run-build-task.js buildIosSimulatorXcframework"
 
 [tasks."install:godot-cef"]
 description = "Install pinned Godot CEF desktop addon into a Godot project"
@@ -130,24 +130,31 @@ run = "pnpm run test:swift"
 description = "Run the Android platform integration suite"
 depends = ["build:packages", "build:integration-web"]
 env = { KIRIE_TEST_TARGET = "android" }
-run = "pnpm -C tests/integration test"
+run = "pnpm -C tests/integration run test:run"
 
 [tasks."test:integration-ios"]
 description = "Run the iOS platform integration suite"
-depends = ["build:packages", "build:integration-web"]
 env = { KIRIE_TEST_TARGET = "ios" }
-run = "pnpm -C tests/integration test"
+run = [
+  "pnpm -C packages/kirie run generate:godot",
+  "pnpm -C packages/cli run build",
+  "pnpm -F @gd-kirie/integration-web run build",
+  "pnpm -C tests/integration run test:run",
+]
 
 [tasks."test:integration-desktop"]
 description = "Run the desktop Godot CEF platform integration suite"
 depends = ["build:packages", "build:integration-web"]
 env = { KIRIE_TEST_TARGET = "desktop" }
-run = "pnpm -C tests/integration test"
+run = "pnpm -C tests/integration run test:run"
 
 [tasks."test:unit"]
 description = "Run package unit tests"
 run = "pnpm run test:unit"
 
 [tasks.typecheck]
-description = "Typecheck publishable packages"
-run = "pnpm run typecheck"
+description = "Typecheck publishable packages and integration fixtures"
+run = [
+  "pnpm run typecheck",
+  "pnpm -C tests/integration run typecheck",
+]

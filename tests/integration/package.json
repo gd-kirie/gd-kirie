@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build:godot": "tstogd convert src/integration_probe.ts src/mobile_test_runner.ts --project-root . --tsconfig tsconfig.godot.json --no-check",
-    "test": "pnpm run typecheck && pnpm run build:godot && vitest run --config vitest.config.ts",
+    "test": "pnpm run typecheck && pnpm run test:run",
+    "test:run": "pnpm run build:godot && vitest run --config vitest.config.ts",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.godot.json --noEmit"
   },
   "dependencies": {

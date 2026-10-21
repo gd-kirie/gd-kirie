@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,11 +17,14 @@ concurrency:
 jobs:
   ios:
     name: iOS
-    runs-on: macos-latest
+    runs-on: xcode-27
+    defaults:
+      run:
+        shell: bash
     env:
       GODOT_VERSION: 4.7.2
-      HOMEBREW_NO_AUTO_UPDATE: "1"
-      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      GODOT_IOS_HEADERS_SHA256: 5e3d897df72fd5cca1979b024380d74f965802fc7388874e57a40d6a48c84610
+      GODOT_IOS_SIMULATOR_SHA256: bd354e44bb77d9f887ab42639031fdf7f7edaad16367014e2e0ea6938b6c387d
       MISE_EXEC_AUTO_INSTALL: "false"
       MISE_NOT_FOUND_AUTO_INSTALL: "false"
       MISE_TASK_RUN_AUTO_INSTALL: "false"
@@ -29,12 +33,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install Node and pnpm
-        uses: jdx/mise-action@v3
+      - name: Install Node, pnpm, and XcodeGen
+        uses: jdx/mise-action@v4
         with:
-          install: true
-          install_args: --locked node pnpm
-          cache: true
+          version: 2026.10.15
+          install_args: --locked node pnpm xcodegen
+
+      - name: Install package dependencies
+        run: mise x -- pnpm install --frozen-lockfile
+
+      - name: Install prebuilt Godot headers and simulator library
+        run: |
+          RELEASE_URL="https://github.com/godot-mobile-plugins/godot-ios-builds/releases/download/$GODOT_VERSION-stable"
+          curl --fail --location "$RELEASE_URL/godot-headers-$GODOT_VERSION-stable.zip" -o "$RUNNER_TEMP/headers.zip"
+          curl --fail --location "$RELEASE_URL/godot-ios-simulator-debug-$GODOT_VERSION-stable.zip" -o "$RUNNER_TEMP/simulator.zip"
+          echo "$GODOT_IOS_HEADERS_SHA256  $RUNNER_TEMP/headers.zip" | shasum -a 256 -c -
+          echo "$GODOT_IOS_SIMULATOR_SHA256  $RUNNER_TEMP/simulator.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/headers.zip" -d godot
+          unzip -q "$RUNNER_TEMP/simulator.zip" -d "$RUNNER_TEMP/simulator"
+          cp -R "$RUNNER_TEMP/simulator/godot-$GODOT_VERSION-stable/bin" godot/bin
 
       - name: Setup Godot
         uses: chickensoft-games/setup-godot@v2
@@ -43,68 +60,13 @@ jobs:
           use-dotnet: false
           include-templates: true
 
-      - name: Setup Xcode version
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Get Xcode version
-        id: xcode
-        run: |
-          xcodebuild -version
-          echo "version=$(xcodebuild -version | tr ' \n' '--')" >> "$GITHUB_OUTPUT"
-
-      - name: Install XcodeGen and SCons
-        run: brew install xcodegen scons
-
-      - name: Download and Prepare Godot Source Headers
-        run: |
-          rm -rf godot "${GODOT_VERSION}-stable.tar.gz" "godot-${GODOT_VERSION}-stable"
-          curl -LO "https://github.com/godotengine/godot/archive/refs/tags/${GODOT_VERSION}-stable.tar.gz"
-          tar -xzf "${GODOT_VERSION}-stable.tar.gz"
-          mv "godot-${GODOT_VERSION}-stable" godot
-
-          cd godot
-
-          scons platform=macos target=editor \
-            vulkan=no \
-            core/version_generated.gen.h \
-            core/disabled_classes.gen.h \
-            core/extension/gdextension_interface.gen.h \
-            core/object/gdvirtual.gen.h
-
-      - name: Cache Godot iOS simulator template
-        uses: actions/cache@v5
-        with:
-          path: godot/bin/libgodot.ios.template_debug.arm64.simulator.a
-          key: ${{ runner.os }}-${{ runner.arch }}-godot-${{ env.GODOT_VERSION }}-${{ steps.xcode.outputs.version }}-ios-template_debug-arm64-simulator
-
-      - name: Get pnpm store path
-        id: pnpm-store
-        run: echo "path=$(mise x -- pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-pnpm-store-
-
-      - name: Install pnpm dependencies
-        run: mise x -- pnpm install --frozen-lockfile
-
-      - name: Build iOS debug XCFramework
-        run: mise run build:ios-debug-xcframework
-
-      - name: Start iOS Simulator
-        timeout-minutes: 5
-        run: |
-          DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 "iPhone 16" | awk -F '[()]' '{print $2}')
-          xcrun simctl boot "$DEVICE_ID"
-          xcrun simctl bootstatus "$DEVICE_ID"
-          echo "SIMULATOR_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+      - name: Build iOS simulator XCFramework
+        run: mise run build:ios-simulator-xcframework
 
       - name: Run integration tests
-        timeout-minutes: 15
-        run: mise run test:integration-ios
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available --json | jq -er '
+            first(.devices["com.apple.CoreSimulator.SimRuntime.iOS-27-0"][]
+              | select(.name == "iPhone 18 Pro")) | .udid')
+          export SIMULATOR_ID
+          mise run test:integration-ios

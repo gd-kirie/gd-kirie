@@ -73,6 +73,7 @@ async function archiveIosFramework(
   configuration: string,
   destination: string,
   archivePath: string,
+  architectures?: string,
 ): Promise<void> {
   await execa(
     "xcodebuild",
@@ -94,6 +95,7 @@ async function archiveIosFramework(
       destination,
       "-archivePath",
       archivePath,
+      ...(architectures ? [`ARCHS=${architectures}`] : []),
     ],
     {
       cwd: rootDir,
@@ -106,6 +108,7 @@ async function createIosXcframework(
   configuration: string,
   name: string,
   outputPath: string,
+  simulatorOnly = false,
 ): Promise<void> {
   const deviceArchivePath = `${iosBuildDir}/Kirie-${name}-iOS.xcarchive`;
   const simulatorArchivePath = `${iosBuildDir}/Kirie-${name}-Simulator.xcarchive`;
@@ -114,15 +117,27 @@ async function createIosXcframework(
   fs.rmSync(simulatorArchivePath, { force: true, recursive: true });
   fs.rmSync(outputPath, { force: true, recursive: true });
 
-  await archiveIosFramework(configuration, "generic/platform=iOS", deviceArchivePath);
-  await archiveIosFramework(configuration, "generic/platform=iOS Simulator", simulatorArchivePath);
+  if (!simulatorOnly) {
+    await archiveIosFramework(configuration, "generic/platform=iOS", deviceArchivePath);
+  }
+
+  await archiveIosFramework(
+    configuration,
+    "generic/platform=iOS Simulator",
+    simulatorArchivePath,
+    simulatorOnly ? "arm64" : undefined,
+  );
 
   await execa(
     "xcodebuild",
     [
       "-create-xcframework",
-      "-framework",
-      `${deviceArchivePath}/Products/Library/Frameworks/Kirie.framework`,
+      ...(!simulatorOnly ?
+          [
+            "-framework",
+            `${deviceArchivePath}/Products/Library/Frameworks/Kirie.framework`,
+          ] :
+          []),
       "-framework",
       `${simulatorArchivePath}/Products/Library/Frameworks/Kirie.framework`,
       "-output",
@@ -203,11 +218,16 @@ export async function buildIosXcframework(): Promise<void> {
 }
 
 // mise task entrypoint.
-export async function buildIosDebugXcframework(): Promise<void> {
+export async function buildIosSimulatorXcframework(): Promise<void> {
   prepareIosBuildDirs();
   await generateIosProject();
 
-  await createIosXcframework("ReleaseDebug", "debug", iosDebugOutputXcframework);
+  await createIosXcframework(
+    "ReleaseDebug",
+    "debug",
+    iosDebugOutputXcframework,
+    true,
+  );
 }
 
 // mise task entrypoint.
