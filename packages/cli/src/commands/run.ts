@@ -211,6 +211,7 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
         stdio: "inherit",
       },
     );
+    console.error(`[${new Date().toISOString()}] [iOS] App installed`);
   }
 
   const { stdout: containerPath } = await execa(

@@ -1,14 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { execa } from "execa";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveKirieConfig } from "./config.ts";
 import { exportIosApp } from "./ios.ts";
 import { createCliProjectTracker } from "./test-project.ts";
 
+const { mockExeca } = vi.hoisted(() => ({ mockExeca: vi.fn() }));
+
 vi.mock("./export.ts", () => ({ runExport: vi.fn() }));
-vi.mock("execa", () => ({ execa: vi.fn() }));
+vi.mock("execa", () => ({ execa: mockExeca }));
 
 const projects = createCliProjectTracker("kirie-cli-ios-");
 
@@ -64,7 +65,7 @@ describe("exportIosApp", () => {
       xcodeProjectPath: "export/project.xcodeproj",
     })).rejects.toThrow(`Missing prebuilt Godot ARM64 iOS simulator library: ${requiredLibrary}`);
 
-    expect(execa).not.toHaveBeenCalled();
+    expect(mockExeca).not.toHaveBeenCalled();
   });
 
   it.each([false, true])("builds a simulator app with the prepared library (release=%s)", async (release) => {
@@ -77,7 +78,7 @@ describe("exportIosApp", () => {
     await fs.writeFile(path.join(libraryDir, "libgodot.ios.template_release.arm64.simulator.a"), "release library");
     await fs.mkdir(path.dirname(exportedLibrary), { recursive: true });
     await fs.writeFile(exportedLibrary, "export template library");
-    vi.mocked(execa).mockImplementationOnce(async () => {
+    mockExeca.mockImplementationOnce(async () => {
       await fs.mkdir(path.join(project, "dist", "ios_raw_build", `${path.basename(project)}.app`));
     });
 
