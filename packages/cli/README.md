@@ -16,11 +16,9 @@ pnpm kirie doctor
 ```
 
 For simulator runs, `kirie run ios` and `kirie dev ios` select the device with
-`--device` or `SIMULATOR_ID`, defaulting to an already booted simulator. Before installation,
-the CLI waits up to four minutes for `simctl bootstatus -b` to boot the device
-and report readiness. It streams Godot logs through process exit using
-[`--log-file`](https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html)
-with the app's `tmp/kirie.log` path.
+`--device` or `SIMULATOR_ID`, defaulting to an already booted simulator.
+See [iOS integration testing](../../docs/platform-integration-tests.md#ios)
+for simulator prerequisites and log behavior.
 
 `kirie dev web` exports the Godot Web host once, starts the Vite development
 server, and prints its URL. C# projects require the experimental .NET

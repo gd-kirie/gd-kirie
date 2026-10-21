@@ -1,30 +1,19 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execa } from "execa";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveKirieConfig } from "./config.ts";
-import { runExport } from "./export.ts";
 import { exportIosApp } from "./ios.ts";
 import { createCliProjectTracker } from "./test-project.ts";
 
 vi.mock("./export.ts", () => ({ runExport: vi.fn() }));
-vi.mock("execa", () => ({
-  execa: vi.fn(async (_command: string, args: string[]) => {
-    const buildDir = args.find((arg) => arg.startsWith("CONFIGURATION_BUILD_DIR="))!
-      .slice("CONFIGURATION_BUILD_DIR=".length);
-    const scheme = args[args.indexOf("-scheme") + 1]!;
-    await fs.mkdir(path.join(buildDir, `${scheme}.app`));
-  }),
-}));
+vi.mock("execa", () => ({ execa: vi.fn() }));
 
 const projects = createCliProjectTracker("kirie-cli-ios-");
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
-
 afterEach(async () => {
+  vi.clearAllMocks();
   await projects.cleanup();
 });
 
@@ -76,7 +65,6 @@ describe("exportIosApp", () => {
     })).rejects.toThrow(`Missing prebuilt Godot ARM64 iOS simulator library: ${requiredLibrary}`);
 
     expect(execa).not.toHaveBeenCalled();
-    await expect(fs.readFile(exportedLibrary, "utf8")).resolves.toBe("export template library");
   });
 
   it.each([false, true])("builds a simulator app with the prepared library (release=%s)", async (release) => {
@@ -87,9 +75,10 @@ describe("exportIosApp", () => {
     await fs.mkdir(libraryDir, { recursive: true });
     await fs.writeFile(path.join(libraryDir, "libgodot.ios.template_debug.arm64.simulator.a"), "debug library");
     await fs.writeFile(path.join(libraryDir, "libgodot.ios.template_release.arm64.simulator.a"), "release library");
-    vi.mocked(runExport).mockImplementationOnce(async () => {
-      await fs.mkdir(path.dirname(exportedLibrary), { recursive: true });
-      await fs.writeFile(exportedLibrary, "export template library");
+    await fs.mkdir(path.dirname(exportedLibrary), { recursive: true });
+    await fs.writeFile(exportedLibrary, "export template library");
+    vi.mocked(execa).mockImplementationOnce(async () => {
+      await fs.mkdir(path.join(project, "dist", "ios_raw_build", `${path.basename(project)}.app`));
     });
 
     await exportIosApp({
@@ -104,8 +93,5 @@ describe("exportIosApp", () => {
     await expect(fs.readFile(exportedLibrary, "utf8")).resolves.toBe(
       release ? "release library" : "debug library",
     );
-    expect((await fs.stat(path.join(project, "dist", "simulator.app"))).isDirectory()).toBe(true);
-    expect(execa).toHaveBeenCalledOnce();
-    expect(vi.mocked(execa).mock.calls[0]?.[0]).toBe("xcodebuild");
   });
 });

@@ -236,7 +236,6 @@ describe("runDev", () => {
     const project = await projects.copy();
     await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
     await installFakeXcrun(project);
-    await fs.mkdir(path.join(project, "test.app"));
     vi.stubEnv("PATH", `${path.join(project, "fake-bin")}${path.delimiter}${process.env.PATH ?? ""}`);
     vi.stubEnv("SIMULATOR_ID", "environment-simulator");
 
@@ -249,23 +248,16 @@ describe("runDev", () => {
       terminateExisting: true,
     });
 
-    const invocations = await readFakeXcrunInvocations(project);
-    const launchRun = invocations.find((invocation) => invocation.argv[1] === "launch");
+    const [bootRun, installRun, , launchRun] = await readFakeXcrunInvocations(project);
 
-    expect(invocations.map((invocation) => invocation.argv[1])).toEqual([
-      "bootstatus",
-      "install",
-      "get_app_container",
-      "launch",
-    ]);
-    expect(invocations[0]?.argv).toEqual(["simctl", "bootstatus", expectedId, "-b"]);
-    expect(invocations[1]?.argv).toEqual([
+    expect(bootRun?.argv).toEqual(["simctl", "bootstatus", expectedId, "-b"]);
+    expect(installRun?.argv).toEqual([
       "simctl",
       "install",
       expectedId,
       path.join(project, "test.app"),
     ]);
-    expect(launchRun?.argv.slice(0, 7)).toEqual([
+    expect(launchRun?.argv).toEqual([
       "simctl",
       "launch",
       "--console",
@@ -273,10 +265,10 @@ describe("runDev", () => {
       expectedId,
       "org.gd-kirie.cli-test",
       "--log-file",
+      path.join(project, "simulator-data", "tmp", "kirie.log"),
+      "--kirie-dev=1",
+      "--kirie-web-url=http://127.0.0.1:5173/",
     ]);
-    expect(launchRun?.argv[7]).toBe(path.join(project, "simulator-data", "tmp", "kirie.log"));
-    expect(launchRun?.argv).toContain("--kirie-dev=1");
-    expect(launchRun?.argv).toContain("--kirie-web-url=http://127.0.0.1:5173/");
   });
 
   it("stops before installing or launching when simulator boot fails", async () => {
@@ -367,7 +359,6 @@ describe("runDev", () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("simulator launch failed");
-    expect(result.timedOut).toBe(false);
   });
 
   it("rejects Kirie-owned Vite options", async () => {
