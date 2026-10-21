@@ -193,5 +193,10 @@ builds both device and simulator frameworks. `test:integration-ios` prepares
 the addon scripts, CLI bundle, and test web assets.
 Other workspace packages are imported from source and need no separate bundles.
 
+After dependency setup, CI selects and starts the simulator before building the
+framework and test app. Startup overlaps with these builds; the CLI waits for
+readiness before installation using `simctl bootstatus -b` (see
+`xcrun simctl help bootstatus`).
+
 When upgrading Godot, verify the matching community archives, their architecture
 and simulator platform (`lipo` and `otool`), then run the full integration suite.
