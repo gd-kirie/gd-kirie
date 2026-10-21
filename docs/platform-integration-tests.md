@@ -179,9 +179,9 @@ fixture. Platform tasks generate and run tests without repeating these checks.
 The fixture's `pnpm -C tests/integration test` command still includes typechecks
 for standalone use.
 
-The [iOS workflow](../.github/workflows/platform-integration-ios.yml) runs Swift
-unit tests and simulator integration in one job. It downloads matching headers
-and the arm64 simulator debug library from
+Swift unit tests run independently in the [unit-test workflow](../.github/workflows/unittest.yml).
+The [iOS integration workflow](../.github/workflows/platform-integration-ios.yml)
+downloads matching headers and the arm64 simulator debug library from
 [Godot Mobile Plugins](https://github.com/godot-mobile-plugins/godot-ios-builds/releases/tag/4.7.2-stable).
 The archives are version-pinned and SHA-256 verified because the
 [official iOS build script](https://github.com/godotengine/godot-build-scripts/blob/master/build-ios/build.sh)

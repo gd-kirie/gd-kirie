@@ -86,3 +86,30 @@ jobs:
 
       - name: Run .NET tests
         run: mise run test:dotnet
+
+  swift-unit-tests:
+    name: Swift unit tests
+    runs-on: xcode-27
+    defaults:
+      run:
+        shell: bash
+    env:
+      MISE_EXEC_AUTO_INSTALL: "false"
+      MISE_NOT_FOUND_AUTO_INSTALL: "false"
+      MISE_TASK_RUN_AUTO_INSTALL: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Node, pnpm, and XcodeGen
+        uses: jdx/mise-action@v4
+        with:
+          version: 2026.10.15
+          install_args: --locked node pnpm xcodegen
+
+      - name: Install package dependencies
+        run: mise x -- pnpm install --frozen-lockfile
+
+      - name: Run Swift unit tests
+        run: mise run test:swift
