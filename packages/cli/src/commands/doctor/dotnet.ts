@@ -51,7 +51,9 @@ export async function getDotnetDependencyReference(
 ): Promise<DotnetDependencyReference | undefined> {
   const args = [
     "msbuild",
-    ...(options.csproj ? [options.csproj] : []),
+    ...(options.csproj
+      ? [options.csproj]
+      : []),
     "-getProperty:MSBuildProjectDirectory",
     "-getItem:PackageReference,PackageVersion,ProjectReference",
   ];
@@ -96,7 +98,9 @@ export async function installDotnetPackage(options: DotnetPackageOptions): Promi
     options.dependency.id,
     "--version",
     options.dependency.version,
-    ...(options.csproj ? ["--project", options.csproj] : []),
+    ...(options.csproj
+      ? ["--project", options.csproj]
+      : []),
   ];
   await (options.runDotnet ?? runDotnet)(args, options.projectDir);
 }

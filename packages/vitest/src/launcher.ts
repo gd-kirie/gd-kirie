@@ -38,7 +38,9 @@ main().catch((error: unknown) => {
 
 async function runLaunch(launch: ParsedLaunch): Promise<void> {
   if (launch.target === "desktop") {
-    const godotArgs = process.env.GODOT ? ["--godot", process.env.GODOT] : [];
+    const godotArgs = process.env.GODOT
+      ? ["--godot", process.env.GODOT]
+      : [];
     await runKirie(
       [
         "run",
@@ -96,11 +98,20 @@ async function runAndroid(projectPath: string, staged: StagedLaunch): Promise<vo
 
 async function runIos(projectPath: string, staged: StagedLaunch): Promise<void> {
   const device = process.env.IOS_DEVICE_ID;
-  const deviceArgs = device ? ["--device", device] : [];
+  const deviceArgs = device
+    ? ["--device", device]
+    : [];
   const appPath = device ? "dist/kirie/ios/device_debug.app" : "dist/kirie/ios/debug.app";
 
   await runKirie(
-    ["export", "ios", "--project", projectPath, "--no-build", ...deviceArgs],
+    [
+      "export",
+      "ios",
+      "--project",
+      projectPath,
+      "--no-build",
+      ...deviceArgs,
+    ],
   );
   await runKirie(
     [
@@ -216,13 +227,19 @@ function parseLaunch(args: string[]): ParsedLaunch {
   }
 
   const projectIndex = args.indexOf("--path");
-  const projectPath = projectIndex >= 0 ? args[projectIndex + 1] : undefined;
+  const projectPath = projectIndex >= 0
+    ? args[projectIndex + 1]
+    : undefined;
   if (!projectPath) {
     throw new Error("ViDot did not provide a Godot project path.");
   }
   args.splice(projectIndex, 2);
 
-  return { args, projectPath: path.resolve(projectPath), target };
+  return {
+    args,
+    projectPath: path.resolve(projectPath),
+    target,
+  };
 }
 
 function resourcePath(projectPath: string, filePath: string): string {

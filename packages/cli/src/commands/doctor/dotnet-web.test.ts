@@ -54,7 +54,10 @@ describe(".NET Web toolchain", () => {
       platform: "linux",
       release,
       runDotnetWorkloadList: async () => "wasm-tools 10.0.112",
-    })).resolves.toMatchObject({ toolchain: { root: installDir }, valid: true });
+    })).resolves.toMatchObject({
+      toolchain: { root: installDir },
+      valid: true,
+    });
 
     await expect(checkDotnetWebToolchain({
       arch: "x64",

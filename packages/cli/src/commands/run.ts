@@ -76,7 +76,12 @@ export async function runDesktop(options: RunDesktopOptions = {}): Promise<void>
 
   await execa(
     options.godotCommand ?? config.godot.command,
-    [...config.godot.args, "--path", config.godot.project, ...(options.godotArgs ?? [])],
+    [
+      ...config.godot.args,
+      "--path",
+      config.godot.project,
+      ...(options.godotArgs ?? []),
+    ],
     {
       cwd: config.godot.project,
       stdio: "inherit",
@@ -91,7 +96,9 @@ export async function runAndroid(options: RunAndroidOptions = {}): Promise<void>
       command: "build",
       cwd: options.cwd,
     }));
-  const adbArgs = options.device ? ["-s", options.device] : [];
+  const adbArgs = options.device
+    ? ["-s", options.device]
+    : [];
   const packageName =
     options.packageName ?? readAndroidPackageName(config.godot.project, options.preset);
 
@@ -130,7 +137,13 @@ export async function runAndroid(options: RunAndroidOptions = {}): Promise<void>
   }
 
   if (options.forceStop) {
-    await execa("adb", [...adbArgs, "shell", "am", "force-stop", packageName], {
+    await execa("adb", [
+      ...adbArgs,
+      "shell",
+      "am",
+      "force-stop",
+      packageName,
+    ], {
       cwd: config.cwd,
       reject: false,
       stderr: "ignore",
@@ -139,7 +152,13 @@ export async function runAndroid(options: RunAndroidOptions = {}): Promise<void>
   }
 
   if (options.clearData) {
-    await execa("adb", [...adbArgs, "shell", "pm", "clear", packageName], {
+    await execa("adb", [
+      ...adbArgs,
+      "shell",
+      "pm",
+      "clear",
+      packageName,
+    ], {
       cwd: config.cwd,
       stderr: "inherit",
       stdout: "ignore",
@@ -191,11 +210,16 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
   const simulatorId = options.simulatorId ?? process.env.SIMULATOR_ID ?? "booted";
   const bundleId =
     options.bundleId ??
-    (options.appPath ?
-        await readIosAppBundleId(path.resolve(config.cwd, options.appPath)) :
-        readIosBundleId(config.godot.project));
+    (options.appPath
+      ? await readIosAppBundleId(path.resolve(config.cwd, options.appPath))
+      : readIosBundleId(config.godot.project));
 
-  await execa("xcrun", ["simctl", "bootstatus", simulatorId, "-b"], {
+  await execa("xcrun", [
+    "simctl",
+    "bootstatus",
+    simulatorId,
+    "-b",
+  ], {
     cwd: config.cwd,
     stdio: "inherit",
   });
@@ -203,7 +227,12 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
   if (options.appPath) {
     await execa(
       "xcrun",
-      ["simctl", "install", simulatorId, path.resolve(config.cwd, options.appPath)],
+      [
+        "simctl",
+        "install",
+        simulatorId,
+        path.resolve(config.cwd, options.appPath),
+      ],
       {
         cwd: config.cwd,
         stdio: "inherit",
@@ -213,7 +242,13 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
 
   const { stdout: containerPath } = await execa(
     "xcrun",
-    ["simctl", "get_app_container", simulatorId, bundleId, "data"],
+    [
+      "simctl",
+      "get_app_container",
+      simulatorId,
+      bundleId,
+      "data",
+    ],
     { cwd: config.cwd },
   );
   const logPath = path.join(containerPath, "tmp", "kirie.log");
@@ -222,7 +257,9 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
     "simctl",
     "launch",
     "--console",
-    ...(options.terminateExisting ? ["--terminate-running-process"] : []),
+    ...(options.terminateExisting
+      ? ["--terminate-running-process"]
+      : []),
     simulatorId,
     bundleId,
     "--log-file",
@@ -301,9 +338,9 @@ export async function runIosDevice(options: RunIosDeviceOptions = {}): Promise<v
 
   const bundleId =
     options.bundleId ??
-    (options.appPath ?
-        await readIosAppBundleId(path.resolve(config.cwd, options.appPath)) :
-        readIosBundleId(config.godot.project));
+    (options.appPath
+      ? await readIosAppBundleId(path.resolve(config.cwd, options.appPath))
+      : readIosBundleId(config.godot.project));
 
   if (options.appPath) {
     await execa(
@@ -324,7 +361,14 @@ export async function runIosDevice(options: RunIosDeviceOptions = {}): Promise<v
     );
   }
 
-  const launchArgs = ["devicectl", "device", "process", "launch", "--device", device];
+  const launchArgs = [
+    "devicectl",
+    "device",
+    "process",
+    "launch",
+    "--device",
+    device,
+  ];
   if (options.terminateExisting) {
     launchArgs.push("--terminate-existing");
   }
@@ -400,7 +444,13 @@ async function attachAndroidLogcat(options: {
   packageName: string;
   pid: string;
 }): Promise<void> {
-  const args = [...options.adbArgs, "logcat", "-v", "time", `--pid=${options.pid}`];
+  const args = [
+    ...options.adbArgs,
+    "logcat",
+    "-v",
+    "time",
+    `--pid=${options.pid}`,
+  ];
   const logcat = execa("adb", args, {
     cwd: options.cwd,
     reject: false,
@@ -424,7 +474,13 @@ async function attachAndroidLogcat(options: {
 
     cleanupPromise ??= execa(
       "adb",
-      [...options.adbArgs, "shell", "am", "force-stop", options.packageName],
+      [
+        ...options.adbArgs,
+        "shell",
+        "am",
+        "force-stop",
+        options.packageName,
+      ],
       {
         cwd: options.cwd,
         reject: false,
@@ -437,7 +493,9 @@ async function attachAndroidLogcat(options: {
   };
   const handleInterrupt = (signal: NodeJS.Signals): void => {
     cleanupAndroidRun(signal).then(() => {
-      process.exitCode = signal === "SIGINT" ? 130 : 143;
+      process.exitCode = signal === "SIGINT"
+        ? 130
+        : 143;
     });
   };
 
@@ -452,15 +510,17 @@ async function attachAndroidLogcat(options: {
     await cleanupPromise;
   }
   if (interruptedSignal) {
-    process.exitCode = interruptedSignal === "SIGINT" ? 130 : 143;
+    process.exitCode = interruptedSignal === "SIGINT"
+      ? 130
+      : 143;
     return;
   }
 
   if (result.failed && result.signal !== "SIGTERM" && result.exitCode !== 143) {
     throw new Error(
-      result.signal ?
-        `adb logcat exited with signal ${result.signal}` :
-        `adb logcat exited with code ${result.exitCode ?? "unknown"}`,
+      result.signal
+        ? `adb logcat exited with signal ${result.signal}`
+        : `adb logcat exited with code ${result.exitCode ?? "unknown"}`,
     );
   }
 }
@@ -474,7 +534,12 @@ async function waitForAndroidPackagePid(options: {
   const deadline = Date.now() + (options.timeoutMs ?? 30_000);
 
   while (Date.now() < deadline) {
-    const result = await execa("adb", [...options.adbArgs, "shell", "pidof", options.packageName], {
+    const result = await execa("adb", [
+      ...options.adbArgs,
+      "shell",
+      "pidof",
+      options.packageName,
+    ], {
       cwd: options.cwd,
       reject: false,
       stderr: "ignore",

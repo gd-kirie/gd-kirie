@@ -52,7 +52,14 @@ export default defineConfig({
       cwd: operation.options.cwd,
       stdio: "inherit",
     });
-    execFileSync("pnpm", ["publish", "-r", "--access", "public", "--no-git-checks", "--dry-run"], {
+    execFileSync("pnpm", [
+      "publish",
+      "-r",
+      "--access",
+      "public",
+      "--no-git-checks",
+      "--dry-run",
+    ], {
       cwd: operation.options.cwd,
       stdio: "inherit",
     });

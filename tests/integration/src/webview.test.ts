@@ -79,7 +79,16 @@ test("round trips IPC lanes", async (context) => {
     return;
   }
 
-  for (const data_payload of [42, ["array-root", 7, null, { nested: true }], null]) {
+  for (const data_payload of [
+    42,
+    [
+      "array-root",
+      7,
+      null,
+      { nested: true },
+    ],
+    null,
+  ]) {
     probe.node.send_data(data_payload);
     if (!expect(await context.waitUntil(
       () => probe.has_data_echo(data_payload),

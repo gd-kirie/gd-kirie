@@ -157,9 +157,9 @@ async function runIosExportCommand({ args }: CommandContext<typeof iosExportArgs
   await exportIosApp({
     appPath:
       args.output ??
-      (targetIsSimulator ?
-        `dist/kirie/ios/${configuration}.app` :
-        `dist/kirie/ios/device_${configuration}.app`),
+      (targetIsSimulator
+        ? `dist/kirie/ios/${configuration}.app`
+        : `dist/kirie/ios/device_${configuration}.app`),
     build: args.build !== false,
     cwd: args.project,
     device: args.device,
@@ -180,7 +180,9 @@ function runDevCommand(target: DevTarget) {
       device: args.device,
       force: args.force,
       forceStop: args["force-stop"],
-      godotArgs: target === "desktop" ? parseUserArgs(rawArgs) : undefined,
+      godotArgs: target === "desktop"
+        ? parseUserArgs(rawArgs)
+        : undefined,
       godotCommand: args.godot,
       host: args.host,
       logLevel: parseLogLevel(args["log-level"]),

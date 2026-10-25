@@ -41,7 +41,9 @@ export async function startViteDevServer(
 
   const localUrl = server.resolvedUrls?.local[0];
   const networkUrl = server.resolvedUrls?.network[0];
-  const url = options.preferNetworkUrl ? (networkUrl ?? localUrl) : (localUrl ?? networkUrl);
+  const url = options.preferNetworkUrl
+    ? (networkUrl ?? localUrl)
+    : (localUrl ?? networkUrl);
 
   if (!url) {
     await server.close();

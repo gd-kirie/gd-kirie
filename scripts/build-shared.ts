@@ -21,11 +21,19 @@ export async function runKirieCli(args: string[]): Promise<void> {
 }
 
 export function kirieCliArgs(args: string[]): string[] {
-  return [path.join(rootDir, "packages/cli/src/cli.ts"), ...args];
+  return [
+    path.join(rootDir, "packages/cli/src/cli.ts"),
+    ...args,
+  ];
 }
 
 export async function exportAndroidDebug(options: AndroidDebugExportOptions): Promise<void> {
-  const args = ["export", "android", "--project", path.resolve(rootDir, options.projectDir)];
+  const args = [
+    "export",
+    "android",
+    "--project",
+    path.resolve(rootDir, options.projectDir),
+  ];
 
   if (options.userArgs && options.userArgs.length > 0) {
     args.push("--", ...options.userArgs);

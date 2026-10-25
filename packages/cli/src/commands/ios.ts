@@ -27,9 +27,9 @@ export async function exportIosApp(options: ExportIosAppOptions): Promise<void> 
       cwd: options.cwd,
     }));
   const appPath = path.resolve(config.cwd, options.appPath);
-  const generatedXcodeProjectDir = options.xcodeProjectPath ?
-    undefined :
-      fs.mkdtempSync(path.join(os.tmpdir(), "kirie-ios-export-"));
+  const generatedXcodeProjectDir = options.xcodeProjectPath
+    ? undefined
+    : fs.mkdtempSync(path.join(os.tmpdir(), "kirie-ios-export-"));
   const xcodeProjectPath = path.resolve(
     config.cwd,
     options.xcodeProjectPath ??
@@ -40,7 +40,9 @@ export async function exportIosApp(options: ExportIosAppOptions): Promise<void> 
   );
   const rawBuildDir = path.join(
     path.dirname(appPath),
-    options.target === "device" ? "ios_device_raw_build" : "ios_raw_build",
+    options.target === "device"
+      ? "ios_device_raw_build"
+      : "ios_raw_build",
   );
 
   validateIosAppOutputPath(appPath, options.target, config.godot.project);
@@ -117,23 +119,23 @@ async function buildExportedIosApp(options: {
       "-sdk",
       simulator ? "iphonesimulator" : "iphoneos",
       "-destination",
-      simulator ?
-        "generic/platform=iOS Simulator" :
-        options.device ?
-          `id=${options.device}` :
-          "generic/platform=iOS",
+      simulator
+        ? "generic/platform=iOS Simulator"
+        : options.device
+          ? `id=${options.device}`
+          : "generic/platform=iOS",
       "-configuration",
       options.release ? "Release" : "Debug",
       `CONFIGURATION_BUILD_DIR=${options.rawBuildDir}`,
       "ARCHS=arm64",
-      ...(simulator ?
-          [
+      ...(simulator
+        ? [
             "CODE_SIGNING_ALLOWED=NO",
             "CODE_SIGNING_REQUIRED=NO",
             "CODE_SIGN_IDENTITY=",
             "EXCLUDED_ARCHS=x86_64",
-          ] :
-          ["-allowProvisioningUpdates"]),
+          ]
+        : ["-allowProvisioningUpdates"]),
       "ONLY_ACTIVE_ARCH=YES",
       "build",
     ],

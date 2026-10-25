@@ -124,7 +124,9 @@ function pointerEvent(
     clientY: { value: overrides.clientY ?? 75 },
     button: { value: 0 },
     buttons: { value: buttons },
-    pressure: { value: overrides.pressure ?? (buttons === 0 ? 0 : 0.5) },
+    pressure: { value: overrides.pressure ?? (buttons === 0
+      ? 0
+      : 0.5) },
     view: { value: overrides.view ?? null },
   });
   return event as PointerEvent;

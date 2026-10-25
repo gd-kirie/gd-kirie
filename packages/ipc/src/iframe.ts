@@ -26,7 +26,9 @@ export function isKirieData(value: unknown, ancestors: Set<object> = new Set<obj
 
   const array = Array.isArray(value);
   const prototype = Object.getPrototypeOf(value);
-  if (array ? prototype !== Array.prototype : prototype !== Object.prototype && prototype !== null) {
+  if (array
+    ? prototype !== Array.prototype
+    : prototype !== Object.prototype && prototype !== null) {
     return false;
   }
   if (Object.getOwnPropertySymbols(value).length !== 0 ||

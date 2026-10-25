@@ -137,7 +137,9 @@ export class _WebIframeBackend extends RefCounted {
   }
 
   get_launch_option(key: string): string {
-    return this._host === null ? "" : String(this._host.launch_option(key));
+    return this._host === null
+      ? ""
+      : String(this._host.launch_option(key));
   }
 
   _send(lane: string, value: unknown): void {

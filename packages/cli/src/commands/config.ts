@@ -62,7 +62,9 @@ export async function loadKirieConfig(
 ): Promise<ResolvedKirieConfig> {
   const cwd = path.resolve(options.cwd ?? process.cwd());
   const command = options.command ?? "serve";
-  const mode = options.mode ?? (command === "build" ? "production" : "development");
+  const mode = options.mode ?? (command === "build"
+    ? "production"
+    : "development");
   const configFile = path.join(cwd, "kirie.config.ts");
   if (!fs.existsSync(configFile)) {
     return resolveKirieConfig(undefined, {
@@ -112,7 +114,9 @@ export function resolveKirieConfig(
     godot: {
       args: godot.args ?? [],
       command: godot.command ?? "godot",
-      csproj: godot.csproj ? path.resolve(project, godot.csproj) : undefined,
+      csproj: godot.csproj
+        ? path.resolve(project, godot.csproj)
+        : undefined,
       project,
     },
     web: {

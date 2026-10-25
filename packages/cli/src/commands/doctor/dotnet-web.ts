@@ -257,9 +257,9 @@ export async function tryExportDotnetWeb(options: DotnetWebExportOptions): Promi
       outputPath: options.outputPath,
       packPath,
       projectName: path.basename(options.config.godot.project),
-      templatePath: options.release ?
-        checked.toolchain.releaseTemplatePath :
-        checked.toolchain.debugTemplatePath,
+      templatePath: options.release
+        ? checked.toolchain.releaseTemplatePath
+        : checked.toolchain.debugTemplatePath,
     });
     await patchDotnetWebExport(options.outputPath);
     if (options.includeWebContent !== false) {
@@ -287,9 +287,9 @@ export function resolveDotnetWebInstallDir(options: HostOptions = {}): string {
   }
 
   const home = options.homeDir ?? os.homedir();
-  const data = platform === "darwin" ?
-      path.join(home, "Library", "Application Support", "Kirie") :
-      path.join(home, ".local", "share", "kirie");
+  const data = platform === "darwin"
+    ? path.join(home, "Library", "Application Support", "Kirie")
+    : path.join(home, ".local", "share", "kirie");
   return path.join(data, "dotnet-web", (options.release ?? DOTNET_WEB_RELEASE).tag);
 }
 
@@ -390,7 +390,9 @@ export async function assembleDotnetWebExport(options: AssembleOptions): Promise
 
 export async function patchDotnetWebExport(outputPath: string): Promise<void> {
   const extension = path.extname(outputPath);
-  const scriptPath = `${extension ? outputPath.slice(0, -extension.length) : outputPath}.js`;
+  const scriptPath = `${extension
+    ? outputPath.slice(0, -extension.length)
+    : outputPath}.js`;
   const source = await fs.readFile(scriptPath, "utf8");
   const setupCall = /^DOTNET\.setup\([^\n]+\);;\r?\n/gm;
   const matches = source.match(setupCall);
@@ -558,7 +560,9 @@ async function resolveDotnetProjectFile(config: ResolvedKirieConfig): Promise<st
 }
 
 function invalid(error: unknown): DotnetWebCheckResult {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error
+    ? error.message
+    : String(error);
   return { message: `${message} (run: pnpm kirie doctor --fix web)`, valid: false };
 }
 

@@ -71,7 +71,9 @@ export class _IntegrationProbe extends RefCounted {
   }
 
   timeout_milliseconds(): int {
-    return OS.get_name() === "iOS" ? 30_000 : 12_000;
+    return OS.get_name() === "iOS"
+      ? 30_000
+      : 12_000;
   }
 
   async wait_for_text_message(

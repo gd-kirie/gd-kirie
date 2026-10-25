@@ -18,14 +18,21 @@ export interface ExportGodotPresetOptions {
 export async function exportGodotPreset(options: ExportGodotPresetOptions): Promise<void> {
   fs.mkdirSync(path.dirname(options.outputPath), { recursive: true });
 
-  const args = [...(options.godotArgs ?? []), "--headless", "--path", options.projectDir];
+  const args = [
+    ...(options.godotArgs ?? []),
+    "--headless",
+    "--path",
+    options.projectDir,
+  ];
 
   if (options.installAndroidBuildTemplate) {
     args.push("--install-android-build-template");
   }
 
   args.push(
-    options.mode === "debug" ? "--export-debug" : "--export-release",
+    options.mode === "debug"
+      ? "--export-debug"
+      : "--export-release",
     options.preset,
     options.outputPath,
   );

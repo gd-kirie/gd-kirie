@@ -13,9 +13,9 @@
         throw new Error(`Kirie Web can only map ${webRoot} resource URLs.`);
       }
 
-      const resourcePath = url === webRoot || url.startsWith(`${webRoot}?`) ?
-        `src-web/dist/index.html${url.slice(webRoot.length)}` :
-          url.slice("res://".length);
+      const resourcePath = url === webRoot || url.startsWith(`${webRoot}?`)
+        ? `src-web/dist/index.html${url.slice(webRoot.length)}`
+        : url.slice("res://".length);
       const mappedRoot = new URL("src-web/dist/", location.href);
       const mapped = new URL(resourcePath, location.href);
       if (!mapped.href.startsWith(mappedRoot.href)) {
@@ -89,7 +89,9 @@
           width: `${rect.width}px`,
           height: `${rect.height}px`,
           visibility: visible ? style.visibility : "hidden",
-          display: visible && style.display !== "none" ? "block" : "none",
+          display: visible && style.display !== "none"
+            ? "block"
+            : "none",
         });
         tick = requestAnimationFrame(layout);
       };
@@ -109,7 +111,9 @@
             throw new Error("Kirie Web requires the Godot canvas with id=canvas.");
           }
 
-          const base = nextBaseUrl ? resolveUrl(nextBaseUrl) : "";
+          const base = nextBaseUrl
+            ? resolveUrl(nextBaseUrl)
+            : "";
           removeFrame();
           frame = document.createElement("iframe");
           frame.title = "Kirie WebView";

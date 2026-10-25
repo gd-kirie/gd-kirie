@@ -71,7 +71,9 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
     }
   }
 
-  const webOutput = target === "web" ? await exportWebDevHost(config, options) : "";
+  const webOutput = target === "web"
+    ? await exportWebDevHost(config, options)
+    : "";
 
   const vite = await startViteDevServer(config, {
     clearScreen: options.clearScreen,
@@ -185,7 +187,13 @@ async function runDesktopDev(
 
   await execa(
     godotCommand,
-    [...config.godot.args, "--headless", "--path", config.godot.project, "--import"],
+    [
+      ...config.godot.args,
+      "--headless",
+      "--path",
+      config.godot.project,
+      "--import",
+    ],
     {
       cwd: config.godot.project,
       stdio: "inherit",
@@ -231,7 +239,9 @@ async function runAndroidDev(
   await execa(
     "adb",
     [
-      ...(options.device ? ["-s", options.device] : []),
+      ...(options.device
+        ? ["-s", options.device]
+        : []),
       "reverse",
       `tcp:${reverseWeb.port}`,
       `tcp:${reverseWeb.port}`,
@@ -285,7 +295,9 @@ async function runIosDev(
 
 export function resolveAndroidReverseWebUrl(webUrl: string): { port: number; url: string } {
   const url = new URL(webUrl);
-  const port = Number(url.port || (url.protocol === "https:" ? 443 : 80));
+  const port = Number(url.port || (url.protocol === "https:"
+    ? 443
+    : 80));
 
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new Error(`Vite dev server URL does not include a valid TCP port: ${webUrl}`);

@@ -19,8 +19,12 @@ describe("dotnet package doctor support", () => {
         expect(cwd).toBe("/project");
         return JSON.stringify({
           Items: {
-            PackageReference: [{ Identity: "example.package" }],
-            PackageVersion: [{ Identity: "Example.Package", Version: "2.0.0" }],
+            PackageReference: [
+              { Identity: "example.package" },
+            ],
+            PackageVersion: [
+              { Identity: "Example.Package", Version: "2.0.0" },
+            ],
           },
         });
       },
@@ -41,7 +45,9 @@ describe("dotnet package doctor support", () => {
 
         return JSON.stringify({
           Items: {
-            ProjectReference: [{ Identity: "../Example.Package/Example.Package.csproj" }],
+            ProjectReference: [
+              { Identity: "../Example.Package/Example.Package.csproj" },
+            ],
           },
           Properties: {
             MSBuildProjectDirectory: "/project",

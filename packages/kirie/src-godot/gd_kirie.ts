@@ -20,7 +20,9 @@ export class GdKirie extends GodotObject {
   set pointer_input_forwarding_enabled(value: boolean) {
     this._pointer_input_forwarding_enabled = value;
     if (!value) {
-      const cef_control = this._plugin_singleton instanceof Control ? this._plugin_singleton : null;
+      const cef_control = this._plugin_singleton instanceof Control
+        ? this._plugin_singleton
+        : null;
       this._pointer_input_forwarder.reset(cef_control);
     }
   }
@@ -110,7 +112,9 @@ export class GdKirie extends GodotObject {
 
   _set_webview_visible(visible: boolean): void {
     this._webview_visible = visible;
-    const cef_control = this._plugin_singleton instanceof Control ? this._plugin_singleton : null;
+    const cef_control = this._plugin_singleton instanceof Control
+      ? this._plugin_singleton
+      : null;
     if (!visible) {
       this._pointer_input_forwarder.reset(cef_control);
     }
@@ -137,7 +141,9 @@ export class GdKirie extends GodotObject {
       return;
     }
 
-    const cef_control = this._plugin_singleton instanceof Control ? this._plugin_singleton : null;
+    const cef_control = this._plugin_singleton instanceof Control
+      ? this._plugin_singleton
+      : null;
     this._pointer_input_forwarder.reset(cef_control);
     if (this._plugin_singleton === null) {
       return;
@@ -303,7 +309,9 @@ export class GdKirie extends GodotObject {
   }
 
   is_available(): boolean {
-    return this._web_backend !== null ? this._web_backend.is_available() : this._plugin_singleton !== null;
+    return this._web_backend !== null
+      ? this._web_backend.is_available()
+      : this._plugin_singleton !== null;
   }
 
   _get_desktop_launch_option(key: string): string {
@@ -712,7 +720,9 @@ export class GdKirie extends GodotObject {
       return;
     }
 
-    const cef_control = this._plugin_singleton instanceof Control ? this._plugin_singleton : null;
+    const cef_control = this._plugin_singleton instanceof Control
+      ? this._plugin_singleton
+      : null;
     if (
       this._pointer_input_forwarder.try_forward_pointer_input(
         value,
