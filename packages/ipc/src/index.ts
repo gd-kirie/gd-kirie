@@ -126,7 +126,9 @@ function currentTransport(): KirieTransport {
   if (!window.kirie) {
     const config = iframeConfig(window);
     if (config) {
-      window.kirie = { platform: { os: "web", backend: "iframe" } };
+      window.kirie = {
+        platform: { os: "web", backend: "iframe" },
+      };
     }
   }
   const platform = window.kirie?.platform;

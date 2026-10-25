@@ -73,8 +73,19 @@ describe("runExport", () => {
 
     await execa(
       process.execPath,
-      [cliPath, "export", "web", "--project", project, "--output", outputPath],
-      { cwd: path.dirname(project), stdio: "inherit" },
+      [
+        cliPath,
+        "export",
+        "web",
+        "--project",
+        project,
+        "--output",
+        outputPath,
+      ],
+      {
+        cwd: path.dirname(project),
+        stdio: "inherit",
+      },
     );
 
     const [exportRun] = await readFakeGodotInvocations(project);
@@ -99,8 +110,18 @@ describe("runExport", () => {
 
     const result = await execa(
       process.execPath,
-      [cliPath, "export", "web", "--project", project, "--no-build"],
-      { cwd: path.dirname(project), reject: false },
+      [
+        cliPath,
+        "export",
+        "web",
+        "--project",
+        project,
+        "--no-build",
+      ],
+      {
+        cwd: path.dirname(project),
+        reject: false,
+      },
     );
 
     expect(result.exitCode).toBe(1);

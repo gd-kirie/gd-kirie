@@ -95,7 +95,9 @@ async function archiveIosFramework(
       destination,
       "-archivePath",
       archivePath,
-      ...(architectures ? [`ARCHS=${architectures}`] : []),
+      ...(architectures
+        ? [`ARCHS=${architectures}`]
+        : []),
     ],
     {
       cwd: rootDir,
@@ -132,12 +134,12 @@ async function createIosXcframework(
     "xcodebuild",
     [
       "-create-xcframework",
-      ...(!simulatorOnly ?
-          [
+      ...(!simulatorOnly
+        ? [
             "-framework",
             `${deviceArchivePath}/Products/Library/Frameworks/Kirie.framework`,
-          ] :
-          []),
+          ]
+        : []),
       "-framework",
       `${simulatorArchivePath}/Products/Library/Frameworks/Kirie.framework`,
       "-output",
@@ -247,7 +249,9 @@ export async function testSwift(): Promise<void> {
       "-scheme",
       "KirieTests",
       "-destination",
-      `platform=macOS,arch=${process.arch === "arm64" ? "arm64" : "x86_64"}`,
+      `platform=macOS,arch=${process.arch === "arm64"
+        ? "arm64"
+        : "x86_64"}`,
       "CODE_SIGNING_ALLOWED=NO",
       "CODE_SIGNING_REQUIRED=NO",
     ],
@@ -260,7 +264,12 @@ export async function testSwift(): Promise<void> {
 
 // mise task entrypoint.
 export async function packAddon(): Promise<void> {
-  await execa("pnpm", ["-C", "packages/kirie", "run", "generate:godot"], {
+  await execa("pnpm", [
+    "-C",
+    "packages/kirie",
+    "run",
+    "generate:godot",
+  ], {
     cwd: rootDir,
     stdio: "inherit",
   });
@@ -276,7 +285,11 @@ export async function packAddon(): Promise<void> {
   checkAddonPack();
 
   fs.rmSync(addonZipPath, { force: true });
-  await execa("zip", ["-r", path.basename(addonZipPath), "addons/kirie"], {
+  await execa("zip", [
+    "-r",
+    path.basename(addonZipPath),
+    "addons/kirie",
+  ], {
     cwd: path.join(rootDir, distDir),
     stdio: "inherit",
   });

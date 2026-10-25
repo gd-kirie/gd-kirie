@@ -158,7 +158,9 @@ describe("createContext", () => {
     const { context, dispose } = createContext();
     const event = defineInvokeEventa<{ output: string }, { input: number }>("test:handler-rpc");
 
-    defineInvokeHandler(context, event, ({ input }) => ({ output: String(input) }));
+    defineInvokeHandler(context, event, ({ input }) => ({
+      output: String(input),
+    }));
 
     receiveText(
       JSON.stringify({

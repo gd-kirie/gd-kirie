@@ -8,7 +8,9 @@ export default ({ command, mode }) => {
   return {
     plugins: [core],
     web: {
-      vite: { build: { sourcemap: true } },
+      vite: {
+        build: { sourcemap: true },
+      },
     },
   };
 };

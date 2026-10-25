@@ -57,7 +57,12 @@ describe("runDev", () => {
     const [prepareRun, devRun] = await readFakeGodotInvocations(project);
 
     expect(prepareRun).toMatchObject({
-      argv: ["--headless", "--path", project, "--import"],
+      argv: [
+        "--headless",
+        "--path",
+        project,
+        "--import",
+      ],
       cwd: realProject,
       env: {},
     });
@@ -65,7 +70,12 @@ describe("runDev", () => {
       cwd: realProject,
       env: {},
     });
-    expect(devRun?.argv.slice(0, 4)).toEqual(["--path", project, "--", "--kirie-dev=1"]);
+    expect(devRun?.argv.slice(0, 4)).toEqual([
+      "--path",
+      project,
+      "--",
+      "--kirie-dev=1",
+    ]);
     expect(devRun?.argv[4]).toMatch(/^--kirie-web-url=http:\/\/127\.0\.0\.1:\d+\/$/);
     expect(devRun?.argv[5]).toBe("--verbose");
   });
@@ -226,7 +236,12 @@ describe("runDev", () => {
 
     const [, devRun] = await readFakeGodotInvocations(project);
 
-    expect(devRun?.argv.slice(0, 4)).toEqual(["--path", project, "--", "--kirie-dev=1"]);
+    expect(devRun?.argv.slice(0, 4)).toEqual([
+      "--path",
+      project,
+      "--",
+      "--kirie-dev=1",
+    ]);
   });
 
   it.each([
@@ -250,7 +265,12 @@ describe("runDev", () => {
 
     const [bootRun, installRun, , launchRun] = await readFakeXcrunInvocations(project);
 
-    expect(bootRun?.argv).toEqual(["simctl", "bootstatus", expectedId, "-b"]);
+    expect(bootRun?.argv).toEqual([
+      "simctl",
+      "bootstatus",
+      expectedId,
+      "-b",
+    ]);
     expect(installRun?.argv).toEqual([
       "simctl",
       "install",
@@ -287,7 +307,12 @@ describe("runDev", () => {
 
     const invocations = await readFakeXcrunInvocations(project);
     expect(invocations.map((invocation) => invocation.argv)).toEqual([
-      ["simctl", "bootstatus", "failed-simulator", "-b"],
+      [
+        "simctl",
+        "bootstatus",
+        "failed-simulator",
+        "-b",
+      ],
     ]);
   });
 

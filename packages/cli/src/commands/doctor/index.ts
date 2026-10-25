@@ -75,7 +75,9 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
     }));
 
   const webTarget = options.target === "web";
-  const plugins = webTarget ? [] : selectPlugins(config.plugins, options.target);
+  const plugins = webTarget
+    ? []
+    : selectPlugins(config.plugins, options.target);
   if (options.fix) {
     if (webTarget) {
       await installDotnetWebToolchain({
@@ -93,11 +95,11 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
     }
   }
 
-  const checks = webTarget ?
-      [await dotnetWebDoctorCheck(options)] :
-    options.target ?
-        await checkPlugins(config, plugins) :
-        await runDoctorChecks({
+  const checks = webTarget
+    ? [await dotnetWebDoctorCheck(options)]
+    : options.target
+      ? await checkPlugins(config, plugins)
+      : await runDoctorChecks({
           config,
           env: options.env,
           homeDir: options.homeDir,
@@ -130,13 +132,13 @@ export async function runDoctorChecks(options: {
     godotCommand: options.config.godot.command,
     projectDir: options.config.godot.project,
   });
-  const exportTemplates = godotCommand.version ?
-      await checkGodotExportTemplates({
+  const exportTemplates = godotCommand.version
+    ? await checkGodotExportTemplates({
         homeDir: options.homeDir,
         platform: options.platform,
         version: godotCommand.version,
-      }) :
-      {
+      })
+    : {
         message: "skipped because the Godot version could not be detected",
         name: "Godot export templates",
         status: DoctorCheckStatus.Fail,
@@ -169,13 +171,13 @@ async function checkPluginDependencies(
       const result = await checkGodotAddon(config.godot.project, addon);
       const missingOptional = addon.optional && !result.installed;
       checks.push({
-        message: result.valid ?
-          result.message :
-          `${result.message} (run: pnpm kirie doctor --fix plugin:${plugin.id})`,
+        message: result.valid
+          ? result.message
+          : `${result.message} (run: pnpm kirie doctor --fix plugin:${plugin.id})`,
         name: `${plugin.id} / ${addon.id}`,
-        status: result.valid ?
-          DoctorCheckStatus.Ok :
-          missingOptional ? DoctorCheckStatus.Warn : DoctorCheckStatus.Fail,
+        status: result.valid
+          ? DoctorCheckStatus.Ok
+          : missingOptional ? DoctorCheckStatus.Warn : DoctorCheckStatus.Fail,
       });
     } catch (error) {
       checks.push(failedCheck(`${plugin.id} / ${addon.id}`, error));
@@ -196,11 +198,11 @@ async function checkPluginDependencies(
       });
       const valid = reference?.type === "project" || reference?.version === dependency.version;
       checks.push({
-        message: reference?.type === "project" ?
-          `local project reference ${reference.path}` :
-          valid ?
-            `${dependency.version} in ${config.godot.csproj ?? config.godot.project}` :
-            `${reference?.version ?? "not installed"}; requires ${dependency.version} (run: pnpm kirie doctor --fix plugin:${plugin.id})`,
+        message: reference?.type === "project"
+          ? `local project reference ${reference.path}`
+          : valid
+            ? `${dependency.version} in ${config.godot.csproj ?? config.godot.project}`
+            : `${reference?.version ?? "not installed"}; requires ${dependency.version} (run: pnpm kirie doctor --fix plugin:${plugin.id})`,
         name: `${plugin.id} / ${dependency.id}`,
         status: valid ? DoctorCheckStatus.Ok : DoctorCheckStatus.Fail,
       });
@@ -259,7 +261,9 @@ async function dotnetWebDoctorCheck(options: {
 }
 
 function failedCheck(name: string, error: unknown): DoctorCheckResult {
-  const failure = error instanceof Error ? error : new Error(String(error), { cause: error });
+  const failure = error instanceof Error
+    ? error
+    : new Error(String(error), { cause: error });
   return {
     error: failure,
     message: failure.message,
@@ -305,7 +309,9 @@ export async function checkGodotCommand(
   } catch (error) {
     const failure = new Error(
       `could not run ${options.godotCommand} --version: ${
-        error instanceof Error ? error.message : String(error)
+        error instanceof Error
+          ? error.message
+          : String(error)
       }`,
       { cause: error },
     );

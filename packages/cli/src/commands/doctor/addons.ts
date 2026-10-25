@@ -148,7 +148,9 @@ export async function installGodotAddon(options: InstallAddonOptions): Promise<v
   } finally {
     await Promise.all([
       fs.rm(temporaryRoot, { force: true, recursive: true }),
-      stagingRoot ? fs.rm(stagingRoot, { force: true, recursive: true }) : Promise.resolve(),
+      stagingRoot
+        ? fs.rm(stagingRoot, { force: true, recursive: true })
+        : Promise.resolve(),
     ]);
   }
 
@@ -220,12 +222,12 @@ export async function downloadFile(options: DownloadFileOptions): Promise<void> 
   // Load the native addon only for the fixer so unsupported hosts can still use other CLI commands.
   const { DownloadTask, TakanawaError, TakanawaStatus } = await import("takanawa-node");
   const task = new DownloadTask({
-    hash: options.expectedSha256 ?
-        {
+    hash: options.expectedSha256
+      ? {
           expected: options.expectedSha256,
           kind: "sha256",
-        } :
-      undefined,
+        }
+      : undefined,
     targetPath: options.outputPath,
     url: options.url,
   });
@@ -256,9 +258,9 @@ export async function downloadFile(options: DownloadFileOptions): Promise<void> 
         resolveCompletion(snapshot);
       } else if (snapshot.phase === "failed") {
         const message =
-          snapshot.lastErrorCode === TakanawaStatus.HashMismatch ?
-            `Addon checksum mismatch: expected ${options.expectedSha256}` :
-              (snapshot.lastError ?? "Takanawa download failed");
+          snapshot.lastErrorCode === TakanawaStatus.HashMismatch
+            ? `Addon checksum mismatch: expected ${options.expectedSha256}`
+            : (snapshot.lastError ?? "Takanawa download failed");
         rejectCompletion(new TakanawaError(message, snapshot.lastErrorCode));
       }
     });
@@ -288,7 +290,11 @@ export async function downloadFile(options: DownloadFileOptions): Promise<void> 
     if (!completed && options.output.isTTY && lastProgressLength > 0) {
       options.output.write("\n");
     }
-    await Promise.all([progressListener?.remove(), speedListener?.remove(), task.close()]);
+    await Promise.all([
+      progressListener?.remove(),
+      speedListener?.remove(),
+      task.close(),
+    ]);
   }
 }
 

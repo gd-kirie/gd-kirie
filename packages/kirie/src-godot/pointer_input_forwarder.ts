@@ -97,7 +97,9 @@ export class _PointerInputForwarder extends RefCounted {
     const button_value = input.get("button", -1);
     const buttons_value = input.get("buttons", 0);
     const pointer_type = `${input.get("pointer_type", "")}`;
-    const pressure_value = input.get("pressure", pointer_type === "mouse" ? 0.0 : 1.0);
+    const pressure_value = input.get("pressure", pointer_type === "mouse"
+      ? 0.0
+      : 1.0);
     if (
       !this._is_number(normalized_x) ||
       !this._is_number(normalized_y) ||
@@ -237,7 +239,9 @@ export class _PointerInputForwarder extends RefCounted {
     button.position = position;
     button.set("global_position", position);
     button.button_index = button_index;
-    button.button_mask = phase === "cancel" ? 0 : this._mouse_button_mask(dom_buttons);
+    button.button_mask = phase === "cancel"
+      ? 0
+      : this._mouse_button_mask(dom_buttons);
     button.pressed = phase === "down";
     button.canceled = phase === "cancel";
     return button;

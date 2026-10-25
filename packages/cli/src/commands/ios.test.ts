@@ -6,9 +6,13 @@ import { resolveKirieConfig } from "./config.ts";
 import { exportIosApp } from "./ios.ts";
 import { createCliProjectTracker } from "./test-project.ts";
 
-const { mockExeca } = vi.hoisted(() => ({ mockExeca: vi.fn() }));
+const { mockExeca } = vi.hoisted(() => ({
+  mockExeca: vi.fn(),
+}));
 
-vi.mock("./export.ts", () => ({ runExport: vi.fn() }));
+vi.mock("./export.ts", () => ({
+  runExport: vi.fn(),
+}));
 vi.mock("execa", () => ({ execa: mockExeca }));
 
 const projects = createCliProjectTracker("kirie-cli-ios-");

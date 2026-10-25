@@ -29,7 +29,13 @@ export default antfu(
       "regexp/prefer-w": "off",
       "regexp/use-ignore-case": "off",
       "style/arrow-parens": ["error", "always"],
-      "style/operator-linebreak": ["error", "after"],
+      "style/operator-linebreak": [
+        "error",
+        "after",
+        {
+          overrides: { "?": "before", ":": "before" },
+        },
+      ],
       "ts/method-signature-style": "off",
     },
   },
@@ -89,11 +95,31 @@ export default antfu(
       ],
       "ts/naming-convention": [
         "error",
-        { selector: "variable", format: ["snake_case", "UPPER_CASE"], leadingUnderscore: "allow" },
-        { selector: "parameter", format: ["snake_case"], leadingUnderscore: "allow" },
-        { selector: "function", format: ["snake_case"], leadingUnderscore: "allow" },
-        { selector: "method", format: ["snake_case"], leadingUnderscore: "allow" },
-        { selector: "classProperty", format: ["snake_case", "UPPER_CASE"], leadingUnderscore: "allow" },
+        {
+          selector: "variable",
+          format: ["snake_case", "UPPER_CASE"],
+          leadingUnderscore: "allow",
+        },
+        {
+          selector: "parameter",
+          format: ["snake_case"],
+          leadingUnderscore: "allow",
+        },
+        {
+          selector: "function",
+          format: ["snake_case"],
+          leadingUnderscore: "allow",
+        },
+        {
+          selector: "method",
+          format: ["snake_case"],
+          leadingUnderscore: "allow",
+        },
+        {
+          selector: "classProperty",
+          format: ["snake_case", "UPPER_CASE"],
+          leadingUnderscore: "allow",
+        },
       ],
     },
   },

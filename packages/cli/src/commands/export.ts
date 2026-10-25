@@ -79,7 +79,10 @@ export async function runExport(options: ExportOptions = {}): Promise<void> {
     userArgs: options.userArgs,
   });
   if (options.platform === "web") {
-    copyViteWebOutput({ outputDir: path.dirname(outputPath), webRoot: config.web.root });
+    copyViteWebOutput({
+      outputDir: path.dirname(outputPath),
+      webRoot: config.web.root,
+    });
   }
 }
 
@@ -95,8 +98,14 @@ export function resolveExportOutputPath(options: {
   }
 
   const platformName = options.platform ?? options.preset.toLowerCase().replaceAll(/\W+/g, "-");
-  const extension = platformName === "android" ? "apk" : platformName === "web" ? "html" : "xcodeproj";
-  const outputName = platformName === "web" ? "index" : options.mode;
+  const extension = platformName === "android"
+    ? "apk"
+    : platformName === "web"
+      ? "html"
+      : "xcodeproj";
+  const outputName = platformName === "web"
+    ? "index"
+    : options.mode;
   return path.resolve(
     options.configCwd,
     "dist",
