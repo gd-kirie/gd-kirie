@@ -34,6 +34,11 @@ export default defineConfig({
         pattern: /MARKETING_VERSION: \S+/,
         replacement: `MARKETING_VERSION: ${operation.state.newVersion}`,
       },
+      {
+        file: "packages/kirie/native/android/plugin/build.gradle.kts",
+        pattern: /^version = "[^"]+"/m,
+        replacement: `version = "${operation.state.newVersion}"`,
+      },
     ];
 
     for (const { file, pattern, replacement } of releaseVersions) {
