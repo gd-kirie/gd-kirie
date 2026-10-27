@@ -95,8 +95,10 @@ from a commit on `main`. The workflow builds the release variant and publishes
 `ai.moeru.kirie:core` to
 `https://maven.pkg.github.com/gd-kirie/gd-kirie`.
 
-`bump.config.ts` keeps the Android `version = "..."` field aligned with the
-npm / NuGet / addon / iOS release version.
+The Android library version is read at build time from the monorepo root
+`package.json` (see `packages/kirie/native/android/plugin/build.gradle.kts`),
+so a normal release bump that updates `package.json` is enough—no separate
+Gradle version rewrite in `bump.config.ts`.
 
 ## Relationship to zip / npm
 

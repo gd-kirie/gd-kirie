@@ -7,7 +7,21 @@ plugins {
 }
 
 group = "ai.moeru.kirie"
-version = "0.15.0"
+
+// Keep Maven publication version in sync with the monorepo root package.json
+// (bumpp updates that file; do not hardcode a second source of truth here).
+fun readMonorepoVersion(): String {
+    val packageJson = rootProject.projectDir.resolve("../../../../package.json")
+    require(packageJson.isFile) {
+        "Missing monorepo package.json at ${packageJson.normalize()}"
+    }
+    val match = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+        .find(packageJson.readText())
+        ?: error("version field not found in ${packageJson.normalize()}")
+    return match.groupValues[1]
+}
+
+version = readMonorepoVersion()
 
 val pluginName = "Kirie"
 val pluginPackageName = "ai.moeru.kirie.android"
