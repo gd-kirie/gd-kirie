@@ -1,7 +1,7 @@
 # Maven Publishing (GitHub Packages)
 
 This lane publishes the Android library
-[`ai.moeru.kirie:core`](../packages/kirie/native/android/plugin/build.gradle.kts)
+[`moe.gdkirie.kirie:core`](../packages/kirie/native/android/plugin/build.gradle.kts)
 to **GitHub Packages** (Maven). It is separate from:
 
 - the Godot addon zip release (local staged AARs under
@@ -17,7 +17,7 @@ plugin as a normal Gradle/Maven coordinate.
 
 | Field | Value |
 | --- | --- |
-| groupId | `ai.moeru.kirie` |
+| groupId | `moe.gdkirie.kirie` |
 | artifactId | `core` |
 | version | same as the release tag without the leading `v` (for example `0.15.0` for `v0.15.0`) |
 | repository | `https://maven.pkg.github.com/gd-kirie/gd-kirie` |
@@ -47,7 +47,7 @@ repositories {
 }
 
 dependencies {
-    implementation("ai.moeru.kirie:core:<version>")
+    implementation("moe.gdkirie.kirie:core:<version>")
 }
 ```
 
@@ -69,7 +69,7 @@ packages/kirie/native/android/gradlew \
   :plugin:publishReleasePublicationToMavenLocal
 ```
 
-That installs `ai.moeru.kirie:core` into `~/.m2` without touching GitHub
+That installs `moe.gdkirie.kirie:core` into `~/.m2` without touching GitHub
 Packages. To publish explicitly to GitHub Packages from a workstation:
 
 ```sh
@@ -92,7 +92,7 @@ mirrors the NuGet release lane:
 
 After a normal release bump (`mise run release` / bumpp), push the `v*` tag
 from a commit on `main`. The workflow builds the release variant and publishes
-`ai.moeru.kirie:core` to
+`moe.gdkirie.kirie:core` to
 `https://maven.pkg.github.com/gd-kirie/gd-kirie`.
 
 The Android library version is read at build time from the monorepo root
@@ -107,7 +107,7 @@ Gradle version rewrite in `bump.config.ts`.
 | Addon zip | `Kirie-release.aar` staged into the Godot addon | Godot projects installing Kirie as an addon |
 | npm | `@gd-kirie/*`, `kirie` | Browser / CLI / tooling |
 | NuGet | `GdKirie.*` | .NET / Godot C# hosts |
-| Maven (this lane) | `ai.moeru.kirie:core` | Gradle/Maven Android hosts that pull the plugin from GitHub Packages |
+| Maven (this lane) | `moe.gdkirie.kirie:core` | Gradle/Maven Android hosts that pull the plugin from GitHub Packages |
 
 Publishing to Maven does not remove the addon-bundled AAR path.
 

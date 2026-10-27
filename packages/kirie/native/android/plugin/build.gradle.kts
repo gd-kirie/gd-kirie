@@ -6,7 +6,7 @@ plugins {
     id("maven-publish")
 }
 
-group = "ai.moeru.kirie"
+group = "moe.gdkirie.kirie"
 
 // Keep Maven publication version in sync with the monorepo root package.json
 // (bumpp updates that file; do not hardcode a second source of truth here).
@@ -93,7 +93,7 @@ dependencies {
 publishing {
     publications {
         register<MavenPublication>("release") {
-            groupId = "ai.moeru.kirie"
+            groupId = "moe.gdkirie.kirie"
             artifactId = "core"
             version = project.version.toString()
 

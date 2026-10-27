@@ -9,7 +9,7 @@ Current direction:
 - depends on the Godot Android library matching the repo's target Godot version
 - ships to staged Godot addon trees as local AAR files through
   `EditorExportPlugin`
-- can also publish `ai.moeru.kirie:core` to GitHub Packages Maven for Gradle
+- can also publish `moe.gdkirie.kirie:core` to GitHub Packages Maven for Gradle
   hosts; see [`docs/maven-publishing.md`](../../../../docs/maven-publishing.md)
 
 Current responsibility:
