@@ -1,9 +1,10 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("maven-publish")
+    id("com.vanniktech.maven.publish")
 }
 
 group = "moe.gdkirie.kirie"
@@ -76,11 +77,6 @@ android {
         }
     }
 
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
 }
 
 dependencies {
@@ -90,56 +86,55 @@ dependencies {
     compileOnly("org.godotengine:godot:4.7.2.stable")
 }
 
-publishing {
-    publications {
-        register<MavenPublication>("release") {
-            groupId = "moe.gdkirie.kirie"
-            artifactId = "core"
-            version = project.version.toString()
+// Published to Maven Central via the Central Publisher Portal
+// (https://central.sonatype.com). Credentials and signing key come from
+// Gradle properties / ORG_GRADLE_PROJECT_* env vars, see docs/maven-publishing.md:
+//   mavenCentralUsername / mavenCentralPassword   (Portal user token)
+//   signingInMemoryKey / signingInMemoryKeyId / signingInMemoryKeyPassword (GPG)
+mavenPublishing {
+    coordinates("moe.gdkirie.kirie", "core", project.version.toString())
 
-            afterEvaluate {
-                from(components["release"])
-            }
+    configure(
+        AndroidSingleVariantLibrary(
+            variant = "release",
+            sourcesJar = true,
+            publishJavadocJar = true,
+        ),
+    )
 
-            pom {
-                name.set("Kirie Android Core")
-                description.set(
-                    "Android WebView Godot plugin core for Kirie " +
-                        "(embedding platform WebViews in Godot).",
-                )
-                url.set("https://github.com/gd-kirie/gd-kirie")
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-                developers {
-                    developer {
-                        name.set("Moeru AI")
-                        organization.set("Moeru AI")
-                        organizationUrl.set("https://github.com/moeru-ai")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:https://github.com/gd-kirie/gd-kirie.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/gd-kirie/gd-kirie.git")
-                    url.set("https://github.com/gd-kirie/gd-kirie")
-                }
-            }
-        }
+    publishToMavenCentral(automaticRelease = true)
+
+    // Central requires signatures; skip signing for local publishToMavenLocal
+    // runs when no key is configured.
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
     }
 
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/gd-kirie/gd-kirie")
-            credentials {
-                username = project.findProperty("gpr.user") as String?
-                    ?: System.getenv("GITHUB_ACTOR")
-                password = project.findProperty("gpr.key") as String?
-                    ?: System.getenv("GITHUB_TOKEN")
+    pom {
+        name.set("Kirie Android Core")
+        description.set(
+            "Android WebView Godot plugin core for Kirie " +
+                "(embedding platform WebViews in Godot).",
+        )
+        url.set("https://github.com/gd-kirie/gd-kirie")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
             }
+        }
+        developers {
+            developer {
+                id.set("moeru-ai")
+                name.set("Moeru AI")
+                organization.set("Moeru AI")
+                organizationUrl.set("https://github.com/moeru-ai")
+            }
+        }
+        scm {
+            connection.set("scm:git:https://github.com/gd-kirie/gd-kirie.git")
+            developerConnection.set("scm:git:ssh://git@github.com/gd-kirie/gd-kirie.git")
+            url.set("https://github.com/gd-kirie/gd-kirie")
         }
     }
 }

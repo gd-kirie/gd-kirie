@@ -1,4 +1,4 @@
-name: Publish Maven Packages
+name: Publish Maven Central
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,7 +15,7 @@ concurrency:
 
 jobs:
   packages:
-    name: Publish Maven Packages
+    name: Publish Maven Central
     runs-on: ubuntu-latest
     env:
       MISE_EXEC_AUTO_INSTALL: "false"
@@ -53,10 +52,33 @@ jobs:
             platforms;android-36
             build-tools;36.0.0
 
-      - name: Publish to GitHub Packages
+      - name: Validate Maven Central secrets
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in CENTRAL_USERNAME CENTRAL_PASSWORD SIGNING_KEY SIGNING_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Repository secret ${name} must be configured for Maven Central publishing."
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      # Central Publisher Portal (OSSRH is shut down). Uploads a signed bundle
+      # (AAR, sources, javadoc, POM, .asc) and releases it automatically.
+      - name: Publish to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: >-
           packages/kirie/native/android/gradlew
           --project-dir packages/kirie/native/android
-          :plugin:publishReleasePublicationToGitHubPackagesRepository
+          --no-configuration-cache
+          :plugin:publishAndReleaseToMavenCentral
