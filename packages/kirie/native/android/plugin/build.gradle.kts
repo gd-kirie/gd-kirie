@@ -17,15 +17,18 @@ fun readMonorepoVersion(): String {
     if (!packageJson.isFile) {
         error("Missing monorepo package.json at $path")
     }
-    val parsed = try {
-        groovy.json.JsonSlurper().parse(packageJson)
-    } catch (e: Exception) {
-        error("Failed to parse JSON in $path: ${e.message}")
-    }
-    val root = parsed as? Map<*, *>
-        ?: error("Expected a JSON object at top level of $path")
-    val version = root["version"]
-        ?: error("Missing top-level \"version\" field in $path")
+    val parsed =
+        try {
+            groovy.json.JsonSlurper().parse(packageJson)
+        } catch (e: Exception) {
+            error("Failed to parse JSON in $path: ${e.message}")
+        }
+    val root =
+        parsed as? Map<*, *>
+            ?: error("Expected a JSON object at top level of $path")
+    val version =
+        root["version"]
+            ?: error("Missing top-level \"version\" field in $path")
     if (version !is String || version.isBlank()) {
         error("Top-level \"version\" in $path must be a non-empty string, got: $version")
     }
@@ -76,7 +79,6 @@ android {
             jvmTarget.set(JvmTarget.JVM_17)
         }
     }
-
 }
 
 dependencies {
