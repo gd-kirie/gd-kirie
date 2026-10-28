@@ -66,4 +66,5 @@ jobs:
           packages/kirie/native/android/gradlew
           --project-dir packages/kirie/native/android
           --no-configuration-cache
+          --stacktrace
           :plugin:publishAndReleaseToMavenCentral
