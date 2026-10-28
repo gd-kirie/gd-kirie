@@ -26,6 +26,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Install libxml2 for swiftlint (Ubuntu 26.04)
+        run: |
+          # Ubuntu 26.04 ships libxml2.so.16 (package libxml2-16); swiftlint still needs libxml2.so.2.
+          sudo apt-get update
+          sudo apt-get install -y libxml2-16
+          multiarch="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+          if [ ! -e "/usr/lib/${multiarch}/libxml2.so.2" ]; then
+            libxml2="$(find "/usr/lib/${multiarch}" -maxdepth 1 -name 'libxml2.so.*' ! -name 'libxml2.so' | sort | tail -1)"
+            sudo ln -sf "$libxml2" "/usr/lib/${multiarch}/libxml2.so.2"
+          fi
+
       - name: Install lint tools
         uses: jdx/mise-action@v3
         with:
@@ -67,6 +78,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Install libxml2 for swiftlint (Ubuntu 26.04)
+        run: |
+          # Ubuntu 26.04 ships libxml2.so.16 (package libxml2-16); swiftlint still needs libxml2.so.2.
+          sudo apt-get update
+          sudo apt-get install -y libxml2-16
+          multiarch="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+          if [ ! -e "/usr/lib/${multiarch}/libxml2.so.2" ]; then
+            libxml2="$(find "/usr/lib/${multiarch}" -maxdepth 1 -name 'libxml2.so.*' ! -name 'libxml2.so' | sort | tail -1)"
+            sudo ln -sf "$libxml2" "/usr/lib/${multiarch}/libxml2.so.2"
+          fi
 
       - name: Install format tools
         uses: jdx/mise-action@v3
