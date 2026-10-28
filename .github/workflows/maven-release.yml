@@ -60,11 +60,16 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.MAVEN_SIGNING_KEY_ID }}
           ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_KEY_PASSWORD }}
-        run: >-
-          packages/kirie/native/android/gradlew
-          --project-dir packages/kirie/native/android
-          --no-configuration-cache
-          --stacktrace
-          :plugin:publishAndReleaseToMavenCentral
+          # Optional; blank secrets.MAVEN_SIGNING_KEY_ID must not become
+          # ORG_GRADLE_PROJECT_signingInMemoryKeyId="" (Gradle rejects empty key ID).
+          MAVEN_SIGNING_KEY_ID: ${{ secrets.MAVEN_SIGNING_KEY_ID }}
+        run: |
+          set -euo pipefail
+          if [ -n "${MAVEN_SIGNING_KEY_ID:-}" ]; then
+            export ORG_GRADLE_PROJECT_signingInMemoryKeyId="$MAVEN_SIGNING_KEY_ID"
+          fi
+          packages/kirie/native/android/gradlew \
+            --project-dir packages/kirie/native/android \
+            --no-configuration-cache \
+            :plugin:publishAndReleaseToMavenCentral
