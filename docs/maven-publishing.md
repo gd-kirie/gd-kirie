@@ -62,15 +62,15 @@ The version is read at build time from the monorepo root `package.json` with
 
 ## Required secrets (GitHub Actions)
 
-Configure these as **repository Actions secrets**:
+Configure these as **organization or repository Actions secrets** (org secrets work when the workflow can access them):
 
 | Secret | Gradle property | What it is |
 | --- | --- | --- |
-| `CENTRAL_USERNAME` | `mavenCentralUsername` | Username part of a Portal **user token** (central.sonatype.com → Account → Generate User Token) |
-| `CENTRAL_PASSWORD` | `mavenCentralPassword` | Password part of that user token |
-| `SIGNING_KEY` | `signingInMemoryKey` | ASCII-armored GPG **private** key (`gpg --armor --export-secret-keys <KEYID>`) |
-| `SIGNING_KEY_ID` | `signingInMemoryKeyId` | Optional: last 8 hex chars of the key ID (needed only if the armored export contains subkeys and you want a specific one) |
-| `SIGNING_KEY_PASSWORD` | `signingInMemoryKeyPassword` | Passphrase of the GPG key |
+| `MAVEN_PUBLISH_USERNAME` | `mavenCentralUsername` | Username part of a Portal **user token** (central.sonatype.com → Account → Generate User Token) |
+| `MAVEN_PUBLISH_PASSWORD` | `mavenCentralPassword` | Password part of that user token |
+| `MAVEN_SIGNING_KEY` | `signingInMemoryKey` | ASCII-armored GPG **private** key (`gpg --armor --export-secret-keys <KEYID>`) |
+| `MAVEN_SIGNING_KEY_ID` | `signingInMemoryKeyId` | Optional: last 8 hex chars of the key ID (needed only if the armored export contains subkeys and you want a specific one) |
+| `MAVEN_SIGNING_KEY_PASSWORD` | `signingInMemoryKeyPassword` | Passphrase of the GPG key |
 
 The matching GPG **public** key must be uploaded to a public keyserver that
 Central checks (for example `keyserver.ubuntu.com` or `keys.openpgp.org`):
