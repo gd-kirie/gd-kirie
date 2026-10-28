@@ -52,21 +52,6 @@ jobs:
             platforms;android-36
             build-tools;36.0.0
 
-      - name: Validate Maven Central secrets
-        env:
-          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
-          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
-          MAVEN_SIGNING_KEY: ${{ secrets.MAVEN_SIGNING_KEY }}
-          MAVEN_SIGNING_KEY_PASSWORD: ${{ secrets.MAVEN_SIGNING_KEY_PASSWORD }}
-        run: |
-          missing=0
-          for name in MAVEN_PUBLISH_USERNAME MAVEN_PUBLISH_PASSWORD MAVEN_SIGNING_KEY MAVEN_SIGNING_KEY_PASSWORD; do
-            if [[ -z "${!name}" ]]; then
-              echo "::error::Organization or repository secret ${name} must be configured for Maven Central publishing."
-              missing=1
-            fi
-          done
-          exit "${missing}"
 
       # Central Publisher Portal (OSSRH is shut down). Uploads a signed bundle
       # (AAR, sources, javadoc, POM, .asc) and releases it automatically.
