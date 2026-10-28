@@ -7,7 +7,7 @@
     <IsAotCompatible>true</IsAotCompatible>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageId>GdKirie.Platform</PackageId>
-    <Version>0.15.0</Version>
+    <Version>0.15.1</Version>
     <Authors>Moeru AI</Authors>
     <Description>Godot desktop Platform capabilities over Kirie Eventa IPC.</Description>
     <PackageTags>godot;kirie;eventa;platform;window;shortcut;webview</PackageTags>
