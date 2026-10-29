@@ -26,6 +26,14 @@ const remoteAddon: KirieGodotAddonDependency = {
     url: "https://example.com/example-addon.zip",
   },
 };
+const releaseAddon: KirieGodotAddonDependency = {
+  ...bundledAddon,
+  source: {
+    archivePath: "addons/example",
+    type: "remote",
+    url: "https://example.com/example-release.zip",
+  },
+};
 const nativeAddon: KirieGodotAddonDependency = {
   id: "native",
   path: "addons/native",
@@ -135,6 +143,36 @@ describe("godot addon dependencies", () => {
       projectDir: project,
     });
     await expect(listAddonStagingDirs(project)).resolves.toEqual([]);
+  });
+
+  it("verifies the plugin version of an unpinned archive", async () => {
+    const project = await createProject();
+    let extractedVersion = "0.0.0";
+    const install = () => installGodotAddon({
+      addon: releaseAddon,
+      download: async (options) => {
+        expect(options.expectedSha256).toBeUndefined();
+        await fs.writeFile(options.outputPath, "release archive fixture");
+      },
+      extractArchive: async (_archivePath, outputDir) => {
+        await writeVersionedAddon(outputDir, extractedVersion);
+      },
+      projectDir: project,
+    });
+
+    await expect(install()).rejects.toThrow("example version 0.0.0 does not match 1.0.0");
+    extractedVersion = ADDON_VERSION;
+    await install();
+
+    await expect(checkGodotAddon(project, releaseAddon)).resolves.toMatchObject({ valid: true });
+    await expect(fs.stat(path.join(project, ".godot", "kirie", "example.sha256")))
+      .rejects
+      .toMatchObject({ code: "ENOENT" });
+    await writeVersionedAddon(project, "0.0.0");
+    await expect(checkGodotAddon(project, releaseAddon)).resolves.toMatchObject({
+      installed: true,
+      valid: false,
+    });
   });
 
   it("rejects an installed archive with a different checksum", async () => {

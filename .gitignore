@@ -6,7 +6,6 @@
 .idea/
 node_modules/
 .pnpm-store/
-packages/cli/addon/
 # APM resolves these directories from apm.yml and apm.lock.yaml.
 apm_modules/
 /.agents/skills/*
