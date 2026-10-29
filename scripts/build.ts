@@ -1,5 +1,4 @@
 export {
-  buildAndroidAar,
   buildIosSimulatorXcframework,
   buildIosXcframework,
   checkAddonPack,

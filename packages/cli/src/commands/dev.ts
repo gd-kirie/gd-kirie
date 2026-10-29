@@ -234,7 +234,7 @@ async function runAndroidDev(
     config,
     godotCommand: options.godotCommand,
     platform: "android",
-    userArgs: ["--kirie-android-aar=debug"],
+    userArgs: options.godotArgs,
   });
   await execa(
     "adb",

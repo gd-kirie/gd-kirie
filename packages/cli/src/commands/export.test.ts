@@ -35,7 +35,7 @@ describe("runExport", () => {
         "--output",
         outputPath,
         "--",
-        "--kirie-android-aar=debug",
+        "--kirie-android-maven-local",
       ],
       {
         cwd: path.dirname(project),
@@ -56,7 +56,7 @@ describe("runExport", () => {
         "Android",
         outputPath,
         "--",
-        "--kirie-android-aar=debug",
+        "--kirie-android-maven-local",
       ],
       cwd: realProject,
       env: {},

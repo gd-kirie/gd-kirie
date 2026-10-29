@@ -83,21 +83,12 @@ jobs:
             exit 1
           fi
 
-      - name: Install Node, pnpm, and Java
+      - name: Install Node and pnpm
         uses: jdx/mise-action@v3
         with:
           install: true
-          install_args: --locked node pnpm java
+          install_args: --locked node pnpm
           cache: true
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: >-
-            platform-tools
-            platforms;android-35
-            platforms;android-36
-            build-tools;36.0.0
 
       - name: Setup Xcode version
         uses: maxim-lobanov/setup-xcode@v1

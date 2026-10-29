@@ -35,7 +35,8 @@ fun readMonorepoVersion(): String {
     return version
 }
 
-version = readMonorepoVersion()
+val versionSuffix = providers.gradleProperty("kirieVersionSuffix").orElse("").get()
+version = "${readMonorepoVersion()}$versionSuffix"
 
 val pluginName = "Kirie"
 val pluginPackageName = "ai.moeru.kirie.android"

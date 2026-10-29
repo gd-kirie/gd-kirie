@@ -180,9 +180,7 @@ function runDevCommand(target: DevTarget) {
       device: args.device,
       force: args.force,
       forceStop: args["force-stop"],
-      godotArgs: target === "desktop"
-        ? parseUserArgs(rawArgs)
-        : undefined,
+      godotArgs: parseUserArgs(rawArgs),
       godotCommand: args.godot,
       host: args.host,
       logLevel: parseLogLevel(args["log-level"]),

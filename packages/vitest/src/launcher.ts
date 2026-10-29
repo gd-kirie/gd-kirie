@@ -78,6 +78,9 @@ async function runAndroid(projectPath: string, staged: StagedLaunch): Promise<vo
       projectPath,
       "--no-build",
       "--",
+      ...(process.env.KIRIE_ANDROID_MAVEN_LOCAL === "1"
+        ? ["--kirie-android-maven-local"]
+        : []),
       `--kirie-android-extra-args=${staged.args.join(" ")}`,
     ],
   );
