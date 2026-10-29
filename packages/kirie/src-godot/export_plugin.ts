@@ -105,27 +105,30 @@ export class _ExportPlugin extends EditorExportPlugin {
     _platform: EditorExportPlatform | null,
     _debug: boolean,
   ): PackedStringArray {
-    return PackedStringArray([
-      "androidx.webkit:webkit:1.16.0",
-      "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.21.3",
-    ]);
+    const config = new ConfigFile();
+    config.load("res://addons/kirie/plugin.cfg");
+    const version = str(config.get_value("plugin", "version", ""));
+    // Godot declares mavenCentral() before plugin repos; suffix avoids resolving the published release version.
+    const suffix = OS.get_cmdline_user_args().has(_ExportPlugin.ANDROID_MAVEN_LOCAL_ARG)
+      ? "-local"
+      : "";
+    return PackedStringArray([`moe.gdkirie.kirie:core:${version}${suffix}`]);
   }
 
-  _get_android_libraries(
+  _get_android_dependencies_maven_repos(
     _platform: EditorExportPlatform | null,
     _debug: boolean,
   ): PackedStringArray {
-    switch (this._get_android_aar_mode()) {
-      case "debug":
-        return PackedStringArray([_ExportPlugin.ANDROID_DEBUG_AAR]);
-      case "release":
-        return PackedStringArray([_ExportPlugin.ANDROID_RELEASE_AAR]);
+    if (!OS.get_cmdline_user_args().has(_ExportPlugin.ANDROID_MAVEN_LOCAL_ARG)) {
+      return PackedStringArray();
     }
 
-    const message = `[Kirie][export] invalid Android AAR mode. Use ${_ExportPlugin.ANDROID_DEBUG_AAR_ARG}=debug or ${_ExportPlugin.ANDROID_DEBUG_AAR_ARG}=release`;
-    push_error(message);
-    assert(false, message);
-    return PackedStringArray();
+    const home = OS.get_environment("HOME");
+    return PackedStringArray([
+      (home.is_empty()
+        ? OS.get_environment("USERPROFILE")
+        : home).path_join(".m2/repository"),
+    ]);
   }
 
   _get_android_manifest_application_element_contents(
@@ -141,24 +144,6 @@ export class _ExportPlugin extends EditorExportPlugin {
         this._xml_bool(this._option_enabled(_ExportPlugin.OPTION_ALLOW_TLS_BYPASS)),
       ],
     );
-  }
-
-  _get_android_aar_mode(): string {
-    for (const arg of OS.get_cmdline_user_args()) {
-      if (arg === `${_ExportPlugin.ANDROID_DEBUG_AAR_ARG}=debug`) {
-        return "debug";
-      }
-
-      if (arg === `${_ExportPlugin.ANDROID_DEBUG_AAR_ARG}=release`) {
-        return "release";
-      }
-
-      if (arg.begins_with(`${_ExportPlugin.ANDROID_DEBUG_AAR_ARG}=`)) {
-        return "invalid";
-      }
-    }
-
-    return "release";
   }
 
   _android_extra_args_override(): string {
@@ -450,7 +435,7 @@ export namespace _ExportPlugin {
   export const DEFAULT_WEB_ROOT = "res://src-web/dist";
   export const OPTION_ENABLE_WEB_INSPECTOR = "kirie/debug/enable_web_inspector";
   export const OPTION_ALLOW_TLS_BYPASS = "kirie/debug/allow_tls_bypass";
-  export const ANDROID_DEBUG_AAR_ARG = "--kirie-android-aar";
+  export const ANDROID_MAVEN_LOCAL_ARG = "--kirie-android-maven-local";
   export const ANDROID_EXTRA_ARGS_ARG = "--kirie-android-extra-args";
   export const DOTNET_WEB_PUBLISH_ARG = "--kirie-dotnet-web-publish";
   export const DOTNET_WEB_EXPORT_ROOT = "res://.godot/mono/publish/wasm32";
@@ -465,8 +450,6 @@ export namespace _ExportPlugin {
     ".rsp",
     ".wasm",
   ];
-  export const ANDROID_DEBUG_AAR = "kirie/libraries/android/Kirie-debug.aar";
-  export const ANDROID_RELEASE_AAR = "kirie/libraries/android/Kirie-release.aar";
   export const ANDROID_META_ENABLE_WEB_INSPECTOR = "ai.moeru.kirie.ENABLE_WEB_INSPECTOR";
   export const ANDROID_META_ALLOW_TLS_BYPASS = "ai.moeru.kirie.ALLOW_TLS_BYPASS";
   export const IOS_PLIST_ENABLE_WEB_INSPECTOR_KEY = "KirieEnableWebInspector";

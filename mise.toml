@@ -23,12 +23,12 @@ run = "pnpm run build"
 
 [tasks."build:addon-pack"]
 description = "Build native artifacts and package the Godot addon"
-depends = ["build:native-artifacts"]
+depends = ["build:ios-xcframework"]
 run = "./scripts/run-build-task.js packAddon"
 
 [tasks."build:android-aar"]
-description = "Build Android AAR artifacts"
-run = "./scripts/run-build-task.js buildAndroidAar"
+description = "Publish Android AAR artifact to Maven Local"
+run = "./packages/kirie/native/android/gradlew --project-dir packages/kirie/native/android -PkirieVersionSuffix=-local :plugin:publishToMavenLocal"
 
 [tasks."build:dotnet"]
 description = "Build .NET projects"
@@ -129,7 +129,7 @@ run = "pnpm run test:swift"
 [tasks."test:integration-android"]
 description = "Run the Android platform integration suite"
 depends = ["build:packages", "build:integration-web"]
-env = { KIRIE_TEST_TARGET = "android" }
+env = { KIRIE_TEST_TARGET = "android", KIRIE_ANDROID_MAVEN_LOCAL = "1" }
 run = "pnpm -C tests/integration run test:run"
 
 [tasks."test:integration-ios"]

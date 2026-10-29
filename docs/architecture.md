@@ -266,10 +266,9 @@ metadata for the native plugin to read at runtime. On iOS, it writes matching
 Info.plist values. The iOS ATS widening plist block is injected only when
 `kirie/debug/allow_tls_bypass` is enabled.
 
-Android native artifact selection is separate from application debug behavior.
-Exports use `Kirie-release.aar` by default. Repository-local Android native
-debugging can opt into `Kirie-debug.aar` for a single export by passing
-`-- --kirie-android-aar=debug` to the Godot export command.
+Android exports use `moe.gdkirie.kirie:core:<version>` from Maven Central by
+default. Local testing publishes `<version>-local` to Maven Local (`mise run build:android-aar`)
+and selects it via `-- --kirie-android-maven-local`.
 
 Android application command line arguments are part of the export preset. A
 single export can replace them by passing
@@ -738,7 +737,7 @@ The platform mapping for this pre-page-script injection is:
   document-beginning script that runs before page JavaScript, while the DOM tree
   might not be ready.
 - iOS: `WKUserScript` with `WKUserScriptInjectionTime.atDocumentStart`, added to
-  the `WKUserContentController` before the `WKWebView` loads content. Apple
+  the `WKWebView` loads content. Apple
   documents this as after creation of the webpage document element but before
   loading other content.
 - Godot CEF: set `CefTexture.preload_script` or `preload_script_path` before the
