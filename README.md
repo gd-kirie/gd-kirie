@@ -16,8 +16,8 @@ pnpm kirie doctor --fix plugin:core
 ```
 
 Import `kirie/plugin/core` in `kirie.config.ts` and add it to the explicit
-`plugins` array before running doctor. The fix downloads the Kirie addon from
-the matching GitHub Release and the desktop Godot CEF backend.
+`plugins` array before running doctor. The fix downloads the Kirie
+addon and the desktop Godot CEF backend.
 After `kirie init`, run `pnpm install` and `pnpm kirie doctor --fix` in the
 generated project.
 
@@ -41,9 +41,8 @@ This follows Godot's plugin installation flow. Release packaging details live in
 A Kirie plugin is an npm package that exports a descriptor created with
 `defineKiriePlugin` from `kirie/plugin`. Descriptors declare an ID plus
 Godot addon and .NET package dependencies. Addons may be bundled with the npm
-package or downloaded from an archive verified by SHA-256 or addon version;
-.NET dependencies use evaluated MSBuild items for checks and
-`dotnet package add` for fixes.
+package or downloaded from a SHA-256-pinned archive; .NET dependencies use
+evaluated MSBuild items for checks and `dotnet package add` for fixes.
 
 Projects enable plugins explicitly:
 

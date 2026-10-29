@@ -521,8 +521,7 @@ user-managed.
 The `kirie/plugin/core` descriptor declares the required Kirie addon, the
 optional desktop Godot CEF addon, and the `GdKirie.EventaAdapter` and
 `GdKirie.Platform` NuGet packages. The Kirie addon is downloaded from the
-matching GitHub Release and verified by its `plugin.cfg` version; Godot CEF is
-pinned by URL and SHA-256.
+GitHub Release; Godot CEF is pinned by URL and SHA-256.
 `packages/cli/src/commands/doctor/addons.ts` validates either source before atomically
 replacing an installation. Doctor skips plugin .NET dependencies when the
 Godot project has no `.csproj`.
