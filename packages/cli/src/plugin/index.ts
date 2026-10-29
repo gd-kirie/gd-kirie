@@ -1,4 +1,5 @@
 export interface BundledGodotAddonSource {
+  sha256?: never;
   type: "bundled";
   url: string;
 }

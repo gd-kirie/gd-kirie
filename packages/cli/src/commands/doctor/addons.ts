@@ -48,7 +48,7 @@ export async function checkGodotAddon(
     return { installed: false, message: "not installed", valid: false };
   }
 
-  const sha256 = readSourceSha256(addon);
+  const sha256 = addon.source.sha256;
   const versionMatches =
     !addon.version || sha256 !== undefined ||
     await readAddonVersion(installDir) === addon.version;
@@ -85,7 +85,7 @@ export async function installGodotAddon(options: InstallAddonOptions): Promise<v
     return;
   }
 
-  const sha256 = readSourceSha256(addon);
+  const sha256 = addon.source.sha256;
   const installDir = resolveAddonInstallPath(projectDir, addon.path);
   await fs.mkdir(path.dirname(installDir), { recursive: true });
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), "kirie-addon-"));
@@ -156,12 +156,6 @@ export async function installGodotAddon(options: InstallAddonOptions): Promise<v
   }
 
   console.log(`Installed ${addon.id} ${addon.version ?? ""} at ${installDir}`);
-}
-
-function readSourceSha256(addon: KirieGodotAddonDependency): string | undefined {
-  return addon.source.type === "remote"
-    ? addon.source.sha256
-    : undefined;
 }
 
 async function readAddonVersion(directory: string): Promise<string | undefined> {
