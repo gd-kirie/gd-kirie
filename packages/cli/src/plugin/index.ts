@@ -1,11 +1,12 @@
 export interface BundledGodotAddonSource {
+  sha256?: never;
   type: "bundled";
   url: string;
 }
 
 export interface RemoteGodotAddonSource {
   archivePath: string;
-  sha256: string;
+  sha256?: string;
   type: "remote";
   url: string;
 }

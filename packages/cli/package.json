@@ -24,11 +24,10 @@
     }
   },
   "files": [
-    "addon",
     "dist"
   ],
   "scripts": {
-    "build": "tsdown && node scripts/package-addon.ts",
+    "build": "tsdown",
     "test:run": "vitest run --no-file-parallelism --test-timeout 30000",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

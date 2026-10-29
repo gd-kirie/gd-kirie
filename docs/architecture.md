@@ -520,8 +520,8 @@ user-managed.
 `kirie.config.ts` lists active plugin descriptors in its `plugins` array.
 The `kirie/plugin/core` descriptor declares the required Kirie addon, the
 optional desktop Godot CEF addon, and the `GdKirie.EventaAdapter` and
-`GdKirie.Platform` NuGet packages. The Kirie addon is bundled with the npm
-package; Godot CEF remains a large external archive pinned by URL and SHA-256.
+`GdKirie.Platform` NuGet packages. The Kirie addon is downloaded from the
+GitHub Release; Godot CEF is pinned by URL and SHA-256.
 `packages/cli/src/commands/doctor/addons.ts` validates either source before atomically
 replacing an installation. Doctor skips plugin .NET dependencies when the
 Godot project has no `.csproj`.
@@ -807,7 +807,7 @@ iOS plugin and Apple embedded platform export APIs.
 
 GitHub Release addon publishing is configured through the `Addon Release`
 workflow. Keep it separate from npm package publishing. The npm packages contain
-browser APIs, CLI tools, and bundled addons. Optional Tray, Notifications, and QR
+browser APIs and CLI tools. Optional Tray, Notifications, and QR
 packages are built and published from kirie-plugins.
 
 The release artifact shape and workflow modes live in

@@ -1,9 +1,6 @@
 import type { KiriePlugin } from "./index.ts";
-import { URL } from "node:url";
 
 import packageJson from "../../package.json" with { type: "json" };
-
-const bundledAddonUrl = new URL("../../addon/kirie", import.meta.url).href;
 
 const corePlugin: KiriePlugin = {
   id: "core",
@@ -22,8 +19,9 @@ const corePlugin: KiriePlugin = {
       id: "kirie",
       path: "addons/kirie",
       source: {
-        type: "bundled",
-        url: bundledAddonUrl,
+        type: "remote",
+        archivePath: "addons/kirie",
+        url: `https://github.com/gd-kirie/gd-kirie/releases/download/v${packageJson.version}/kirie-addon.zip`,
       },
       version: packageJson.version,
     },
