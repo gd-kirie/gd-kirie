@@ -6,10 +6,6 @@ import { distDir, godotSourceRoot, rootDir } from "./build-shared.ts";
 const addonSourceDir = "packages/kirie/addon/addons/kirie";
 const addonStageDir = `${distDir}/addons/kirie`;
 const addonZipPath = `${distDir}/kirie-addon.zip`;
-const androidAarOutputDir = "packages/kirie/native/android/plugin/build/outputs/aar";
-const androidAddonLibraryDir = "packages/kirie/addon/addons/kirie/libraries/android";
-const androidStagedDebugAar = `${addonStageDir}/libraries/android/Kirie-debug.aar`;
-const androidStagedReleaseAar = `${addonStageDir}/libraries/android/Kirie-release.aar`;
 const iosPluginDir = "packages/kirie/native/ios/Kirie";
 const iosBuildDir = `${iosPluginDir}/.build`;
 const iosGeneratedDir = `${iosPluginDir}/.generated`;
@@ -163,50 +159,15 @@ export function checkAddonPack(): void {
   assertPathExists(addonStageDir);
   assertPathExists(`${addonStageDir}/plugin.gd`);
   assertPathExists(`${addonStageDir}/gd_kirie.gd`);
-  assertPathExists(androidStagedReleaseAar);
   assertPathExists(iosStagedDebugXcframework);
   assertPathExists(`${iosStagedDebugXcframework}/Info.plist`);
   assertPathExists(iosStagedReleaseXcframework);
   assertPathExists(`${iosStagedReleaseXcframework}/Info.plist`);
 
-  if (fs.existsSync(androidStagedDebugAar)) {
-    throw new Error(`Development-only debug AAR must not be included: ${androidStagedDebugAar}`);
-  }
-
   const symlink = findSymlink(addonStageDir);
   if (symlink) {
     throw new Error(`Release addon staging must not contain symlinks: ${symlink}`);
   }
-}
-
-// mise task entrypoint.
-export async function buildAndroidAar(): Promise<void> {
-  await execa(
-    "mise",
-    [
-      "x",
-      "--",
-      "packages/kirie/native/android/gradlew",
-      "--project-dir",
-      "packages/kirie/native/android",
-      ":plugin:assembleDebug",
-      ":plugin:assembleRelease",
-    ],
-    {
-      cwd: rootDir,
-      stdio: "inherit",
-    },
-  );
-
-  fs.mkdirSync(androidAddonLibraryDir, { recursive: true });
-
-  const debugAar = `${androidAddonLibraryDir}/Kirie-debug.aar`;
-  fs.rmSync(debugAar, { force: true });
-  fs.copyFileSync(`${androidAarOutputDir}/Kirie-debug.aar`, debugAar);
-
-  const releaseAar = `${androidAddonLibraryDir}/Kirie-release.aar`;
-  fs.rmSync(releaseAar, { force: true });
-  fs.copyFileSync(`${androidAarOutputDir}/Kirie-release.aar`, releaseAar);
 }
 
 // mise task entrypoint.
@@ -277,10 +238,7 @@ export async function packAddon(): Promise<void> {
   fs.mkdirSync(path.dirname(addonStageDir), { recursive: true });
   fs.cpSync(addonSourceDir, addonStageDir, {
     recursive: true,
-    filter: (src) =>
-      path.resolve(src) !== path.resolve(`${addonSourceDir}/libraries/android/Kirie-debug.aar`),
   });
-  fs.rmSync(androidStagedDebugAar, { force: true });
 
   checkAddonPack();
 

@@ -7,10 +7,8 @@ Current direction:
 - based on the standard Godot Android v2 plugin template
 - structured as an Android library root with a `plugin` module
 - depends on the Godot Android library matching the repo's target Godot version
-- ships to staged Godot addon trees as local AAR files through
-  `EditorExportPlugin`
-- can also publish `moe.gdkirie.kirie:core` to Maven Central for Gradle
-  hosts; see [`docs/maven-publishing.md`](../../../../docs/maven-publishing.md)
+- published to Maven Central as `moe.gdkirie.kirie:core` and consumed by Godot
+  Android exports; see [`docs/maven-publishing.md`](../../../../docs/maven-publishing.md)
 
 Current responsibility:
 
@@ -47,12 +45,9 @@ Notes:
 
 - The current skeleton was adapted from the official Godot Android v2 plugin
   template at commit `089491f`.
-- Local AAR export follows Godot's Android plugin v2 and `EditorExportPlugin`
-  hooks; see `docs/references.md` for the official Godot references.
-- Build staged AARs with `mise run build:android-aar`.
-- Exported projects use the release AAR by default. Local Kirie development can
-  select the debug AAR for Android native debugging by passing
-  `-- --kirie-android-aar=debug` to the Godot export command.
+- Publish the local AAR (`<version>-local`) to Maven Local with
+  `mise run build:android-aar`, and opt in during export with
+  `-- --kirie-android-maven-local`.
 - Exported applications read their engine command line arguments from the export
   preset. A single export can replace them by passing
   `-- --kirie-android-extra-args=<arguments>` to the Godot export command, for

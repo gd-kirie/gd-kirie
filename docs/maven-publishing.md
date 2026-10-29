@@ -5,8 +5,8 @@ to **Maven Central** via the
 [Central Publisher Portal](https://central.sonatype.com).
 Not GitHub Packages. Separate from the addon zip, npm, and NuGet lanes.
 
-Godot Android exports keep using the addon-bundled AAR. Use this lane for
-Gradle/Maven hosts that depend on the coordinate directly.
+Godot Android exports resolve `moe.gdkirie.kirie:core:<version>` from Maven
+Central through `EditorExportPlugin._get_android_dependencies()`.
 
 ## Coordinates
 
@@ -63,9 +63,7 @@ Central versions are immutable.
 ## Local validation
 
 ```sh
-packages/kirie/native/android/gradlew \
-  --project-dir packages/kirie/native/android \
-  :plugin:publishToMavenLocal
+mise run build:android-aar
 ```
 
 Workstation publish: put the Gradle properties in `~/.gradle/gradle.properties`,

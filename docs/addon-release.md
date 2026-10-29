@@ -4,7 +4,7 @@ GitHub Release addon publishing is handled by the `Addon Release` workflow.
 This flow is separate from npm publishing, which is only for browser-side
 workspace packages such as `@gd-kirie/ipc` and `@gd-kirie/ipc-eventa`.
 
-It is also separate from the NuGet publishing lane for .NET adapter packages.
+It is also separate from the Maven Central and NuGet publishing lanes.
 Keep addon zip packaging focused on `addons/kirie`; desktop Godot CEF artifacts
 are outside the default Kirie addon zip.
 
@@ -21,12 +21,10 @@ addons/kirie/
 
 The public addon should include release native artifacts:
 
-- `addons/kirie/libraries/android/Kirie-release.aar`
 - `addons/kirie/ios/Kirie.debug.xcframework`
 - `addons/kirie/ios/Kirie.release.xcframework`
 
-The Android debug AAR and desktop Godot CEF artifacts should not be included in
-the public addon zip. The iOS debug xcframework is included because Godot's
+The iOS debug xcframework is included because Godot's
 debug iOS export template needs a plugin binary built with matching Godot debug
 template flags. In Godot's official iOS plugin build model this corresponds to
 the `release_debug` target, so Kirie's debug artifact is built from the
