@@ -123,9 +123,6 @@ importers:
       ini:
         specifier: 'catalog:'
         version: 7.0.0
-      vite:
-        specifier: 'catalog:'
-        version: 8.3.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.8.3)
     devDependencies:
       '@types/ini':
         specifier: 'catalog:'
@@ -139,6 +136,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.8.3)
 
   packages/cli:
     dependencies:
@@ -157,9 +157,6 @@ importers:
       takanawa-node:
         specifier: 0.9.0
         version: 0.9.0
-      vite:
-        specifier: 'catalog:'
-        version: 8.3.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.8.3)
     devDependencies:
       '@gd-kirie/kirie':
         specifier: workspace:*
@@ -173,6 +170,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.8.3)
       vitest:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.6.5)(vite@8.3.5(@types/node@26.6.5)(jiti@2.7.0)(yaml@2.8.3))
