@@ -16,8 +16,8 @@ pnpm kirie doctor --fix plugin:core
 ```
 
 Import `kirie/plugin/core` in `kirie.config.ts` and add it to the explicit
-`plugins` array before running doctor. The fix installs the bundled Kirie
-addon and downloads the desktop Godot CEF backend.
+`plugins` array before running doctor. The fix downloads the Kirie
+addon and the desktop Godot CEF backend.
 After `kirie init`, run `pnpm install` and `pnpm kirie doctor --fix` in the
 generated project.
 

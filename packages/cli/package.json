@@ -1,6 +1,6 @@
 {
   "name": "kirie",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -24,11 +24,10 @@
     }
   },
   "files": [
-    "addon",
     "dist"
   ],
   "scripts": {
-    "build": "tsdown && node scripts/package-addon.ts",
+    "build": "tsdown",
     "test:run": "vitest run --no-file-parallelism --test-timeout 30000",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -37,15 +36,18 @@
     "citty": "catalog:",
     "execa": "catalog:",
     "giget": "3.3.0",
-    "takanawa-node": "0.9.0",
-    "vite": "catalog:"
+    "takanawa-node": "0.9.0"
   },
   "devDependencies": {
     "@gd-kirie/kirie": "workspace:*",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": "^7.0.0 || ^8.0.0"
   },
   "publishConfig": {
     "access": "public",

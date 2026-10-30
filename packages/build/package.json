@@ -1,6 +1,6 @@
 {
   "name": "@gd-kirie/build",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "type": "module",
   "repository": {
     "type": "git",
@@ -23,14 +23,17 @@
   },
   "dependencies": {
     "execa": "catalog:",
-    "ini": "catalog:",
-    "vite": "catalog:"
+    "ini": "catalog:"
   },
   "devDependencies": {
     "@types/ini": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": "^7.0.0 || ^8.0.0"
   },
   "publishConfig": {
     "access": "public",
