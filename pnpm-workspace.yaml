@@ -21,10 +21,10 @@ catalog:
   cborg: ^4.5.8
   citty: ^0.2.2
   execa: 9.6.1
-  eslint: ^10.13.0
+  eslint: ^10.14.0
   eslint-plugin-format: ^2.0.1
   ini: ^7.0.0
-  tsdown: ^0.23.4
+  tsdown: ^0.23.5
   typescript: ^6.0.3
   typescript-to-gdscript: ^0.1.12
   vite: ^8.3.5
@@ -32,7 +32,7 @@ catalog:
   xsai: ^0.5.0-beta.6
 
 minimumReleaseAgeExclude:
-  - tsdown@0.23.4
+  - tsdown@0.23.5
 
 overrides:
   argparse: 3.0.3
