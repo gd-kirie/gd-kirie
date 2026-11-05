@@ -9,27 +9,35 @@ version = "4.7.2-stable_mono"
 backend = "vfox:godot"
 
 [tools.godot."platforms.linux-arm64"]
+checksum = "sha256:0dc8ad63feacc6c19d7cb5c89ae828085b0ac3fa8039bc816a08a0537744e523"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_arm64.zip"
 
 [tools.godot."platforms.linux-arm64-musl"]
+checksum = "sha256:0dc8ad63feacc6c19d7cb5c89ae828085b0ac3fa8039bc816a08a0537744e523"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_arm64.zip"
 
 [tools.godot."platforms.linux-x64"]
+checksum = "sha256:129f82db7bafd54ae14bb5bb284041c73860e8c7a009a3a026ca5e946cbff247"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_x86_64.zip"
 
 [tools.godot."platforms.linux-x64-musl"]
+checksum = "sha256:129f82db7bafd54ae14bb5bb284041c73860e8c7a009a3a026ca5e946cbff247"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_linux_x86_64.zip"
 
 [tools.godot."platforms.macos-arm64"]
+checksum = "sha256:8af3977b60d2c59802f7c8ff1914b3ca02a5e294f7381fc1104ee777e33cbbd8"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_macos.universal.zip"
 
 [tools.godot."platforms.macos-x64"]
+checksum = "sha256:8af3977b60d2c59802f7c8ff1914b3ca02a5e294f7381fc1104ee777e33cbbd8"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_macos.universal.zip"
 
 [tools.godot."platforms.windows-arm64"]
+checksum = "sha256:8c02d8c5cb459535ef2595f52ff3feb99744c7efff79d7c09855c267bbe91979"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_windows_arm64.zip"
 
 [tools.godot."platforms.windows-x64"]
+checksum = "sha256:a2a48473a7414c5f19fab690518caebb738c09ef9601f6bd2388676a7f53b3c0"
 url = "https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable/Godot_v4.7.2-stable_mono_win64.zip"
 
 [[tools.java]]
