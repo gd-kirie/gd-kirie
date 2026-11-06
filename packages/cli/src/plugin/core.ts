@@ -32,10 +32,10 @@ const corePlugin: KiriePlugin = {
       source: {
         type: "remote",
         archivePath: "dist/addons/godot_cef",
-        sha256: "55badbf72cc3f9036d0c9933c4405ce10f574378ca6d427c3919c557c3ea614a",
-        url: "https://github.com/dsh0416/godot-cef/releases/download/v2.1.1/godot_cef-v2.1.1.zip",
+        sha256: "a966363e0835e727ffae182a222d577b42057db41368a7b82cf618d1cd47eb4e",
+        url: "https://github.com/dsh0416/godot-cef/releases/download/v2.1.3/godot_cef-v2.1.3.zip",
       },
-      version: "2.1.1",
+      version: "2.1.3",
     },
   ],
 };
