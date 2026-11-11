@@ -1,9 +1,8 @@
-import type { ResolvedKirieConfig } from "./config.ts";
+import type { InlineConfig, ViteDevServer } from "vite";
+import type { ResolvedKirieConfig, ResolvedKirieWebConfig } from "./config.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { createViteBuildConfig } from "@gd-kirie/build";
-
-import { createServer, type InlineConfig, mergeConfig, type ViteDevServer } from "vite";
 
 export interface StartedViteServer {
   server: ViteDevServer;
@@ -25,9 +24,17 @@ export async function startViteDevServer(
   config: ResolvedKirieConfig,
   options: StartViteDevServerOptions = {},
 ): Promise<StartedViteServer> {
+  if (!config.web) {
+    throw new Error(
+      "Kirie Vite dev server requires webview(...) from \"kirie/plugin/webview\" in kirie.config.ts.",
+    );
+  }
+
   assertWebEntryExists(config.web.root);
 
-  const server = await createServer(createViteConfig(config, options));
+  const viteConfig = await createViteConfig(config, config.web, options);
+  const { createServer } = await importVite();
+  const server = await createServer(viteConfig);
 
   let listening = false;
   try {
@@ -56,14 +63,15 @@ export async function startViteDevServer(
   };
 }
 
-function createViteConfig(
+async function createViteConfig(
   config: ResolvedKirieConfig,
+  web: ResolvedKirieWebConfig,
   options: StartViteDevServerOptions = {},
-): InlineConfig {
-  const buildConfig = createViteBuildConfig({
+): Promise<InlineConfig> {
+  const buildConfig = await createViteBuildConfig({
     mode: config.mode,
-    viteConfig: config.web.vite,
-    webRoot: config.web.root,
+    viteConfig: web.vite,
+    webRoot: web.root,
   });
   let headers;
   if (options.crossOriginIsolation) {
@@ -72,6 +80,8 @@ function createViteConfig(
       "Cross-Origin-Opener-Policy": "same-origin",
     };
   }
+
+  const { mergeConfig } = await importVite();
 
   return mergeConfig(buildConfig, {
     clearScreen: options.clearScreen,
@@ -85,6 +95,21 @@ function createViteConfig(
       strictPort: options.strictPort ?? false,
     },
   }) as InlineConfig;
+}
+
+async function importVite(): Promise<typeof import("vite")> {
+  try {
+    return await import("vite");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException | undefined)?.code === "ERR_MODULE_NOT_FOUND") {
+      throw new Error(
+        "Vite is required when kirie/plugin/webview is configured. Install vite in your project dependencies.",
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
 }
 
 function assertWebEntryExists(webRoot: string): void {

@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import webview from "../../plugin/webview.ts";
 import { resolveKirieConfig } from "../config.ts";
 import {
   assembleDotnetWebExport,
@@ -135,7 +136,17 @@ describe(".NET Web export", () => {
     await fs.writeFile(path.join(projectDir, "Example.csproj"), "<Project />");
     await fs.mkdir(path.join(projectDir, "src-web", "dist"), { recursive: true });
     await fs.writeFile(path.join(projectDir, "src-web", "dist", "index.html"), "web");
-    const config = resolveKirieConfig(undefined, { cwd: projectDir, mode: "production" });
+    const config = resolveKirieConfig(
+      {
+        plugins: [
+          webview({ root: "./src-web" }),
+        ],
+        targets: {
+          web: { host: "godot" },
+        },
+      },
+      { cwd: projectDir, mode: "production" },
+    );
     const options = {
       arch: "x64" as const,
       build: false,

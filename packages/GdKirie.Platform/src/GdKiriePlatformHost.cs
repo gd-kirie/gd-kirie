@@ -9,21 +9,23 @@ namespace GdKirie.Platform;
 public sealed class GdKiriePlatformHost : IDisposable
 {
     private readonly Window _window;
-    private readonly SceneTree _sceneTree;
-    private readonly Action<PointerPositionPayload> _emitPointerPositionChanged;
-    private readonly Action<WindowStatePayload> _emitWindowStateChanged;
+    private readonly IKirieWindowBackend? _windowBackend;
+    private readonly Action<KiriePointerPosition> _emitPointerPositionChanged;
+    private readonly Action<KirieWindowState> _emitWindowStateChanged;
     private readonly Action _emitBackRequested;
     private readonly GlobalShortcutManager _globalShortcuts;
     private readonly List<IDisposable> _registrations = [];
-    private PointerPositionPayload? _lastPointerPosition;
-    private WindowStatePayload? _lastWindowState;
-    private bool _windowsPointerPassthrough;
+    private KiriePointerPosition? _lastPointerPosition;
+    private KirieWindowState? _lastWindowState;
     private bool _disposed;
 
-    internal GdKiriePlatformHost(IEventContext context, Window window)
+    internal GdKiriePlatformHost(
+        IEventContext context,
+        Window window,
+        IKirieWindowBackend? windowBackend)
     {
         _window = window;
-        _sceneTree = window.GetTree();
+        _windowBackend = windowBackend;
         _emitPointerPositionChanged = position =>
             context.Emit(PlatformEvents.PointerPositionChanged, position);
         _emitWindowStateChanged = state => context.Emit(PlatformEvents.StateChanged, state);
@@ -35,40 +37,30 @@ public sealed class GdKiriePlatformHost : IDisposable
             PlatformEvents.BeginMove,
             (EmptyPayload _, CancellationToken _) =>
             {
-                _window.StartDrag();
+                RequireWindowBackend().BeginMove();
                 return Task.FromResult(new EmptyPayload());
             }));
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.BeginResize,
             (edge, _) =>
             {
-                _window.StartResize(ToGodotEdge(edge));
+                RequireWindowBackend().BeginResize(ToGodotEdge(edge));
                 return Task.FromResult(new EmptyPayload());
             }));
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.Center,
             (EmptyPayload _, CancellationToken _) =>
             {
-                _window.MoveToCenter();
+                RequireWindowBackend().Center();
                 return Task.FromResult(new EmptyPayload());
             }));
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.GetBounds,
-            (EmptyPayload _, CancellationToken _) =>
-            {
-                var position = _window.Position;
-                var size = _window.Size;
-                return Task.FromResult(new BoundsPayload(position.X, position.Y, size.X, size.Y));
-            }));
+            (EmptyPayload _, CancellationToken _) => Task.FromResult(RequireWindowBackend().GetBounds())));
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.GetCurrentDisplayBounds,
             (EmptyPayload _, CancellationToken _) =>
-            {
-                var screen = _window.CurrentScreen;
-                var position = DisplayServer.ScreenGetPosition(screen);
-                var size = DisplayServer.ScreenGetSize(screen);
-                return Task.FromResult(new BoundsPayload(position.X, position.Y, size.X, size.Y));
-            }));
+                Task.FromResult(RequireWindowBackend().GetCurrentDisplayBounds())));
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.GetPointerPosition,
             (EmptyPayload _, CancellationToken _) => Task.FromResult(SnapshotPointerPosition())));
@@ -79,14 +71,14 @@ public sealed class GdKiriePlatformHost : IDisposable
             PlatformEvents.SetAlwaysOnTop,
             (enabled, _) =>
             {
-                _window.AlwaysOnTop = enabled;
+                RequireWindowBackend().SetAlwaysOnTop(enabled);
                 return Task.FromResult(new EmptyPayload());
             }));
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.SetPointerPassthrough,
             (enabled, _) =>
             {
-                SetPointerPassthrough(enabled);
+                RequireWindowBackend().SetPointerPassthrough(enabled);
                 return Task.FromResult(new EmptyPayload());
             }));
         _registrations.Add(context.RegisterInvokeHandler(
@@ -109,12 +101,14 @@ public sealed class GdKiriePlatformHost : IDisposable
         _registrations.Add(context.RegisterInvokeHandler(
             PlatformEvents.OpenApplicationDataDirectory,
             (EmptyPayload _, CancellationToken _) => Task.FromResult(OpenApplicationDataDirectory())));
-        _window.FocusEntered += RefreshWindowState;
-        _window.FocusExited += RefreshWindowState;
-        _window.SizeChanged += RefreshWindowState;
-        _window.VisibilityChanged += RefreshWindowState;
+
+        if (_windowBackend is not null)
+        {
+            _windowBackend.PointerPositionChanged += OnPointerPositionChanged;
+            _windowBackend.StateChanged += OnWindowStateChanged;
+        }
+
         _window.GoBackRequested += OnGoBackRequested;
-        _sceneTree.ProcessFrame += RefreshObservedState;
         _window.TreeExiting += Dispose;
     }
 
@@ -132,17 +126,14 @@ public sealed class GdKiriePlatformHost : IDisposable
         }
 
         _disposed = true;
-        _window.FocusEntered -= RefreshWindowState;
-        _window.FocusExited -= RefreshWindowState;
-        _window.SizeChanged -= RefreshWindowState;
-        _window.VisibilityChanged -= RefreshWindowState;
         _window.GoBackRequested -= OnGoBackRequested;
-        _sceneTree.ProcessFrame -= RefreshObservedState;
         _window.TreeExiting -= Dispose;
 
-        if (_windowsPointerPassthrough && OperatingSystem.IsWindowsVersionAtLeast(5))
+        if (_windowBackend is not null)
         {
-            WindowsMousePassthrough.Set(_window, false);
+            _windowBackend.PointerPositionChanged -= OnPointerPositionChanged;
+            _windowBackend.StateChanged -= OnWindowStateChanged;
+            _windowBackend.Dispose();
         }
 
         _globalShortcuts.Dispose();
@@ -154,34 +145,23 @@ public sealed class GdKiriePlatformHost : IDisposable
         _registrations.Clear();
     }
 
-    private PointerPositionPayload CapturePointerPosition()
+    private IKirieWindowBackend RequireWindowBackend()
     {
-        var relativePosition = DisplayServer.MouseGetPosition() - _window.Position;
-        var size = _window.Size;
-        return new PointerPositionPayload(
-            relativePosition.X,
-            relativePosition.Y,
-            relativePosition.X >= 0
-                && relativePosition.Y >= 0
-                && relativePosition.X < size.X
-                && relativePosition.Y < size.Y);
+        return _windowBackend
+            ?? throw new PlatformNotSupportedException(
+                "Platform host-window capabilities require a native, non-embedded Godot Window or an explicit IKirieWindowBackend.");
     }
 
-    private PointerPositionPayload SnapshotPointerPosition()
+    private KiriePointerPosition SnapshotPointerPosition()
     {
-        _lastPointerPosition = CapturePointerPosition();
-        return _lastPointerPosition;
+        var position = RequireWindowBackend().GetPointerPosition();
+        _lastPointerPosition = position;
+        return position;
     }
 
-    private void RefreshPointerPosition()
+    private void OnPointerPositionChanged(KiriePointerPosition position)
     {
-        if (_lastPointerPosition is null)
-        {
-            return;
-        }
-
-        var position = CapturePointerPosition();
-        if (position == _lastPointerPosition)
+        if (_disposed || _lastPointerPosition is null || position == _lastPointerPosition.Value)
         {
             return;
         }
@@ -190,29 +170,16 @@ public sealed class GdKiriePlatformHost : IDisposable
         _emitPointerPositionChanged(position);
     }
 
-    private WindowStatePayload CaptureWindowState()
+    private KirieWindowState SnapshotWindowState()
     {
-        return new WindowStatePayload(
-            _window.HasFocus(),
-            _window.Mode == Window.ModeEnum.Minimized,
-            _window.Visible);
+        var state = RequireWindowBackend().GetState();
+        _lastWindowState = state;
+        return state;
     }
 
-    private WindowStatePayload SnapshotWindowState()
+    private void OnWindowStateChanged(KirieWindowState state)
     {
-        _lastWindowState = CaptureWindowState();
-        return _lastWindowState;
-    }
-
-    private void RefreshWindowState()
-    {
-        if (_lastWindowState is null)
-        {
-            return;
-        }
-
-        var state = CaptureWindowState();
-        if (state == _lastWindowState)
+        if (_disposed || _lastWindowState is null || state == _lastWindowState.Value)
         {
             return;
         }
@@ -221,27 +188,9 @@ public sealed class GdKiriePlatformHost : IDisposable
         _emitWindowStateChanged(state);
     }
 
-    private void RefreshObservedState()
-    {
-        RefreshPointerPosition();
-        RefreshWindowState();
-    }
-
     private void OnGoBackRequested()
     {
         _emitBackRequested();
-    }
-
-    private void SetPointerPassthrough(bool enabled)
-    {
-        if (OperatingSystem.IsWindowsVersionAtLeast(5))
-        {
-            WindowsMousePassthrough.Set(_window, enabled);
-            _windowsPointerPassthrough = enabled;
-            return;
-        }
-
-        _window.MousePassthrough = enabled;
     }
 
     private static EmptyPayload OpenExternalUrl(string url)
@@ -289,5 +238,4 @@ public sealed class GdKiriePlatformHost : IDisposable
             _ => throw new ArgumentOutOfRangeException(nameof(edge), edge, "Unknown host-window resize edge."),
         };
     }
-
 }

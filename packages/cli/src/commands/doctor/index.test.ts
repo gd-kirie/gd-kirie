@@ -5,14 +5,16 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import webview from "../../plugin/webview.ts";
 import { type ResolvedKirieConfig, resolveKirieConfig } from "../config.ts";
 import { parseDoctorTarget } from "../index.ts";
-import { createCliProjectTracker } from "../test-project.ts";
+import { createCliProjectTracker, installProjectFixture } from "../test-project.ts";
 import {
   checkAndroidSdk,
   checkGodotCommand,
   checkGodotExportTemplates,
   runDoctor,
+  runDoctorChecks,
 } from "./index.ts";
 
 const projects = createCliProjectTracker("kirie-cli-doctor-");
@@ -53,7 +55,10 @@ describe("doctor command", () => {
     expect(loggedOutput(output)).not.toContain("Godot command");
   });
 
-  it("parses only one plugin target", () => {
+  it("parses platform and plugin targets", () => {
+    expect(parseDoctorTarget("desktop", ["desktop"])).toBe("desktop");
+    expect(parseDoctorTarget("ios", ["ios"])).toBe("ios");
+    expect(parseDoctorTarget("android", ["android"])).toBe("android");
     expect(parseDoctorTarget("web", ["web"])).toBe("web");
     expect(parseDoctorTarget("plugin:example", ["plugin:example"])).toBe("plugin:example");
     expect(() => parseDoctorTarget("unknown", ["unknown"])).toThrow("Unknown doctor target: unknown");
@@ -61,13 +66,18 @@ describe("doctor command", () => {
       .toThrow("Unexpected doctor argument: extra");
   });
 
-  it("rejects plugin targets that are not configured", async () => {
+  it("rejects plugin and platform targets that are not configured", async () => {
     const project = await projects.copy();
 
     await expect(runDoctor({
       config: createPluginConfig(project),
       target: "plugin:missing",
     })).rejects.toThrow("Kirie plugin is not configured: missing");
+
+    await expect(runDoctor({
+      config: createPluginConfig(project),
+      target: "android",
+    })).rejects.toThrow("kirie doctor cannot target \"android\"");
   });
 
   it("repairs only the selected plugin", async () => {
@@ -88,6 +98,128 @@ describe("doctor command", () => {
     expect(loggedOutput(output)).toContain("optional-addon is already installed");
     expect(loggedOutput(output)).toContain("ok example / required-addon:");
     expect(loggedOutput(output)).not.toContain("Godot command");
+  });
+
+  it("scopes checks strictly to declared targets and skips desktop-only addons on mobile-only configs", async () => {
+    const project = await projects.copy();
+    await installProjectFixture(project, "fake-godot.js");
+    const homeDir = await createTempDir("kirie-doctor-scope-home-");
+    const templateDir = path.join(
+      homeDir,
+      "Library",
+      "Application Support",
+      "Godot",
+      "export_templates",
+      "4.5.stable",
+    );
+    await fs.mkdir(templateDir, { recursive: true });
+    await fs.writeFile(path.join(templateDir, "ios.zip"), "");
+
+    const iosOnlyWebviewConfig = resolveKirieConfig(
+      {
+        godot: {
+          args: ["fake-godot.js"],
+          command: process.execPath,
+        },
+        plugins: [
+          webview({ root: "./src-web" }),
+        ],
+        targets: {
+          ios: { host: "godot" },
+        },
+      },
+      { cwd: project },
+    );
+
+    const checks = await runDoctorChecks({
+      config: iosOnlyWebviewConfig,
+      env: {},
+      homeDir,
+      platform: "darwin",
+    });
+
+    const checkNames = checks.map((item) => item.name);
+    expect(checkNames).not.toContain("Android SDK");
+    expect(checkNames).not.toContain("webview / godot-cef");
+    expect(checkNames).toContain("webview / kirie");
+  });
+
+  it("validates host: native project paths and gradlew without touching user host files on --fix", async () => {
+    const project = await projects.copy();
+    await installProjectFixture(project, "fake-godot.js");
+    const homeDir = await createTempDir("kirie-doctor-native-home-");
+    const sdk = await createTempDir("kirie-doctor-native-sdk-");
+    const templateDir = path.join(
+      homeDir,
+      "Library",
+      "Application Support",
+      "Godot",
+      "export_templates",
+      "4.5.stable",
+    );
+    await fs.mkdir(templateDir, { recursive: true });
+    await fs.writeFile(path.join(templateDir, "android_source.zip"), "");
+
+    const androidHostDir = path.join(project, "android-host");
+    await fs.mkdir(androidHostDir, { recursive: true });
+    await fs.writeFile(path.join(androidHostDir, "settings.gradle.kts"), "rootProject.name = \"host\"\n");
+
+    const nativeConfig = resolveKirieConfig(
+      {
+        godot: {
+          args: ["fake-godot.js"],
+          command: process.execPath,
+        },
+        targets: {
+          android: {
+            host: "native",
+            project: "./android-host",
+          },
+        },
+      },
+      { cwd: project },
+    );
+
+    const checksMissingGradlew = await runDoctorChecks({
+      config: nativeConfig,
+      env: { ANDROID_HOME: sdk },
+      homeDir,
+      platform: "darwin",
+    });
+    expect(checksMissingGradlew).toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("Gradle wrapper not found"),
+        name: "Android native host project",
+        status: "fail",
+      }),
+    );
+
+    await fs.writeFile(path.join(androidHostDir, "gradlew"), "#!/bin/sh\n");
+    const checksWithGradlew = await runDoctorChecks({
+      config: nativeConfig,
+      env: { ANDROID_HOME: sdk },
+      homeDir,
+      platform: "darwin",
+    });
+    expect(checksWithGradlew).toContainEqual(
+      expect.objectContaining({
+        name: "Android native host project",
+        status: "ok",
+      }),
+    );
+
+    const output = vi.spyOn(console, "log").mockImplementation(() => {});
+    await runDoctor({
+      config: nativeConfig,
+      env: { ANDROID_HOME: sdk },
+      fix: true,
+      homeDir,
+      platform: "darwin",
+    });
+    expect(loggedOutput(output)).toContain("ok Android native host project:");
+    await expect(fs.readFile(path.join(androidHostDir, "settings.gradle.kts"), "utf8")).resolves.toBe(
+      "rootProject.name = \"host\"\n",
+    );
   });
 });
 
@@ -234,6 +366,9 @@ function createPluginConfig(project: string): ResolvedKirieConfig {
           id: "example",
         },
       ],
+      targets: {
+        desktop: { host: "godot" },
+      },
     },
     { cwd: project },
   );

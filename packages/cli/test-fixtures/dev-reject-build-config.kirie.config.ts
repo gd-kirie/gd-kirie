@@ -1,6 +1,8 @@
+import { defineKirieConfig } from "kirie";
 import core from "kirie/plugin/core";
+import webview from "kirie/plugin/webview";
 
-export default ({ command }) => {
+export default defineKirieConfig(({ command }) => {
   if (command === "build") {
     throw new Error("dev should reuse the serve config");
   }
@@ -10,9 +12,15 @@ export default ({ command }) => {
       args: ["fake-godot.js"],
       command: process.execPath,
     },
-    plugins: [core],
-    web: {
-      vite: { logLevel: "silent" },
+    plugins: [
+      core,
+      webview({
+        root: "./src-web",
+        vite: { logLevel: "silent" },
+      }),
+    ],
+    targets: {
+      android: { host: "godot" },
     },
   };
-};
+});

@@ -7,6 +7,9 @@
     "url": "https://github.com/gd-kirie/gd-kirie.git",
     "directory": "packages/vitest"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "bin": {
     "kirie-vitest": "./src/launcher.ts"
   },
@@ -23,6 +26,7 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "test:run": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

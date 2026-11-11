@@ -1,5 +1,6 @@
 .DS_Store
 .godot/
+.kirie/
 .import/
 .mono/
 .tmp/

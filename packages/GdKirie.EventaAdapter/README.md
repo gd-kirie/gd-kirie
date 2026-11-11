@@ -1,30 +1,22 @@
 # GdKirie.EventaAdapter
 
-Eventa adapter for Kirie C# projects over Kirie text IPC.
-
-This package targets `net10.0` only because the upstream `Eventa` package
-targets `net10.0`. Projects targeting `net8.0` or `net9.0` should expect restore
-or build failures when referencing this package.
+`GdKirie.EventaAdapter` connects C# projects to `@moeru/eventa` over Kirie text IPC. This package targets `net10.0` only because the upstream `Eventa` package targets `net10.0`. Projects that target `net8.0` or `net9.0` fail during restore or build when they reference this package.
 
 ## Usage
 
-Create a `KirieEventaJsonRegistry`, explicitly register each event or unary
-invoke payload with `System.Text.Json` source-generated metadata, then create a
-context with a Kirie text transport.
+1. Create a `KirieEventaJsonRegistry` instance in your Godot C# project.
+2. Register each event or unary invoke payload with `System.Text.Json` source-generated metadata.
+3. Call `KirieEventa.CreateContext(...)` with an `IKirieTextTransport` implementation.
 
-The package includes a NuGet `contentFiles` source bridge for addon-shipped
-`KirieClient.cs`, exposing `KirieClient.CreateEventaContext(...)`.
+The NuGet package ships `build` and `buildTransitive` MSBuild targets in `GdKirie.EventaAdapter.targets`. When `addons/kirie/csharp/KirieClient.cs` exists in a direct or transitive consumer project, MSBuild compiles `KirieClientEventaBridge.cs` automatically. That source bridge adds `KirieClientTextTransport` and `KirieClient.CreateEventaContext(...)`. WebView-free projects without `KirieClient.cs` skip the bridge automatically, and setting `EnableKirieClientEventaBridge` to `true` or `false` overrides detection.
 
-Repository projects using `ProjectReference` instead of the packed NuGet must
-include the source bridge explicitly because project references do not import
-NuGet `contentFiles`:
+Repository projects that use `ProjectReference` instead of the packed NuGet package do not import NuGet MSBuild targets automatically. Add the source bridge item explicitly when the project also includes `KirieClient.cs`:
 
 ```xml
 <Compile
-  Include="../../packages/GdKirie.EventaAdapter/contentFiles/cs/any/GdKirie.EventaAdapter/KirieClientEventaBridge.cs"
-  Link="GdKirie.EventaAdapter/KirieClientEventaBridge.cs" />
+  Include="../../packages/GdKirie.EventaAdapter/content/KirieClientEventaBridge.cs"
+  Link="KirieClientEventaBridge.cs"
+  Visible="false" />
 ```
 
-Eventa messages are serialized as JSON text over Kirie's text IPC lane. Kirie
-core remains a low-level WebView and IPC bridge and does not learn Eventa
-semantics.
+The adapter serializes Eventa messages as JSON text over the Kirie text IPC lane. Kirie core remains a low-level WebView and IPC bridge without Eventa rules.

@@ -1,10 +1,16 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { readExportPresetValue } from "@gd-kirie/build";
+import { normalizeGradleModuleName, readExportPresetValue } from "@gd-kirie/build";
 import { execa } from "execa";
 
-import { loadKirieConfig, type ResolvedKirieConfig } from "./config.ts";
+import {
+  assertConfiguredTarget,
+  loadKirieConfig,
+  type ResolvedKirieConfig,
+  resolveSingleOrExplicitTarget,
+} from "./config.ts";
 import { resolveExportOutputPath } from "./export.ts";
 
 export interface KirieDevLaunchOptions {
@@ -22,6 +28,7 @@ export function createKirieDevLaunchOptions(webUrl: string): KirieDevLaunchOptio
 }
 
 export interface RunAndroidOptions {
+  apkPath?: string;
   attachLogcat?: boolean;
   clearData?: boolean;
   clearLogcat?: boolean;
@@ -36,6 +43,7 @@ export interface RunAndroidOptions {
 }
 
 export interface RunDesktopOptions {
+  config?: ResolvedKirieConfig;
   cwd?: string;
   godotArgs?: string[];
   godotCommand?: string;
@@ -65,14 +73,80 @@ export interface RunIosDeviceOptions {
 
 export type RunIosOptions = RunIosSimulatorOptions & RunIosDeviceOptions;
 
+export interface RunAutoOptions {
+  appArgs?: string[];
+  appPath?: string;
+  attachLogcat?: boolean;
+  clearData?: boolean;
+  clearLogcat?: boolean;
+  cwd?: string;
+  device?: string;
+  forceStop?: boolean;
+  godotArgs?: string[];
+  godotCommand?: string;
+  launchOptions?: LaunchOptions;
+  skipInstall?: boolean;
+  terminateExisting?: boolean;
+}
+
 const androidDeviceWaitTimeoutMs = 10_000;
 const simulatorLookupTimeoutMs = 30_000;
 
-export async function runDesktop(options: RunDesktopOptions = {}): Promise<void> {
+export async function runAutoTarget(options: RunAutoOptions = {}): Promise<void> {
   const config = await loadKirieConfig({
     command: "build",
     cwd: options.cwd,
   });
+  const target = resolveSingleOrExplicitTarget(config, undefined, "run", [
+    "desktop",
+    "ios",
+    "android",
+  ]);
+
+  if (target === "desktop") {
+    await runDesktop({
+      config,
+      cwd: options.cwd,
+      godotArgs: options.godotArgs,
+      godotCommand: options.godotCommand,
+    });
+    return;
+  }
+
+  if (target === "android") {
+    await runAndroid({
+      attachLogcat: options.attachLogcat,
+      clearData: options.clearData,
+      clearLogcat: options.clearLogcat,
+      config,
+      cwd: options.cwd,
+      device: options.device,
+      forceStop: options.forceStop,
+      launchOptions: options.launchOptions,
+      skipInstall: options.skipInstall,
+    });
+    return;
+  }
+
+  await runIos({
+    appArgs: options.appArgs,
+    appPath: options.appPath,
+    config,
+    cwd: options.cwd,
+    device: options.device,
+    launchOptions: options.launchOptions,
+    terminateExisting: options.terminateExisting,
+  });
+}
+
+export async function runDesktop(options: RunDesktopOptions = {}): Promise<void> {
+  const config =
+    options.config ??
+    (await loadKirieConfig({
+      command: "build",
+      cwd: options.cwd,
+    }));
+  assertConfiguredTarget(config, "desktop", "kirie run");
 
   await execa(
     options.godotCommand ?? config.godot.command,
@@ -96,11 +170,45 @@ export async function runAndroid(options: RunAndroidOptions = {}): Promise<void>
       command: "build",
       cwd: options.cwd,
     }));
+  const androidTarget = assertConfiguredTarget(config, "android", "kirie run");
+  if (androidTarget.host === "native" && !androidTarget.project) {
+    throw new Error(
+      "kirie run android requires targets.android.project when host is \"native\" " +
+      "(or run kirie export android to build the embed artifact).",
+    );
+  }
+
   const adbArgs = options.device
     ? ["-s", options.device]
     : [];
-  const packageName =
-    options.packageName ?? readAndroidPackageName(config.godot.project, options.preset);
+  const preset = options.preset ?? androidTarget.preset ?? "Android";
+  const apkPath = options.apkPath
+    ? path.resolve(config.cwd, options.apkPath)
+    : resolveExportOutputPath({
+        configCwd: config.cwd,
+        mode: "debug",
+        platform: "android",
+        preset,
+      });
+
+  let packageName: string | undefined = options.packageName;
+  let activityComponent: string | undefined;
+
+  if (androidTarget.host === "godot") {
+    packageName ??= readAndroidPackageName(config.godot.project, preset);
+    activityComponent = `${packageName}/com.godot.game.GodotAppLauncher`;
+  } else {
+    const apkMeta = await inspectApkLaunchMetadata(apkPath, config.cwd);
+    packageName ??=
+      apkMeta.packageName ??
+      (androidTarget.project
+        ? readGradleApplicationId(
+            path.resolve(config.cwd, androidTarget.project),
+            androidTarget.module,
+          )
+        : undefined);
+    activityComponent = apkMeta.activityComponent;
+  }
 
   await execa("adb", [...adbArgs, "wait-for-device"], {
     cwd: config.cwd,
@@ -115,18 +223,28 @@ export async function runAndroid(options: RunAndroidOptions = {}): Promise<void>
         ...adbArgs,
         "install",
         "-r",
-        resolveExportOutputPath({
-          configCwd: config.cwd,
-          mode: "debug",
-          platform: "android",
-          preset: options.preset ?? "Android",
-        }),
+        apkPath,
       ],
       {
         cwd: config.cwd,
         stdio: "inherit",
       },
     );
+  }
+
+  if (!packageName) {
+    throw new Error(
+      `Unable to determine Android package name from ${apkPath}. ` +
+      "Ensure Android SDK build-tools (aapt2 / apkanalyzer) is installed or declare applicationId in Gradle.",
+    );
+  }
+
+  if (!activityComponent) {
+    activityComponent = await resolveInstalledAndroidLauncherActivity({
+      adbArgs,
+      cwd: config.cwd,
+      packageName,
+    });
   }
 
   if (options.clearLogcat) {
@@ -173,7 +291,7 @@ export async function runAndroid(options: RunAndroidOptions = {}): Promise<void>
       "am",
       "start",
       "-n",
-      `${packageName}/com.godot.game.GodotAppLauncher`,
+      activityComponent,
       ...androidLaunchOptionArgs(options.launchOptions),
     ],
     {
@@ -207,12 +325,36 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
       command: "build",
       cwd: options.cwd,
     }));
+  const iosTarget = assertConfiguredTarget(config, "ios", "kirie run");
+  if (iosTarget.host === "native" && !iosTarget.project && !options.appPath) {
+    throw new Error(
+      "kirie run ios requires targets.ios.project when host is \"native\" " +
+      "(or run kirie export ios to build the embed artifact).",
+    );
+  }
+
   const simulatorId = options.simulatorId ?? process.env.SIMULATOR_ID ?? "booted";
+  const defaultNativeAppPath = path.resolve(config.cwd, "dist", "kirie", "ios", "debug.app");
+  const effectiveAppPath =
+    options.appPath ??
+    (iosTarget.host === "native" && existsSync(defaultNativeAppPath)
+      ? defaultNativeAppPath
+      : undefined);
+
   const bundleId =
     options.bundleId ??
-    (options.appPath
-      ? await readIosAppBundleId(path.resolve(config.cwd, options.appPath))
-      : readIosBundleId(config.godot.project));
+    (effectiveAppPath
+      ? await readIosAppBundleId(path.resolve(config.cwd, effectiveAppPath))
+      : iosTarget.host === "godot"
+        ? readIosBundleId(config.godot.project, iosTarget.preset)
+        : undefined);
+
+  if (!bundleId) {
+    throw new Error(
+      "Unable to resolve iOS CFBundleIdentifier for native host app. " +
+      "Run kirie export ios first or pass --app <path-to-app.app>.",
+    );
+  }
 
   await execa("xcrun", [
     "simctl",
@@ -224,14 +366,14 @@ export async function runIosSimulator(options: RunIosSimulatorOptions = {}): Pro
     stdio: "inherit",
   });
 
-  if (options.appPath) {
+  if (effectiveAppPath) {
     await execa(
       "xcrun",
       [
         "simctl",
         "install",
         simulatorId,
-        path.resolve(config.cwd, options.appPath),
+        path.resolve(config.cwd, effectiveAppPath),
       ],
       {
         cwd: config.cwd,
@@ -330,19 +472,48 @@ export async function runIosDevice(options: RunIosDeviceOptions = {}): Promise<v
       command: "build",
       cwd: options.cwd,
     }));
-  const device = options.device ?? process.env.IOS_DEVICE_ID;
+  const iosTarget = assertConfiguredTarget(config, "ios", "kirie run");
+  if (iosTarget.host === "native" && !iosTarget.project && !options.appPath) {
+    throw new Error(
+      "kirie run ios requires targets.ios.project when host is \"native\" " +
+      "(or run kirie export ios to build the embed artifact).",
+    );
+  }
 
+  const device = options.device ?? process.env.IOS_DEVICE_ID;
   if (!device) {
     throw new Error("iOS physical-device runs require --device <UDID>.");
   }
 
+  const defaultNativeAppPath = path.resolve(
+    config.cwd,
+    "dist",
+    "kirie",
+    "ios",
+    "device_debug.app",
+  );
+  const effectiveAppPath =
+    options.appPath ??
+    (iosTarget.host === "native" && existsSync(defaultNativeAppPath)
+      ? defaultNativeAppPath
+      : undefined);
+
   const bundleId =
     options.bundleId ??
-    (options.appPath
-      ? await readIosAppBundleId(path.resolve(config.cwd, options.appPath))
-      : readIosBundleId(config.godot.project));
+    (effectiveAppPath
+      ? await readIosAppBundleId(path.resolve(config.cwd, effectiveAppPath))
+      : iosTarget.host === "godot"
+        ? readIosBundleId(config.godot.project, iosTarget.preset)
+        : undefined);
 
-  if (options.appPath) {
+  if (!bundleId) {
+    throw new Error(
+      "Unable to resolve iOS CFBundleIdentifier for native host app. " +
+      "Run kirie export ios --device <UDID> first or pass --app <path-to-app.app>.",
+    );
+  }
+
+  if (effectiveAppPath) {
     await execa(
       "xcrun",
       [
@@ -352,7 +523,7 @@ export async function runIosDevice(options: RunIosDeviceOptions = {}): Promise<v
         "app",
         "--device",
         device,
-        path.resolve(config.cwd, options.appPath),
+        path.resolve(config.cwd, effectiveAppPath),
       ],
       {
         cwd: config.cwd,
@@ -416,10 +587,10 @@ function readAndroidPackageName(projectDir: string, preset = "Android"): string 
   throw new Error("Android export preset option package/unique_name must be a string.");
 }
 
-function readIosBundleId(projectDir: string): string {
+function readIosBundleId(projectDir: string, preset = "iOS"): string {
   const bundleId = readExportPresetValue({
     optionName: "application/bundle_identifier",
-    presetName: "iOS",
+    presetName: preset,
     projectDir,
   });
 
@@ -436,6 +607,214 @@ function androidLaunchOptionArgs(launchOptions: LaunchOptions | undefined): stri
   }
 
   return Object.entries(launchOptions).flatMap(([key, value]) => ["--es", key, value]);
+}
+
+async function inspectApkLaunchMetadata(
+  apkPath: string,
+  cwd: string,
+): Promise<{ activityComponent?: string; packageName?: string }> {
+  if (!existsSync(apkPath)) {
+    return {};
+  }
+
+  const aapt2Candidates = findAndroidSdkBinaryCandidates("aapt2", "build-tools");
+  for (const aapt2 of aapt2Candidates) {
+    const result = await execa(aapt2, ["dump", "badging", apkPath], {
+      cwd,
+      reject: false,
+      stderr: "ignore",
+    });
+    if (result.exitCode === 0 && result.stdout) {
+      const parsed = parseAaptBadgingOutput(result.stdout);
+      if (parsed.packageName) {
+        return parsed;
+      }
+    }
+  }
+
+  const apkanalyzerCandidates = findAndroidSdkBinaryCandidates("apkanalyzer", "cmdline-tools");
+  for (const apkanalyzer of apkanalyzerCandidates) {
+    const appIdResult = await execa(
+      apkanalyzer,
+      ["manifest", "application-id", apkPath],
+      { cwd, reject: false, stderr: "ignore" },
+    );
+    const packageName = appIdResult.exitCode === 0
+      ? appIdResult.stdout.trim()
+      : "";
+    if (!packageName) {
+      continue;
+    }
+
+    const manifestResult = await execa(
+      apkanalyzer,
+      ["manifest", "print", apkPath],
+      { cwd, reject: false, stderr: "ignore" },
+    );
+    const launcherActivity = manifestResult.exitCode === 0
+      ? parseManifestLauncherActivity(manifestResult.stdout, packageName)
+      : undefined;
+    return {
+      activityComponent: launcherActivity,
+      packageName,
+    };
+  }
+
+  return {};
+}
+
+function findAndroidSdkBinaryCandidates(
+  toolBaseName: string,
+  sdkSubdir: "build-tools" | "cmdline-tools",
+): string[] {
+  const ext = process.platform === "win32"
+    ? toolBaseName === "apkanalyzer"
+      ? ".bat"
+      : ".exe"
+    : "";
+  const binaryName = `${toolBaseName}${ext}`;
+  const candidates: string[] = [];
+  const sdkRoot = process.env.ANDROID_HOME?.trim() || process.env.ANDROID_SDK_ROOT?.trim();
+
+  if (sdkRoot) {
+    const parent = path.join(sdkRoot, sdkSubdir);
+    if (existsSync(parent)) {
+      const subdirs = readdirSync(parent, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+        .reverse();
+      for (const subdir of subdirs) {
+        const candidate = sdkSubdir === "cmdline-tools"
+          ? path.join(parent, subdir, "bin", binaryName)
+          : path.join(parent, subdir, binaryName);
+        if (existsSync(candidate)) {
+          candidates.push(candidate);
+        }
+      }
+    }
+  }
+
+  candidates.push(binaryName);
+  return candidates;
+}
+
+export function parseAaptBadgingOutput(output: string): {
+  activityComponent?: string;
+  packageName?: string;
+} {
+  const pkgMatch = output.match(/package:\s+name='([^']+)'/);
+  const packageName = pkgMatch?.[1];
+  const actMatch = output.match(/launchable-activity:\s+name='([^']+)'/);
+  const activityName = actMatch?.[1];
+  if (!packageName) {
+    return {};
+  }
+  if (!activityName) {
+    return { packageName };
+  }
+
+  const normalizedActivity = activityName.startsWith(".")
+    ? `${packageName}${activityName}`
+    : activityName.includes(".")
+      ? activityName
+      : `${packageName}.${activityName}`;
+  return {
+    activityComponent: `${packageName}/${normalizedActivity}`,
+    packageName,
+  };
+}
+
+function parseManifestLauncherActivity(
+  manifestXml: string,
+  packageName: string,
+): string | undefined {
+  const activityBlocks = manifestXml.match(/<activity\b[\s\S]*?<\/activity>/g) ?? [];
+  for (const block of activityBlocks) {
+    if (
+      !block.includes("android.intent.action.MAIN") ||
+      !block.includes("android.intent.category.LAUNCHER")
+    ) {
+      continue;
+    }
+
+    const nameMatch = block.match(/android:name="([^"]+)"/);
+    const rawName = nameMatch?.[1];
+    if (!rawName) {
+      continue;
+    }
+
+    const normalized = rawName.startsWith(".")
+      ? `${packageName}${rawName}`
+      : rawName.includes(".")
+        ? rawName
+        : `${packageName}.${rawName}`;
+    return `${packageName}/${normalized}`;
+  }
+
+  return undefined;
+}
+
+function readGradleApplicationId(projectRoot: string, moduleName?: string): string | undefined {
+  const normalizedModule = normalizeGradleModuleName(moduleName);
+  const moduleRelativePath = normalizedModule.replace(/^:+/, "").replaceAll(":", path.sep);
+  const moduleDir = path.join(projectRoot, moduleRelativePath);
+
+  for (const fileName of ["build.gradle.kts", "build.gradle"]) {
+    const filePath = path.join(moduleDir, fileName);
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    const content = readFileSync(filePath, "utf8");
+    const match = content.match(/\bapplicationId(?:\s*=\s*|\s+)["']([^"']+)["']/);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return undefined;
+}
+
+async function resolveInstalledAndroidLauncherActivity(options: {
+  adbArgs: string[];
+  cwd: string;
+  packageName: string;
+}): Promise<string> {
+  const result = await execa(
+    "adb",
+    [
+      ...options.adbArgs,
+      "shell",
+      "cmd",
+      "package",
+      "resolve-activity",
+      "--brief",
+      "-c",
+      "android.intent.category.LAUNCHER",
+      options.packageName,
+    ],
+    {
+      cwd: options.cwd,
+      reject: false,
+      stderr: "ignore",
+    },
+  );
+
+  if (result.exitCode === 0 && result.stdout) {
+    const lines = result.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const component = lines.findLast((line) => line.includes("/") && !line.startsWith("priority="));
+    if (component) {
+      return component;
+    }
+  }
+
+  throw new Error(
+    `Unable to resolve Android launcher Activity for package "${options.packageName}".`,
+  );
 }
 
 async function attachAndroidLogcat(options: {
@@ -568,11 +947,26 @@ function iosLaunchOptionArgs(launchOptions: LaunchOptions | undefined): string[]
   );
 }
 
-async function readIosAppBundleId(appPath: string): Promise<string> {
+export async function readIosAppBundleId(appPath: string): Promise<string> {
+  const plistPath = path.join(appPath, "Info.plist");
+  if (existsSync(plistPath)) {
+    const raw = await fs.readFile(plistPath);
+    if (!raw.subarray(0, 6).equals(Buffer.from("bplist"))) {
+      const xml = raw.toString("utf8");
+      const match = xml.match(
+        /<key>CFBundleIdentifier<\/key>\s*<string>([^<]+)<\/string>/,
+      );
+      const parsedId = match?.[1]?.trim();
+      if (parsedId) {
+        return parsedId;
+      }
+    }
+  }
+
   const result = await execa("/usr/libexec/PlistBuddy", [
     "-c",
     "Print :CFBundleIdentifier",
-    path.join(appPath, "Info.plist"),
+    plistPath,
   ]);
 
   return result.stdout.trim();

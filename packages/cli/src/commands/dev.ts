@@ -1,13 +1,31 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
-import { buildDotnet, exportGodotPreset, readExportPresetValue } from "@gd-kirie/build";
+import {
+  buildDotnet,
+  buildViteWeb,
+  exportGodotPreset,
+  readExportPresetValue,
+} from "@gd-kirie/build";
 import { execa } from "execa";
 
-import { loadKirieConfig, type ResolvedKirieConfig } from "./config.ts";
+import {
+  createGodotExportUserArgs,
+  getActiveAddonsForTargets,
+  getActivePluginsForTarget,
+  loadKirieConfig,
+  type ResolvedKirieConfig,
+  resolveSingleOrExplicitTarget,
+} from "./config.ts";
 import { checkGodotAddon } from "./doctor/addons.ts";
 import { tryExportDotnetWeb } from "./doctor/dotnet-web.ts";
 import { resolveExportOutputPath, runExport } from "./export.ts";
 import { exportIosApp } from "./ios.ts";
-import { createKirieDevLaunchOptions, isIosSimulatorDevice, runAndroid, runIos } from "./run.ts";
+import {
+  createKirieDevLaunchOptions,
+  isIosSimulatorDevice,
+  runAndroid,
+  runIos,
+} from "./run.ts";
 import { startViteDevServer, type StartViteDevServerOptions } from "./vite.ts";
 
 export type DevTarget = "desktop" | "android" | "ios" | "web";
@@ -28,46 +46,94 @@ export interface DevOptions extends StartViteDevServerOptions {
 }
 
 export async function runDev(options: DevOptions = {}): Promise<void> {
-  const target = options.target ?? "desktop";
   const config = await loadKirieConfig({
     command: "serve",
     cwd: options.cwd,
     mode: options.mode,
   });
+  const target = resolveSingleOrExplicitTarget(config, options.target, "dev", [
+    "desktop",
+    "ios",
+    "android",
+    "web",
+  ]);
 
-  if (target === "android") {
-    assertAndroidDevInternetPermission(config);
+  if (target === "ios" && config.targets.ios?.host === "native" && !config.targets.ios.project) {
+    throw new Error(
+      "kirie dev ios requires targets.ios.project when host is \"native\", " +
+      "or run kirie export ios to build the embed artifact.",
+    );
   }
-  if (target === "ios") {
-    assertIosDevExportProjectOnly(config);
+  if (
+    target === "android" &&
+    config.targets.android?.host === "native" &&
+    !config.targets.android.project
+  ) {
+    throw new Error(
+      "kirie dev android requires targets.android.project when host is \"native\", " +
+      "or run kirie export android to build the embed artifact.",
+    );
+  }
+
+  if (target === "android" && config.targets.android?.host === "godot" && config.web) {
+    assertAndroidDevInternetPermission(
+      config,
+      config.targets.android.preset ?? "Android",
+    );
+  }
+  if (target === "ios" && config.targets.ios?.host === "godot") {
+    assertIosDevExportProjectOnly(
+      config,
+      config.targets.ios.preset ?? "iOS",
+    );
   }
   if (target === "desktop") {
-    for (const plugin of config.plugins) {
-      for (const addon of plugin.godotAddons ?? []) {
+    for (const plugin of getActivePluginsForTarget(config, "desktop")) {
+      for (const addon of getActiveAddonsForTargets(plugin, ["desktop"])) {
         if (addon.optional) {
           continue;
         }
 
         const result = await checkGodotAddon(config.godot.project, addon);
-        if (!result.valid) {
+        if (!result.installed || !result.valid) {
+          if (addon.id === "godot-cef") {
+            throw new Error(
+              `Godot CEF is required. ${result.message}. Run: pnpm kirie doctor --fix plugin:${plugin.id}`,
+            );
+          }
           throw new Error(
             `Godot addon ${addon.id} is required. ${result.message}. Run: pnpm kirie doctor --fix plugin:${plugin.id}`,
           );
         }
       }
     }
+  }
+  if (target === "web" && !config.web) {
+    throw new Error(
+      "kirie dev web requires webview(...) from \"kirie/plugin/webview\" in kirie.config.ts.",
+    );
+  }
 
-    const core = config.plugins.find((plugin) => plugin.id === "core");
-    const godotCef = core?.godotAddons?.find((addon) => addon.id === "godot-cef");
-    if (!godotCef) {
-      throw new Error("kirie dev desktop requires the core plugin in kirie.config.ts.");
-    }
+  const physicalIosDevice =
+    target === "ios" &&
+    Boolean(options.device) &&
+    !(await isIosSimulatorDevice(options.device!, config.cwd));
 
-    const result = await checkGodotAddon(config.godot.project, godotCef);
-    if (!result.installed || !result.valid) {
-      throw new Error(
-        `Godot CEF is required. ${result.message}. Run: pnpm kirie doctor --fix plugin:core`,
-      );
+  if (!config.web) {
+    switch (target) {
+      case "desktop":
+        await runDesktopDev(config, undefined, options);
+        return;
+      case "android":
+        await runAndroidDev(config, undefined, options);
+        return;
+      case "ios":
+        await runIosDev(config, undefined, physicalIosDevice, options);
+        return;
+      case "web":
+        throw new Error(
+          "kirie dev web requires webview(...) from \"kirie/plugin/webview\" in kirie.config.ts.",
+        );
     }
   }
 
@@ -79,9 +145,10 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
     clearScreen: options.clearScreen,
     crossOriginIsolation: target === "web",
     force: options.force,
+    host: options.host ?? (physicalIosDevice ? "0.0.0.0" : undefined),
     logLevel: options.logLevel,
     port: options.port,
-    host: options.host,
+    preferNetworkUrl: options.preferNetworkUrl ?? physicalIosDevice,
     strictPort: options.strictPort,
   });
 
@@ -98,7 +165,7 @@ export async function runDev(options: DevOptions = {}): Promise<void> {
         await runAndroidDev(config, vite.url, options);
         return;
       case "ios":
-        await runIosDev(config, vite.url, options);
+        await runIosDev(config, vite.url, physicalIosDevice, options);
         return;
       case "web":
         await runWebDev(vite.url, webOutput, options);
@@ -112,13 +179,15 @@ async function exportWebDevHost(
   config: ResolvedKirieConfig,
   options: DevOptions,
 ): Promise<string> {
+  const preset = config.targets.web?.preset ?? "Web";
   const outputPath = resolveExportOutputPath({
     configCwd: config.cwd,
     mode: "debug",
     platform: "web",
-    preset: "Web",
+    preset,
   });
   const godotCommand = options.godotCommand ?? config.godot.command;
+  const userArgs = createGodotExportUserArgs(config, "web", options.godotArgs);
 
   if (await tryExportDotnetWeb({
     build: false,
@@ -126,8 +195,9 @@ async function exportWebDevHost(
     godotCommand,
     includeWebContent: false,
     outputPath,
-    preset: "Web",
+    preset,
     release: false,
+    userArgs,
   })) {
     return outputPath;
   }
@@ -137,8 +207,9 @@ async function exportWebDevHost(
     godotCommand,
     mode: "debug",
     outputPath,
-    preset: "Web",
+    preset,
     projectDir: config.godot.project,
+    userArgs,
   });
   return outputPath;
 }
@@ -180,7 +251,7 @@ function waitForWebExit(): Promise<void> {
 
 async function runDesktopDev(
   config: ResolvedKirieConfig,
-  webUrl: string,
+  webUrl: string | undefined,
   options: DevOptions,
 ): Promise<void> {
   const godotCommand = options.godotCommand ?? config.godot.command;
@@ -199,17 +270,25 @@ async function runDesktopDev(
       stdio: "inherit",
     },
   );
+
+  const userArgs = [
+    ...(webUrl
+      ? Object.entries(createKirieDevLaunchOptions(webUrl)).map(
+          ([key, value]) => `--${key}=${value}`,
+        )
+      : []),
+    ...(options.godotArgs ?? []),
+  ];
+
   await execa(
     godotCommand,
     [
       ...config.godot.args,
       "--path",
       config.godot.project,
-      "--",
-      ...Object.entries(createKirieDevLaunchOptions(webUrl)).map(
-        ([key, value]) => `--${key}=${value}`,
-      ),
-      ...(options.godotArgs ?? []),
+      ...(userArgs.length > 0
+        ? ["--", ...userArgs]
+        : []),
     ],
     {
       cwd: config.godot.project,
@@ -218,14 +297,31 @@ async function runDesktopDev(
   );
 }
 
+async function ensureBuiltWebDistForMobileExport(config: ResolvedKirieConfig): Promise<void> {
+  if (!config.web) {
+    return;
+  }
+
+  const distIndexPath = path.join(config.web.root, "dist", "index.html");
+  if (existsSync(distIndexPath)) {
+    return;
+  }
+
+  await buildViteWeb({
+    mode: config.mode,
+    viteConfig: config.web.vite,
+    webRoot: config.web.root,
+  });
+}
+
 async function runAndroidDev(
   config: ResolvedKirieConfig,
-  webUrl: string,
+  webUrl: string | undefined,
   options: DevOptions,
 ): Promise<void> {
-  const reverseWeb = resolveAndroidReverseWebUrl(webUrl);
-
+  await ensureBuiltWebDistForMobileExport(config);
   await buildDotnet({
+    csproj: config.godot.csproj,
     projectDir: config.godot.project,
     skipMissingProject: true,
   });
@@ -236,43 +332,57 @@ async function runAndroidDev(
     platform: "android",
     userArgs: options.godotArgs,
   });
-  await execa(
-    "adb",
-    [
-      ...(options.device
-        ? ["-s", options.device]
-        : []),
-      "reverse",
-      `tcp:${reverseWeb.port}`,
-      `tcp:${reverseWeb.port}`,
-    ],
-    {
-      cwd: config.cwd,
-      stdio: "inherit",
-    },
-  );
+
+  if (webUrl) {
+    const reverseWeb = resolveAndroidReverseWebUrl(webUrl);
+    await execa(
+      "adb",
+      [
+        ...(options.device
+          ? ["-s", options.device]
+          : []),
+        "reverse",
+        `tcp:${reverseWeb.port}`,
+        `tcp:${reverseWeb.port}`,
+      ],
+      {
+        cwd: config.cwd,
+        stdio: "inherit",
+      },
+    );
+    await runAndroid({
+      clearData: options.clearData,
+      clearLogcat: options.clearLogcat,
+      config,
+      device: options.device,
+      forceStop: options.forceStop ?? true,
+      launchOptions: createKirieDevLaunchOptions(reverseWeb.url),
+    });
+    return;
+  }
+
   await runAndroid({
     clearData: options.clearData,
     clearLogcat: options.clearLogcat,
     config,
     device: options.device,
     forceStop: options.forceStop ?? true,
-    launchOptions: createKirieDevLaunchOptions(reverseWeb.url),
   });
 }
 
 async function runIosDev(
   config: ResolvedKirieConfig,
-  webUrl: string,
+  webUrl: string | undefined,
+  physicalDevice: boolean,
   options: DevOptions,
 ): Promise<void> {
-  const physicalDevice =
-    options.device && !(await isIosSimulatorDevice(options.device, config.cwd));
   const appPath =
     options.appPath ??
     (physicalDevice ? "dist/kirie/ios/device_debug.app" : "dist/kirie/ios/debug.app");
 
+  await ensureBuiltWebDistForMobileExport(config);
   await buildDotnet({
+    csproj: config.godot.csproj,
     projectDir: config.godot.project,
     skipMissingProject: true,
   });
@@ -280,15 +390,27 @@ async function runIosDev(
     appPath,
     build: false,
     config,
+    derivedDataPath: config.targets.ios?.host === "native"
+      ? path.join(
+          config.cwd,
+          ".kirie",
+          "derived-data",
+          "ios",
+          physicalDevice ? "device" : "simulator",
+        )
+      : undefined,
     device: options.device,
     godotCommand: options.godotCommand,
     target: physicalDevice ? "device" : "simulator",
+    userArgs: options.godotArgs,
   });
   await runIos({
     appPath,
     config,
     device: options.device,
-    launchOptions: createKirieDevLaunchOptions(webUrl),
+    launchOptions: webUrl
+      ? createKirieDevLaunchOptions(webUrl)
+      : undefined,
     terminateExisting: options.terminateExisting ?? true,
   });
 }
@@ -311,10 +433,13 @@ export function resolveAndroidReverseWebUrl(webUrl: string): { port: number; url
   };
 }
 
-function assertAndroidDevInternetPermission(config: ResolvedKirieConfig): void {
+function assertAndroidDevInternetPermission(
+  config: ResolvedKirieConfig,
+  presetName = "Android",
+): void {
   const internetPermission = readExportPresetValue({
     optionName: "permissions/internet",
-    presetName: "Android",
+    presetName,
     projectDir: config.godot.project,
   });
 
@@ -327,10 +452,13 @@ function assertAndroidDevInternetPermission(config: ResolvedKirieConfig): void {
   );
 }
 
-function assertIosDevExportProjectOnly(config: ResolvedKirieConfig): void {
+function assertIosDevExportProjectOnly(
+  config: ResolvedKirieConfig,
+  presetName = "iOS",
+): void {
   const exportProjectOnly = readExportPresetValue({
     optionName: "application/export_project_only",
-    presetName: "iOS",
+    presetName,
     projectDir: config.godot.project,
   });
 

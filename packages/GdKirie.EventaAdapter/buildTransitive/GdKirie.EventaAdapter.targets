@@ -1,0 +1,10 @@
+<Project>
+
+  <ItemGroup Condition="'$(EnableKirieClientEventaBridge)' == 'true' Or ('$(EnableKirieClientEventaBridge)' == '' And Exists('$(MSBuildProjectDirectory)/addons/kirie/csharp/KirieClient.cs'))">
+    <Compile
+      Include="$(MSBuildThisFileDirectory)../content/KirieClientEventaBridge.cs"
+      Link="KirieClientEventaBridge.cs"
+      Visible="false" />
+  </ItemGroup>
+
+</Project>

@@ -1,10 +1,28 @@
-import type { KiriePlugin } from "../../plugin/index.ts";
 import { existsSync, readdirSync, statSync } from "node:fs";
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-
+import {
+  listExportPresets,
+  readExportPresetValue,
+  resolveGradleWrapperPath,
+  resolveXcodeSchemes,
+} from "@gd-kirie/build";
 import { execa } from "execa";
-import { loadKirieConfig, type ResolvedKirieConfig } from "../config.ts";
+
+import {
+  isAddonActiveForTarget,
+  isPluginActiveForTarget,
+  type KirieGodotAddonDependency,
+  type KiriePlugin,
+  type KirieTargetName,
+} from "../../plugin/index.ts";
+import {
+  assertConfiguredTarget,
+  getConfiguredTargets,
+  loadKirieConfig,
+  type ResolvedKirieConfig,
+} from "../config.ts";
 import { checkGodotAddon, installGodotAddon } from "./addons.ts";
 import { checkDotnetWebToolchain, installDotnetWebToolchain } from "./dotnet-web.ts";
 import { getDotnetDependencyReference, hasDotnetProject, installDotnetPackage } from "./dotnet.ts";
@@ -16,7 +34,7 @@ export const DoctorCheckStatus = {
 } as const;
 export type DoctorCheckStatus = (typeof DoctorCheckStatus)[keyof typeof DoctorCheckStatus];
 
-export type DoctorTarget = "web" | `plugin:${string}`;
+export type DoctorTarget = KirieTargetName | `plugin:${string}`;
 
 export interface DoctorCheckResult {
   error?: Error;
@@ -60,7 +78,7 @@ interface RunGodotVersionOptions {
   projectDir: string;
 }
 
-interface TemplatePathOptions {
+export interface TemplatePathOptions {
   homeDir: string;
   platform: NodeJS.Platform;
   version: string;
@@ -74,12 +92,31 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
       cwd: options.cwd,
     }));
 
-  const webTarget = options.target === "web";
-  const plugins = webTarget
-    ? []
-    : selectPlugins(config.plugins, options.target);
+  const isPluginTarget = Boolean(options.target?.startsWith("plugin:"));
+  if (isPluginTarget) {
+    const selectedPlugins = selectPlugins(config.plugins, options.target);
+    const activeTargets = getConfiguredTargets(config);
+    if (options.fix) {
+      for (const plugin of selectedPlugins) {
+        await fixPluginDependencies(config, plugin, activeTargets);
+      }
+    }
+
+    const checks = await checkPlugins(config, selectedPlugins, activeTargets);
+    reportAndThrowOnFailures(checks);
+    return;
+  }
+
+  const targetNames: KirieTargetName[] = options.target
+    ? [options.target as KirieTargetName]
+    : getConfiguredTargets(config);
+
+  if (options.target) {
+    assertConfiguredTarget(config, options.target as KirieTargetName, "kirie doctor");
+  }
+
   if (options.fix) {
-    if (webTarget) {
+    if (targetNames.includes("web") && (options.target === "web" || await projectUsesDotnet(config))) {
       await installDotnetWebToolchain({
         arch: options.arch,
         godotArgs: config.godot.args,
@@ -90,22 +127,32 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
       });
     }
 
-    for (const plugin of plugins) {
-      await fixPluginDependencies(config, plugin);
+    await repairGodotExportPresetsForTargets(config, targetNames);
+
+    const activePlugins = selectPluginsForTargets(config.plugins, targetNames);
+    for (const plugin of activePlugins) {
+      await fixPluginDependencies(config, plugin, targetNames);
     }
   }
 
-  const checks = webTarget
-    ? [await dotnetWebDoctorCheck(options)]
-    : options.target
-      ? await checkPlugins(config, plugins)
-      : await runDoctorChecks({
-          config,
-          env: options.env,
-          homeDir: options.homeDir,
-          platform: options.platform,
-        });
+  const checks = options.target === "web"
+    ? [
+        await dotnetWebDoctorCheck(options),
+        ...(await checkPlugins(config, selectPluginsForTargets(config.plugins, ["web"]), ["web"])),
+      ]
+    : await runDoctorChecks({
+        arch: options.arch,
+        config,
+        env: options.env,
+        homeDir: options.homeDir,
+        platform: options.platform,
+        targets: targetNames,
+      });
 
+  reportAndThrowOnFailures(checks);
+}
+
+function reportAndThrowOnFailures(checks: DoctorCheckResult[]): void {
   for (const check of checks) {
     console.log(`${check.status} ${check.name}: ${check.message}`);
   }
@@ -120,13 +167,14 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<void> {
 }
 
 export async function runDoctorChecks(options: {
+  arch?: NodeJS.Architecture;
   config: ResolvedKirieConfig;
   env?: NodeJS.ProcessEnv;
   homeDir?: string;
   platform?: NodeJS.Platform;
+  targets?: readonly KirieTargetName[];
 }): Promise<DoctorCheckResult[]> {
-  // TODO: Check Godot EditorSettings for `export/android/java_sdk_path` and
-  // verify that it points at a usable Java/JDK before Android export diagnostics pass.
+  const targets = options.targets ?? getConfiguredTargets(options.config);
   const godotCommand = await checkGodotCommand({
     godotArgs: options.config.godot.args,
     godotCommand: options.config.godot.command,
@@ -144,29 +192,377 @@ export async function runDoctorChecks(options: {
         status: DoctorCheckStatus.Fail,
       };
 
-  return [
-    godotCommand.check,
-    exportTemplates,
-    await checkAndroidSdk(options.env),
-    ...(await checkPlugins(options.config, options.config.plugins)),
-  ];
+  const checks: DoctorCheckResult[] = [godotCommand.check, exportTemplates];
+
+  for (const target of targets) {
+    switch (target) {
+      case "android":
+        checks.push(await checkAndroidSdk(options.env));
+        checks.push(...checkAndroidTargetConfig(options.config, options.platform));
+        break;
+      case "ios":
+        checks.push(...(await checkIosTargetConfig(options.config, options.platform)));
+        break;
+      case "web":
+        if (await projectUsesDotnet(options.config)) {
+          checks.push(
+            await dotnetWebDoctorCheck({
+              arch: options.arch,
+              homeDir: options.homeDir,
+              platform: options.platform,
+            }),
+          );
+        }
+        break;
+      case "desktop":
+        break;
+    }
+  }
+
+  const activePlugins = selectPluginsForTargets(options.config.plugins, targets);
+  checks.push(...(await checkPlugins(options.config, activePlugins, targets)));
+  return checks;
+}
+
+function checkAndroidTargetConfig(
+  config: ResolvedKirieConfig,
+  platform: NodeJS.Platform = process.platform,
+): DoctorCheckResult[] {
+  const androidTarget = config.targets.android;
+  if (!androidTarget) {
+    return [];
+  }
+
+  const checks: DoctorCheckResult[] = [];
+  const presetName = androidTarget.preset ?? "Android";
+  const presetsPath = path.join(config.godot.project, "export_presets.cfg");
+
+  if (existsSync(presetsPath)) {
+    const presets = listExportPresets(config.godot.project);
+    const matching = presets.find((item) => item.name === presetName);
+    if (!matching) {
+      checks.push({
+        message: `preset "${presetName}" not found in ${presetsPath}`,
+        name: "Android export preset",
+        status: DoctorCheckStatus.Fail,
+      });
+    } else if (androidTarget.host === "godot" && config.web) {
+      try {
+        const internet = readExportPresetValue({
+          optionName: "permissions/internet",
+          presetName,
+          projectDir: config.godot.project,
+        });
+        checks.push({
+          message: internet === true
+            ? `${presetName} (permissions/internet=true)`
+            : `${presetName} requires permissions/internet=true (run: pnpm kirie doctor --fix android)`,
+          name: "Android export preset",
+          status: internet === true
+            ? DoctorCheckStatus.Ok
+            : DoctorCheckStatus.Fail,
+        });
+      } catch {
+        checks.push({
+          message: `${presetName} requires permissions/internet=true (run: pnpm kirie doctor --fix android)`,
+          name: "Android export preset",
+          status: DoctorCheckStatus.Fail,
+        });
+      }
+    } else {
+      checks.push({
+        message: presetName,
+        name: "Android export preset",
+        status: DoctorCheckStatus.Ok,
+      });
+    }
+  }
+
+  if (androidTarget.host === "native" && androidTarget.project) {
+    const hostProjectDir = path.resolve(config.cwd, androidTarget.project);
+    const gradlew = resolveGradleWrapperPath(hostProjectDir, platform);
+    if (!existsSync(hostProjectDir)) {
+      checks.push({
+        message: `Android host project directory does not exist: ${hostProjectDir}`,
+        name: "Android native host project",
+        status: DoctorCheckStatus.Fail,
+      });
+    } else if (!existsSync(gradlew)) {
+      checks.push({
+        message: `Gradle wrapper not found at ${gradlew}`,
+        name: "Android native host project",
+        status: DoctorCheckStatus.Fail,
+      });
+    } else {
+      checks.push({
+        message: `${hostProjectDir} (${androidTarget.module ?? ":app"})`,
+        name: "Android native host project",
+        status: DoctorCheckStatus.Ok,
+      });
+    }
+  }
+
+  return checks;
+}
+
+async function checkIosTargetConfig(
+  config: ResolvedKirieConfig,
+  platform: NodeJS.Platform = process.platform,
+): Promise<DoctorCheckResult[]> {
+  const iosTarget = config.targets.ios;
+  if (!iosTarget) {
+    return [];
+  }
+
+  const checks: DoctorCheckResult[] = [];
+  if (platform !== "darwin") {
+    checks.push({
+      message: `iOS builds require macOS (current platform: ${platform})`,
+      name: "Xcode toolchain",
+      status: DoctorCheckStatus.Fail,
+    });
+    return checks;
+  }
+
+  try {
+    const xcodeResult = await execa("xcodebuild", ["-version"], { cwd: config.cwd });
+    const firstLine = xcodeResult.stdout.trim().split(/\r?\n/, 1)[0] ?? "xcodebuild";
+    checks.push({
+      message: firstLine,
+      name: "Xcode toolchain",
+      status: DoctorCheckStatus.Ok,
+    });
+  } catch (error) {
+    checks.push(failedCheck("Xcode toolchain", error));
+  }
+
+  const presetName = iosTarget.preset ?? "iOS";
+  const presetsPath = path.join(config.godot.project, "export_presets.cfg");
+  if (existsSync(presetsPath)) {
+    const presets = listExportPresets(config.godot.project);
+    const matching = presets.find((item) => item.name === presetName);
+    if (!matching) {
+      checks.push({
+        message: `preset "${presetName}" not found in ${presetsPath}`,
+        name: "iOS export preset",
+        status: DoctorCheckStatus.Fail,
+      });
+    } else {
+      try {
+        const projectOnly = readExportPresetValue({
+          optionName: "application/export_project_only",
+          presetName,
+          projectDir: config.godot.project,
+        });
+        checks.push({
+          message: projectOnly === true
+            ? `${presetName} (application/export_project_only=true)`
+            : `${presetName} requires application/export_project_only=true (run: pnpm kirie doctor --fix ios)`,
+          name: "iOS export preset",
+          status: projectOnly === true
+            ? DoctorCheckStatus.Ok
+            : DoctorCheckStatus.Fail,
+        });
+      } catch {
+        checks.push({
+          message: `${presetName} requires application/export_project_only=true (run: pnpm kirie doctor --fix ios)`,
+          name: "iOS export preset",
+          status: DoctorCheckStatus.Fail,
+        });
+      }
+    }
+  }
+
+  if (iosTarget.host === "native" && iosTarget.project) {
+    const hostProjectPath = path.resolve(config.cwd, iosTarget.project);
+    if (!existsSync(hostProjectPath)) {
+      checks.push({
+        message: `Xcode project/workspace not found: ${hostProjectPath}`,
+        name: "iOS native host project",
+        status: DoctorCheckStatus.Fail,
+      });
+    } else {
+      try {
+        const schemes = await resolveXcodeSchemes(hostProjectPath, config.cwd);
+        if (iosTarget.scheme && !schemes.includes(iosTarget.scheme)) {
+          checks.push({
+            message: `scheme "${iosTarget.scheme}" not found in ${hostProjectPath} (available: ${schemes.join(", ") || "none"})`,
+            name: "iOS native host project",
+            status: DoctorCheckStatus.Fail,
+          });
+        } else if (!iosTarget.scheme && schemes.length !== 1) {
+          checks.push({
+            message: schemes.length === 0
+              ? `no shared schemes found in ${hostProjectPath}; set targets.ios.scheme`
+              : `multiple schemes found (${schemes.join(", ")}); set targets.ios.scheme in kirie.config.ts`,
+            name: "iOS native host project",
+            status: DoctorCheckStatus.Fail,
+          });
+        } else {
+          checks.push({
+            message: `${hostProjectPath} (${iosTarget.scheme ?? schemes[0]})`,
+            name: "iOS native host project",
+            status: DoctorCheckStatus.Ok,
+          });
+        }
+      } catch (error) {
+        checks.push(failedCheck("iOS native host project", error));
+      }
+    }
+  }
+
+  return checks;
+}
+
+async function repairGodotExportPresetsForTargets(
+  config: ResolvedKirieConfig,
+  targets: readonly KirieTargetName[],
+): Promise<void> {
+  const presetsPath = path.join(config.godot.project, "export_presets.cfg");
+  if (!existsSync(presetsPath)) {
+    return;
+  }
+
+  const patches: Array<{ option: string; presetName: string; valueLiteral: string }> = [];
+  if (targets.includes("ios") && config.targets.ios) {
+    const presetName = config.targets.ios.preset ?? "iOS";
+    if (!hasPresetBooleanTrue(config.godot.project, presetName, "application/export_project_only")) {
+      patches.push({
+        option: "application/export_project_only",
+        presetName,
+        valueLiteral: "true",
+      });
+    }
+  }
+
+  if (targets.includes("android") && config.targets.android?.host === "godot" && config.web) {
+    const presetName = config.targets.android.preset ?? "Android";
+    if (!hasPresetBooleanTrue(config.godot.project, presetName, "permissions/internet")) {
+      patches.push({
+        option: "permissions/internet",
+        presetName,
+        valueLiteral: "true",
+      });
+    }
+  }
+
+  if (patches.length === 0) {
+    return;
+  }
+
+  const temporaryDir = await fs.mkdtemp(path.join(os.tmpdir(), "kirie-doctor-preset-fix-"));
+  try {
+    const scriptPath = path.join(temporaryDir, "repair_presets.gd");
+    const statements = patches
+      .map(
+        (patch) =>
+          `        if preset_name == ${JSON.stringify(patch.presetName)}:\n` +
+          `            config.set_value(options_section, ${JSON.stringify(patch.option)}, ${patch.valueLiteral})\n` +
+          `            changed = true`,
+      )
+      .join("\n");
+
+    await fs.writeFile(
+      scriptPath,
+      `extends SceneTree
+
+func _init() -> void:
+    var preset_path := ProjectSettings.globalize_path("res://export_presets.cfg")
+    var config := ConfigFile.new()
+    if config.load(preset_path) != OK:
+        push_error("Could not load export_presets.cfg.")
+        quit(2)
+        return
+
+    var changed := false
+    var index := 0
+    while config.has_section("preset.%d" % index):
+        var section := "preset.%d" % index
+        var preset_name := str(config.get_value(section, "name", ""))
+        var options_section := "%s.options" % section
+${statements}
+        index += 1
+
+    if changed and config.save(preset_path) != OK:
+        push_error("Could not save export_presets.cfg.")
+        quit(2)
+        return
+    quit()
+`,
+    );
+
+    await execa(
+      config.godot.command,
+      [
+        ...config.godot.args,
+        "--headless",
+        "--path",
+        config.godot.project,
+        "--script",
+        scriptPath,
+      ],
+      {
+        cwd: config.godot.project,
+        stdio: "inherit",
+      },
+    );
+  } finally {
+    await fs.rm(temporaryDir, { force: true, recursive: true });
+  }
+}
+
+function hasPresetBooleanTrue(
+  projectDir: string,
+  presetName: string,
+  optionName: string,
+): boolean {
+  try {
+    return readExportPresetValue({ optionName, presetName, projectDir }) === true;
+  } catch {
+    return false;
+  }
+}
+
+function selectPluginsForTargets(
+  plugins: KiriePlugin[],
+  targets: readonly KirieTargetName[],
+): KiriePlugin[] {
+  return plugins.filter((plugin) =>
+    targets.some((target) => isPluginActiveForTarget(plugin, target)),
+  );
+}
+
+function filterAddonsForTargets(
+  plugin: KiriePlugin,
+  targets: readonly KirieTargetName[],
+): KirieGodotAddonDependency[] {
+  const matchingTargets = targets.filter((target) => isPluginActiveForTarget(plugin, target));
+  if (matchingTargets.length === 0) {
+    return [];
+  }
+
+  return (plugin.godotAddons ?? []).filter((addon) =>
+    matchingTargets.some((target) => isAddonActiveForTarget(addon, target)),
+  );
 }
 
 async function checkPlugins(
   config: ResolvedKirieConfig,
   plugins: KiriePlugin[],
+  targets: readonly KirieTargetName[],
 ): Promise<DoctorCheckResult[]> {
   return (await Promise.all(
-    plugins.map((plugin) => checkPluginDependencies(config, plugin)),
+    plugins.map((plugin) => checkPluginDependencies(config, plugin, targets)),
   )).flat();
 }
 
 async function checkPluginDependencies(
   config: ResolvedKirieConfig,
   plugin: KiriePlugin,
+  targets: readonly KirieTargetName[],
 ): Promise<DoctorCheckResult[]> {
   const checks: DoctorCheckResult[] = [];
-  for (const addon of plugin.godotAddons ?? []) {
+  for (const addon of filterAddonsForTargets(plugin, targets)) {
     try {
       const result = await checkGodotAddon(config.godot.project, addon);
       const missingOptional = addon.optional && !result.installed;
@@ -217,8 +613,9 @@ async function checkPluginDependencies(
 async function fixPluginDependencies(
   config: ResolvedKirieConfig,
   plugin: KiriePlugin,
+  targets: readonly KirieTargetName[],
 ): Promise<void> {
-  for (const addon of plugin.godotAddons ?? []) {
+  for (const addon of filterAddonsForTargets(plugin, targets)) {
     await installGodotAddon({ addon, projectDir: config.godot.project });
   }
 
@@ -379,6 +776,15 @@ export async function checkAndroidSdk(
   };
 }
 
+export async function detectGodotVersion(options: {
+  godotArgs: string[];
+  godotCommand: string;
+  projectDir: string;
+}): Promise<string> {
+  const output = await runGodotVersion(options);
+  return parseGodotVersion(output);
+}
+
 async function runGodotVersion(options: RunGodotVersionOptions): Promise<string> {
   const result = await execa(options.godotCommand, [...options.godotArgs, "--version"], {
     cwd: options.projectDir,
@@ -386,7 +792,7 @@ async function runGodotVersion(options: RunGodotVersionOptions): Promise<string>
   return result.stdout;
 }
 
-function parseGodotVersion(output: string): string {
+export function parseGodotVersion(output: string): string {
   const [version] = output.trim().split(/\s+/, 1);
   if (!version) {
     throw new Error("empty version output");
@@ -395,35 +801,35 @@ function parseGodotVersion(output: string): string {
   return version.replace(/\.official\..*$/, "");
 }
 
-function resolveGodotExportTemplatesDir(options: TemplatePathOptions): string {
-  if (options.platform === "darwin") {
+export function resolveGodotExportTemplatesRootDir(
+  options: { homeDir?: string; platform?: NodeJS.Platform } = {},
+): string {
+  const homeDir = options.homeDir ?? os.homedir();
+  const platform = options.platform ?? process.platform;
+
+  if (platform === "darwin") {
     return path.join(
-      options.homeDir,
+      homeDir,
       "Library",
       "Application Support",
       "Godot",
       "export_templates",
-      options.version,
     );
   }
 
-  if (options.platform === "win32") {
-    return path.join(
-      options.homeDir,
-      "AppData",
-      "Roaming",
-      "Godot",
-      "export_templates",
-      options.version,
-    );
+  if (platform === "win32") {
+    return path.join(homeDir, "AppData", "Roaming", "Godot", "export_templates");
   }
 
+  return path.join(homeDir, ".local", "share", "godot", "export_templates");
+}
+
+export function resolveGodotExportTemplatesDir(options: TemplatePathOptions): string {
   return path.join(
-    options.homeDir,
-    ".local",
-    "share",
-    "godot",
-    "export_templates",
+    resolveGodotExportTemplatesRootDir({
+      homeDir: options.homeDir,
+      platform: options.platform,
+    }),
     options.version,
   );
 }

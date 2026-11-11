@@ -39,9 +39,7 @@ mise x -- dotnet nuget push "artifacts/nuget/*.nupkg" \
   --skip-duplicate
 ```
 
-The Eventa adapter includes a NuGet `contentFiles` source bridge that connects the
-addon-shipped `KirieClient.cs` to the adapter without placing Eventa source in
-`addons/kirie`.
+`GdKirie.EventaAdapter` packs `build` and `buildTransitive` MSBuild targets alongside `content/KirieClientEventaBridge.cs`. When `addons/kirie/csharp/KirieClient.cs` exists in a consumer project, MSBuild compiles that source bridge without placing Eventa source files inside `addons/kirie`.
 
 The repository `global.json` opts `dotnet test` into
 Microsoft.Testing.Platform, which is required for this xUnit v3 test project on

@@ -28,6 +28,7 @@ The browser fixture uses `@gd-kirie/ipc`. Eventa behavior has separate tests.
 
 ```text
 tests/integration/
+  kirie.config.ts
   project.godot
   export_presets.cfg
   vitest.config.ts

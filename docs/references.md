@@ -152,7 +152,7 @@ packaging, or platform WebView bridge details.
   loading behavior.
 - [Godot CEF releases](https://github.com/dsh0416/godot-cef/releases)
   Desktop artifact source for Kirie. The current pin lives in
-  `kirie/plugin/core`.
+  `kirie/plugin/webview`.
 - [RFC 8949: Concise Binary Object Representation](https://www.rfc-editor.org/rfc/rfc8949.html)
   Stable CBOR specification used as the primary reference for Kirie IPC v1
   packet encoding.
@@ -212,8 +212,9 @@ packaging, or platform WebView bridge details.
   desktop exports.
 - [Microsoft.Testing.Platform migration to v2](https://learn.microsoft.com/en-us/dotnet/core/testing/microsoft-testing-platform-migration-from-v1-to-v2)
   Reference for the .NET 10 `dotnet test` opt-in through `global.json`.
-- [NuGet contentFiles](https://learn.microsoft.com/en-us/nuget/reference/nuspec#including-content-files)
-  Reference for source files included in PackageReference-based NuGet packages.
+- [NuGet MSBuild props and targets](https://learn.microsoft.com/en-us/nuget/concepts/msbuild-props-and-targets)
+  Reference for `build` and `buildTransitive` MSBuild targets that conditionally
+  compile `KirieClientEventaBridge.cs` in PackageReference consumers.
 - [dotnet pack](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-pack)
   Reference for creating NuGet packages from .NET projects.
 - [dotnet build](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-build)
@@ -312,7 +313,7 @@ packaging, or platform WebView bridge details.
   support, C# signals, and .NET reflection or AOT documentation.
 - When changing the Eventa adapter or NuGet packaging, start with .NET Native
   AOT, System.Text.Json source generation, the upstream Eventa repositories,
-  NuGet contentFiles, `dotnet pack`, and `dotnet nuget push`.
+  NuGet MSBuild props and targets, `dotnet pack`, and `dotnet nuget push`.
 - When changing the Tray plugin, start with `tray-icon`, `muda`, godot-rust,
   and the Godot GDExtension descriptor.
 - When changing npm package publishing, start with npm trusted publishing,

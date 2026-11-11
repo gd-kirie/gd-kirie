@@ -3,12 +3,16 @@ import { execa } from "execa";
 const DOTNET_NO_PROJECT_ERROR = "MSB1003";
 
 export interface BuildDotnetOptions {
+  csproj?: string;
   projectDir: string;
   skipMissingProject?: boolean;
 }
 
 export async function buildDotnet(options: BuildDotnetOptions): Promise<void> {
-  const result = await execa("dotnet", ["build"], {
+  const args = options.csproj
+    ? ["build", options.csproj]
+    : ["build"];
+  const result = await execa("dotnet", args, {
     all: true,
     cwd: options.projectDir,
     reject: false,

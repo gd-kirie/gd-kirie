@@ -1,4 +1,4 @@
-import { lstatSync } from "node:fs";
+import { existsSync, lstatSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -76,6 +76,10 @@ export async function applyProjectName(project: string, projectName: string): Pr
   await fs.writeFile(packageJsonPath, `${JSON.stringify(packageRecord, null, 2)}\n`);
 
   const indexPath = path.join(project, "src-web", "index.html");
+  if (!existsSync(indexPath)) {
+    return;
+  }
+
   const indexHtml = await fs.readFile(indexPath, "utf8");
   if (!/<title>.*?<\/title>/s.test(indexHtml)) {
     throw new Error("Template src-web/index.html must contain a title element.");

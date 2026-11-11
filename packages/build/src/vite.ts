@@ -1,6 +1,6 @@
+import type { InlineConfig, UserConfig } from "vite";
 import fs from "node:fs";
 import path from "node:path";
-import { build, type InlineConfig, mergeConfig, type UserConfig } from "vite";
 
 const KIRIE_OWNED_VITE_OPTIONS = ["root", "base"] as const;
 const KIRIE_OWNED_VITE_SERVER_OPTIONS = ["host", "port", "strictPort", "open"] as const;
@@ -23,7 +23,9 @@ export async function buildViteWeb(options: BuildViteWebOptions): Promise<void> 
     throw new Error(`Kirie build web requires ${indexPath}.`);
   }
 
-  await build(createViteBuildConfig(options));
+  const buildConfig = await createViteBuildConfig(options);
+  const { build } = await importVite();
+  await build(buildConfig);
 }
 
 export function assertViteWebOutput(webRoot: string): void {
@@ -59,8 +61,10 @@ function pathContains(parent: string, child: string): boolean {
   );
 }
 
-export function createViteBuildConfig(options: BuildViteWebOptions): InlineConfig {
+export async function createViteBuildConfig(options: BuildViteWebOptions): Promise<InlineConfig> {
   assertNoKirieOwnedViteOptions((options.viteConfig ?? {}) as Record<string, unknown>);
+
+  const { mergeConfig } = await importVite();
 
   return mergeConfig(options.viteConfig ?? {}, {
     base: "./",
@@ -73,14 +77,29 @@ export function createViteBuildConfig(options: BuildViteWebOptions): InlineConfi
   }) as InlineConfig;
 }
 
+async function importVite(): Promise<typeof import("vite")> {
+  try {
+    return await import("vite");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException | undefined)?.code === "ERR_MODULE_NOT_FOUND") {
+      throw new Error(
+        "Vite is required when kirie/plugin/webview is configured. Install vite in your project dependencies.",
+        { cause: error },
+      );
+    }
+
+    throw error;
+  }
+}
+
 function assertNoKirieOwnedViteOptions(viteConfig: Record<string, unknown>): void {
-  assertNoOwnedOptions(viteConfig, "web.vite", KIRIE_OWNED_VITE_OPTIONS);
+  assertNoOwnedOptions(viteConfig, "webview.vite", KIRIE_OWNED_VITE_OPTIONS);
 
   const server = viteConfig.server;
   if (server && typeof server === "object") {
     assertNoOwnedOptions(
       server as Record<string, unknown>,
-      "web.vite.server",
+      "webview.vite.server",
       KIRIE_OWNED_VITE_SERVER_OPTIONS,
     );
   }
@@ -89,7 +108,7 @@ function assertNoKirieOwnedViteOptions(viteConfig: Record<string, unknown>): voi
   if (buildOptions && typeof buildOptions === "object") {
     assertNoOwnedOptions(
       buildOptions as Record<string, unknown>,
-      "web.vite.build",
+      "webview.vite.build",
       KIRIE_OWNED_VITE_BUILD_OPTIONS,
     );
   }
