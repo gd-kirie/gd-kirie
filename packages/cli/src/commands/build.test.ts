@@ -1,10 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { execa } from "execa";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runBuild, runBuildDotnet, runBuildWeb } from "./build.ts";
 import { createCliProjectTracker, installKirieConfigFixture } from "./test-project.ts";
 
+const cliPath = fileURLToPath(import.meta.resolve("../cli.ts"));
 const projects = createCliProjectTracker("kirie-cli-build-");
 
 afterEach(async () => {
@@ -26,10 +29,8 @@ describe("runBuildWeb", () => {
     const project = await projects.copy();
     await installKirieConfigFixture(project, "build-owned-out-dir.kirie.config.ts");
 
-    // TODO: Revisit whether `build.outDir` should be configurable once the
-    // packaged resource layout is settled.
     await expect(runBuildWeb({ cwd: project })).rejects.toThrow(
-      "web.vite.build.outDir is owned by Kirie",
+      "webview.vite.build.outDir is owned by Kirie",
     );
   });
 
@@ -43,6 +44,23 @@ describe("runBuildWeb", () => {
 
     expect(assets.some((asset) => asset.endsWith(".js.map"))).toBe(true);
   });
+
+  it("rejects kirie build web when webview(...) is not configured", async () => {
+    const project = await projects.copy();
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+export default {
+  plugins: [core],
+  targets: { desktop: { host: "godot" } },
+};
+`,
+    );
+
+    await expect(runBuildWeb({ cwd: project })).rejects.toThrow(
+      "kirie build web requires webview(...) from \"kirie/plugin/webview\"",
+    );
+  });
 });
 
 describe("runBuild", () => {
@@ -54,6 +72,26 @@ describe("runBuild", () => {
     await expect(fs.access(path.join(project, "src-web", "dist", "index.html"))).resolves.toBe(
       undefined,
     );
+  });
+
+  it("skips Vite build cleanly when webview(...) is not configured and supports --project", async () => {
+    const project = await projects.copy();
+    await fs.rm(path.join(project, "src-web"), { force: true, recursive: true });
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+export default {
+  plugins: [core],
+  targets: { desktop: { host: "godot" } },
+};
+`,
+    );
+
+    await execa(process.execPath, [cliPath, "build", "--project", project], {
+      cwd: path.dirname(project),
+    });
+
+    await expect(fs.access(path.join(project, "src-web"))).rejects.toThrow();
   });
 });
 

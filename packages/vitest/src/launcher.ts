@@ -2,15 +2,17 @@
 
 import type { KirieTestTarget } from "./index.ts";
 
+import { realpathSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { execa } from "execa";
 
 const EVENT_PREFIX = "VIDOT ";
 const STAGING_DIRECTORY_NAME = "kirie_vitest_generated";
 
-interface ParsedLaunch {
+export interface ParsedLaunch {
   args: string[];
   projectPath: string;
   target: KirieTestTarget;
@@ -20,10 +22,14 @@ interface ProjectPackage {
   name: string;
 }
 
-interface StagedLaunch {
+export interface StagedLaunch {
   args: string[];
   filePaths: Map<string, string>;
   stagingPath: string;
+}
+
+export interface RunLaunchOptions {
+  kirieCommand?: string;
 }
 
 async function main(): Promise<void> {
@@ -31,17 +37,39 @@ async function main(): Promise<void> {
   await runLaunch(launch);
 }
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (isExecutedDirectly()) {
+  main().catch((error: unknown) => {
+    process.stderr.write(`${error instanceof Error
+      ? error.stack ?? error.message
+      : String(error)}\n`);
+    process.exitCode = 1;
+  });
+}
 
-async function runLaunch(launch: ParsedLaunch): Promise<void> {
+function isExecutedDirectly(): boolean {
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return path.resolve(entry) === fileURLToPath(import.meta.url);
+  }
+}
+
+export async function runLaunch(
+  launch: ParsedLaunch,
+  options: RunLaunchOptions = {},
+): Promise<void> {
+  const kirieCommand = options.kirieCommand ?? "kirie";
   if (launch.target === "desktop") {
     const godotArgs = process.env.GODOT
       ? ["--godot", process.env.GODOT]
       : [];
     await runKirie(
+      kirieCommand,
+      launch.projectPath,
       [
         "run",
         "desktop",
@@ -59,18 +87,24 @@ async function runLaunch(launch: ParsedLaunch): Promise<void> {
   const staged = await stageLaunch(launch.projectPath, launch.args);
   try {
     if (launch.target === "android") {
-      await runAndroid(launch.projectPath, staged);
+      await runAndroid(kirieCommand, launch.projectPath, staged);
       return;
     }
 
-    await runIos(launch.projectPath, staged);
+    await runIos(kirieCommand, launch.projectPath, staged);
   } finally {
     await fs.rm(staged.stagingPath, { force: true, recursive: true });
   }
 }
 
-async function runAndroid(projectPath: string, staged: StagedLaunch): Promise<void> {
+async function runAndroid(
+  kirieCommand: string,
+  projectPath: string,
+  staged: StagedLaunch,
+): Promise<void> {
   await runKirie(
+    kirieCommand,
+    projectPath,
     [
       "export",
       "android",
@@ -85,6 +119,8 @@ async function runAndroid(projectPath: string, staged: StagedLaunch): Promise<vo
     ],
   );
   await runKirie(
+    kirieCommand,
+    projectPath,
     [
       "run",
       "android",
@@ -99,7 +135,11 @@ async function runAndroid(projectPath: string, staged: StagedLaunch): Promise<vo
   );
 }
 
-async function runIos(projectPath: string, staged: StagedLaunch): Promise<void> {
+async function runIos(
+  kirieCommand: string,
+  projectPath: string,
+  staged: StagedLaunch,
+): Promise<void> {
   const device = process.env.IOS_DEVICE_ID;
   const deviceArgs = device
     ? ["--device", device]
@@ -107,6 +147,8 @@ async function runIos(projectPath: string, staged: StagedLaunch): Promise<void> 
   const appPath = device ? "dist/kirie/ios/device_debug.app" : "dist/kirie/ios/debug.app";
 
   await runKirie(
+    kirieCommand,
+    projectPath,
     [
       "export",
       "ios",
@@ -117,6 +159,8 @@ async function runIos(projectPath: string, staged: StagedLaunch): Promise<void> 
     ],
   );
   await runKirie(
+    kirieCommand,
+    projectPath,
     [
       "run",
       "ios",
@@ -135,11 +179,14 @@ async function runIos(projectPath: string, staged: StagedLaunch): Promise<void> 
 }
 
 async function runKirie(
+  kirieCommand: string,
+  projectPath: string,
   args: string[],
   filePaths: ReadonlyMap<string, string> = new Map(),
   stopAfterRunFinish = false,
 ): Promise<void> {
-  const child = execa("kirie", args, {
+  const child = execa(kirieCommand, args, {
+    cwd: projectPath,
     reject: false,
     stderr: "inherit",
     stdout: "pipe",
@@ -177,7 +224,7 @@ async function runKirie(
   }
 }
 
-async function stageLaunch(projectPath: string, args: string[]): Promise<StagedLaunch> {
+export async function stageLaunch(projectPath: string, args: string[]): Promise<StagedLaunch> {
   const stagingPath = path.join(projectPath, STAGING_DIRECTORY_NAME);
   await fs.rm(stagingPath, { force: true, recursive: true });
   await fs.mkdir(stagingPath, { recursive: true });
@@ -218,7 +265,8 @@ async function stageLaunch(projectPath: string, args: string[]): Promise<StagedL
   return { args: stagedArgs, filePaths, stagingPath };
 }
 
-function parseLaunch(args: string[]): ParsedLaunch {
+export function parseLaunch(rawArgs: string[]): ParsedLaunch {
+  const args = [...rawArgs];
   const targetArgument = args.shift();
   let target = "";
   if (targetArgument?.startsWith("--kirie-target=")) {

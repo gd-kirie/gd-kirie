@@ -5,7 +5,7 @@ using Godot;
 namespace GdKirie.Platform;
 
 /// <summary>
-/// Registers and attaches Kirie's desktop Platform capabilities.
+/// Registers and attaches Kirie Platform capabilities.
 /// </summary>
 public static class GdKiriePlatform
 {
@@ -31,22 +31,22 @@ public static class GdKiriePlatform
                 PlatformJsonContext.Default.EmptyPayload)
             .RegisterInvoke(
                 PlatformEvents.GetBounds,
-                PlatformJsonContext.Default.BoundsPayload,
+                PlatformJsonContext.Default.KirieWindowBounds,
                 PlatformJsonContext.Default.EmptyPayload)
             .RegisterInvoke(
                 PlatformEvents.GetCurrentDisplayBounds,
-                PlatformJsonContext.Default.BoundsPayload,
+                PlatformJsonContext.Default.KirieWindowBounds,
                 PlatformJsonContext.Default.EmptyPayload)
             .RegisterInvoke(
                 PlatformEvents.GetPointerPosition,
-                PlatformJsonContext.Default.PointerPositionPayload,
+                PlatformJsonContext.Default.KiriePointerPosition,
                 PlatformJsonContext.Default.EmptyPayload)
             .RegisterEvent(
                 PlatformEvents.PointerPositionChanged,
-                PlatformJsonContext.Default.PointerPositionPayload)
+                PlatformJsonContext.Default.KiriePointerPosition)
             .RegisterInvoke(
                 PlatformEvents.GetState,
-                PlatformJsonContext.Default.WindowStatePayload,
+                PlatformJsonContext.Default.KirieWindowState,
                 PlatformJsonContext.Default.EmptyPayload)
             .RegisterInvoke(
                 PlatformEvents.SetAlwaysOnTop,
@@ -80,13 +80,26 @@ public static class GdKiriePlatform
                 PlatformJsonContext.Default.EmptyPayload)
             .RegisterEvent(
                 PlatformEvents.StateChanged,
-                PlatformJsonContext.Default.WindowStatePayload);
+                PlatformJsonContext.Default.KirieWindowState);
     }
 
     /// <summary>
     /// Attaches Platform handlers to an existing Eventa context and explicit host window.
     /// </summary>
     public static GdKiriePlatformHost Attach(IEventContext context, Window hostWindow)
+    {
+        return Attach(context, hostWindow, windowBackend: null);
+    }
+
+    /// <summary>
+    /// Attaches Platform handlers to an existing Eventa context, host window, and optional window backend.
+    /// When <paramref name="windowBackend"/> is omitted on an embedded window, OS and scene capabilities attach
+    /// while window-owned operations throw <see cref="PlatformNotSupportedException"/> when invoked.
+    /// </summary>
+    public static GdKiriePlatformHost Attach(
+        IEventContext context,
+        Window hostWindow,
+        IKirieWindowBackend? windowBackend = null)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(hostWindow);
@@ -100,12 +113,8 @@ public static class GdKiriePlatform
             throw new ArgumentException("The host window must be inside the scene tree.", nameof(hostWindow));
         }
 
-        if (hostWindow.IsEmbedded())
-        {
-            throw new PlatformNotSupportedException(
-                "Platform host-window capabilities require a native, non-embedded Godot Window.");
-        }
-
-        return new GdKiriePlatformHost(context, hostWindow);
+        var effectiveWindowBackend = windowBackend
+            ?? (hostWindow.IsEmbedded() ? null : new GodotWindowBackend(hostWindow));
+        return new GdKiriePlatformHost(context, hostWindow, effectiveWindowBackend);
     }
 }

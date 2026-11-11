@@ -9,6 +9,7 @@ export default defineConfig({
     "index": "src/index.ts",
     "plugin/core": "src/plugin/core.ts",
     "plugin/index": "src/plugin/index.ts",
+    "plugin/webview": "src/plugin/webview.ts",
   },
   fixedExtension: false,
   format: "esm",

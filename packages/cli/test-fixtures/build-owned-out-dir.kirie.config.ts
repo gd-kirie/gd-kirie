@@ -1,10 +1,17 @@
 import core from "kirie/plugin/core";
+import webview from "kirie/plugin/webview";
 
 export default {
-  plugins: [core],
-  web: {
-    vite: {
-      build: { outDir: "custom-dist" },
-    },
+  plugins: [
+    core,
+    webview({
+      root: "./src-web",
+      vite: {
+        build: { outDir: "custom-dist" },
+      },
+    }),
+  ],
+  targets: {
+    desktop: { host: "godot" },
   },
 };

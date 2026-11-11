@@ -19,6 +19,9 @@
     "./plugin/core": {
       "import": "./src/plugin/core.ts"
     },
+    "./plugin/webview": {
+      "import": "./src/plugin/webview.ts"
+    },
     "./plugin": {
       "import": "./src/plugin/index.ts"
     }
@@ -26,6 +29,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "tsdown",
     "test:run": "vitest run --no-file-parallelism --test-timeout 30000",
@@ -49,6 +55,11 @@
   "peerDependencies": {
     "vite": "^7.0.0 || ^8.0.0"
   },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org",
@@ -60,6 +71,10 @@
       "./plugin/core": {
         "types": "./dist/plugin/core.d.ts",
         "import": "./dist/plugin/core.js"
+      },
+      "./plugin/webview": {
+        "types": "./dist/plugin/webview.d.ts",
+        "import": "./dist/plugin/webview.js"
       },
       "./plugin": {
         "types": "./dist/plugin/index.d.ts",

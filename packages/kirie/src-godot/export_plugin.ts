@@ -7,6 +7,9 @@ interface KirieExportOption {
 
 @tool
 export class _ExportPlugin extends EditorExportPlugin {
+  _pending_ios_web_source_dir = "";
+  _pending_ios_web_binary_dir = "";
+
   _get_name(): string {
     return _ExportPlugin.PLUGIN_NAME;
   }
@@ -58,20 +61,26 @@ export class _ExportPlugin extends EditorExportPlugin {
     return { "command_line/extra_args": extra_args };
   }
 
-  _export_begin(features: PackedStringArray, _is_debug: boolean, _path: string, _flags: int): void {
-    if (features.has("web")) {
-      // JavaScript source is not a Godot resource; include it explicitly in the PCK.
-      // https://docs.godotengine.org/en/stable/classes/class_editorexportplugin.html#class-editorexportplugin-method-add-file
-      const host_path = "res://addons/kirie/iframe_host.js";
-      const host_file = FileAccess.open(host_path, FileAccess.READ);
-      if (host_file === null) {
-        const error = "Kirie Web export requires addons/kirie/iframe_host.js. Regenerate the addon before export.";
-        push_error(error);
-        assert(false, error);
-        return;
-      }
+  _export_begin(features: PackedStringArray, _is_debug: boolean, path: string, _flags: int): void {
+    this._pending_ios_web_source_dir = "";
+    this._pending_ios_web_binary_dir = "";
 
-      this.add_file(host_path, host_file.get_buffer(host_file.get_length()), false);
+    const webview_enabled = this._webview_export_enabled();
+    if (features.has("web")) {
+      if (webview_enabled) {
+        // JavaScript source is not a Godot resource; include it explicitly in the PCK.
+        // https://docs.godotengine.org/en/stable/classes/class_editorexportplugin.html#class-editorexportplugin-method-add-file
+        const host_path = "res://addons/kirie/iframe_host.js";
+        const host_file = FileAccess.open(host_path, FileAccess.READ);
+        if (host_file === null) {
+          const error = "Kirie Web export requires addons/kirie/iframe_host.js. Regenerate the addon before export.";
+          push_error(error);
+          assert(false, error);
+          return;
+        }
+
+        this.add_file(host_path, host_file.get_buffer(host_file.get_length()), false);
+      }
 
       const publish_path = this._dotnet_web_publish_path();
       if (!publish_path.is_empty()) {
@@ -82,13 +91,26 @@ export class _ExportPlugin extends EditorExportPlugin {
       return;
     }
 
+    if (!webview_enabled) {
+      return;
+    }
+
+    const web_dist_override = this._web_dist_override_path();
+    const web_root = web_dist_override.is_empty()
+      ? _ExportPlugin.DEFAULT_WEB_ROOT
+      : web_dist_override;
+
     if (this._features_are_desktop(features)) {
       this._assert_godot_cef_available();
+      if (!web_dist_override.is_empty()) {
+        this._add_desktop_web_asset_files(web_root);
+      }
+
       return;
     }
 
     if (features.has("android")) {
-      this._add_android_web_asset_files(_ExportPlugin.DEFAULT_WEB_ROOT);
+      this._add_android_web_asset_files(web_root);
       return;
     }
 
@@ -98,13 +120,25 @@ export class _ExportPlugin extends EditorExportPlugin {
 
     this._add_ios_native_plugin(_is_debug);
     this._add_ios_runtime_configuration();
-    this._add_ios_web_bundle_files(_ExportPlugin.DEFAULT_WEB_ROOT);
+    this._add_ios_web_bundle_files(web_root, path);
+  }
+
+  _end_generate_apple_embedded_project(path: string, _will_build_archive: boolean): void {
+    this._flush_pending_ios_web_bundle_files(path);
+  }
+
+  _export_end(): void {
+    this._flush_pending_ios_web_bundle_files("");
   }
 
   _get_android_dependencies(
     _platform: EditorExportPlatform | null,
     _debug: boolean,
   ): PackedStringArray {
+    if (!this._webview_export_enabled()) {
+      return PackedStringArray();
+    }
+
     const config = new ConfigFile();
     config.load("res://addons/kirie/plugin.cfg");
     const version = str(config.get_value("plugin", "version", ""));
@@ -119,6 +153,10 @@ export class _ExportPlugin extends EditorExportPlugin {
     _platform: EditorExportPlatform | null,
     _debug: boolean,
   ): PackedStringArray {
+    if (!this._webview_export_enabled()) {
+      return PackedStringArray();
+    }
+
     if (!OS.get_cmdline_user_args().has(_ExportPlugin.ANDROID_MAVEN_LOCAL_ARG)) {
       return PackedStringArray();
     }
@@ -135,6 +173,10 @@ export class _ExportPlugin extends EditorExportPlugin {
     _platform: EditorExportPlatform | null,
     _debug: boolean,
   ): string {
+    if (!this._webview_export_enabled()) {
+      return "";
+    }
+
     return gd.ops.rem(
       "\n        <meta-data\n            android:name=\"%s\"\n            android:value=\"%s\" />\n        <meta-data\n            android:name=\"%s\"\n            android:value=\"%s\" />\n",
       [
@@ -144,6 +186,58 @@ export class _ExportPlugin extends EditorExportPlugin {
         this._xml_bool(this._option_enabled(_ExportPlugin.OPTION_ALLOW_TLS_BYPASS)),
       ],
     );
+  }
+
+  _webview_export_enabled(): boolean {
+    const prefix = `${_ExportPlugin.PLUGINS_ARG}=`;
+    let has_plugins_arg = false;
+    let raw_ids = "";
+    for (const arg of OS.get_cmdline_user_args()) {
+      if (arg.begins_with(prefix)) {
+        has_plugins_arg = true;
+        raw_ids = arg.substr(prefix.length());
+      }
+    }
+
+    if (!has_plugins_arg) {
+      return true;
+    }
+
+    for (const plugin_id of raw_ids.split(",", false)) {
+      if (plugin_id.strip_edges() === _ExportPlugin.WEBVIEW_PLUGIN_ID) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  _web_dist_override_path(): string {
+    const prefix = `${_ExportPlugin.WEB_DIST_ARG}=`;
+    let raw_path = "";
+    for (const arg of OS.get_cmdline_user_args()) {
+      if (arg.begins_with(prefix)) {
+        raw_path = arg.substr(prefix.length()).strip_edges();
+      }
+    }
+
+    if (raw_path.is_empty()) {
+      return "";
+    }
+
+    if (raw_path.begins_with("res://") || raw_path.begins_with("user://")) {
+      return raw_path.simplify_path();
+    }
+
+    const normalized_path = raw_path.replace("\\", "/");
+    if (normalized_path.is_absolute_path()) {
+      return normalized_path.simplify_path();
+    }
+
+    return ProjectSettings.globalize_path("res://")
+      .replace("\\", "/")
+      .path_join(normalized_path)
+      .simplify_path();
   }
 
   _android_extra_args_override(): string {
@@ -316,34 +410,80 @@ export class _ExportPlugin extends EditorExportPlugin {
     return "<false/>";
   }
 
+  _is_default_web_root(source_path: string): boolean {
+    if (source_path === _ExportPlugin.DEFAULT_WEB_ROOT) {
+      return true;
+    }
+
+    const default_global_path = ProjectSettings.globalize_path(_ExportPlugin.DEFAULT_WEB_ROOT)
+      .replace("\\", "/")
+      .simplify_path();
+    const source_global_path = (
+      source_path.begins_with("res://") || source_path.begins_with("user://")
+        ? ProjectSettings.globalize_path(source_path)
+        : source_path
+    )
+      .replace("\\", "/")
+      .simplify_path();
+    if (source_global_path === default_global_path) {
+      return true;
+    }
+
+    const dir = DirAccess.open(source_global_path);
+    if (dir !== null && DirAccess.dir_exists_absolute(default_global_path)) {
+      return dir.is_equivalent(source_global_path, default_global_path);
+    }
+
+    return false;
+  }
+
+  _add_desktop_web_asset_files(root_path: string): void {
+    if (!this._has_web_entry(root_path)) {
+      return;
+    }
+
+    if (this._is_default_web_root(root_path)) {
+      return;
+    }
+
+    print(`[Kirie][export] add desktop web asset root: ${root_path}`);
+    this._add_virtual_web_asset_directory(root_path, "");
+  }
+
   _add_android_web_asset_files(root_path: string): void {
     if (!this._has_web_entry(root_path)) {
       return;
     }
 
-    print(`[Kirie][export] add Android web asset root: ${root_path}`);
-    this._add_android_web_asset_directory(root_path);
+    const source_root = this._is_default_web_root(root_path)
+      ? _ExportPlugin.DEFAULT_WEB_ROOT
+      : root_path;
+    print(`[Kirie][export] add Android web asset root: ${source_root}`);
+    this._add_virtual_web_asset_directory(source_root, "");
   }
 
-  _add_android_web_asset_directory(dir_path: string): boolean {
+  _add_virtual_web_asset_directory(source_root: string, relative_directory: string): boolean {
     // EditorExportPlugin only exposes add_file() for custom exported resources.
-    // There is no Android directory-level API for resource files, so recurse here.
-    for (const file_name of DirAccess.get_files_at(dir_path)) {
-      const file_path = dir_path.path_join(file_name);
-      const file = FileAccess.open(file_path, FileAccess.READ);
+    // Pack files into virtual res://src-web/dist/... regardless of source location.
+    const directory_path = source_root.path_join(relative_directory);
+    for (const file_name of DirAccess.get_files_at(directory_path)) {
+      const relative_path = relative_directory.path_join(file_name);
+      const source_file_path = source_root.path_join(relative_path);
+      const file = FileAccess.open(source_file_path, FileAccess.READ);
       if (file === null) {
-        const message = `[Kirie][export] Android web asset file not readable: ${file_path}`;
+        const message = `[Kirie][export] web asset file not readable: ${source_file_path}`;
         push_error(message);
         assert(false, message);
         return false;
       }
 
-      this.add_file(file_path, file.get_buffer(file.get_length()), false);
+      const export_path = _ExportPlugin.DEFAULT_WEB_ROOT.path_join(relative_path);
+      this.add_file(export_path, file.get_buffer(file.get_length()), false);
     }
 
-    for (const directory_name of DirAccess.get_directories_at(dir_path)) {
-      const child_path = dir_path.path_join(directory_name);
-      if (!this._add_android_web_asset_directory(child_path)) {
+    for (const directory_name of DirAccess.get_directories_at(directory_path)) {
+      const child_relative_directory = relative_directory.path_join(directory_name);
+      if (!this._add_virtual_web_asset_directory(source_root, child_relative_directory)) {
         return false;
       }
     }
@@ -363,13 +503,95 @@ export class _ExportPlugin extends EditorExportPlugin {
     return false;
   }
 
-  _add_ios_web_bundle_files(root_path: string): void {
+  _add_ios_web_bundle_files(root_path: string, export_path: string = ""): void {
     if (!this._has_web_entry(root_path)) {
       return;
     }
 
-    print(`[Kirie][export] add iOS bundle web root: ${root_path}`);
-    this.add_apple_embedded_platform_bundle_file(root_path);
+    if (this._is_default_web_root(root_path)) {
+      print(`[Kirie][export] add iOS bundle web root: ${_ExportPlugin.DEFAULT_WEB_ROOT}`);
+      this.add_apple_embedded_platform_bundle_file(_ExportPlugin.DEFAULT_WEB_ROOT);
+      return;
+    }
+
+    const binary_name = export_path.get_file().get_basename();
+    if (binary_name.is_empty()) {
+      print(`[Kirie][export] add iOS bundle web root: ${root_path}`);
+      this.add_apple_embedded_platform_bundle_file(root_path);
+      return;
+    }
+
+    this._pending_ios_web_source_dir = root_path;
+    this._pending_ios_web_binary_dir = export_path.get_base_dir().path_join(binary_name);
+    print(`[Kirie][export] add external iOS bundle web root: ${root_path}`);
+    this.add_apple_embedded_platform_bundle_file(binary_name.path_join("src-web/dist"));
+  }
+
+  _flush_pending_ios_web_bundle_files(export_path: string): void {
+    if (this._pending_ios_web_source_dir.is_empty()) {
+      return;
+    }
+
+    const source_dir = this._pending_ios_web_source_dir;
+    const binary_dir = export_path.is_empty()
+      ? this._pending_ios_web_binary_dir
+      : export_path.get_base_dir().path_join(export_path.get_file().get_basename());
+    this._pending_ios_web_source_dir = "";
+    this._pending_ios_web_binary_dir = "";
+    if (binary_dir.is_empty() || !DirAccess.dir_exists_absolute(binary_dir)) {
+      return;
+    }
+
+    const target_dir = binary_dir.path_join("src-web/dist");
+    if (!this._copy_directory_recursive(source_dir, target_dir)) {
+      return;
+    }
+
+    print(`[Kirie][export] staged iOS bundle web root: ${source_dir} -> ${target_dir}`);
+  }
+
+  _copy_directory_recursive(source_dir: string, target_dir: string): boolean {
+    if (DirAccess.make_dir_recursive_absolute(target_dir) !== Error.OK) {
+      const message = `[Kirie][export] failed to create iOS web bundle directory: ${target_dir}`;
+      push_error(message);
+      assert(false, message);
+      return false;
+    }
+
+    for (const file_name of DirAccess.get_files_at(source_dir)) {
+      const source_file_path = source_dir.path_join(file_name);
+      const source_file = FileAccess.open(source_file_path, FileAccess.READ);
+      if (source_file === null) {
+        const message = `[Kirie][export] iOS web bundle file not readable: ${source_file_path}`;
+        push_error(message);
+        assert(false, message);
+        return false;
+      }
+
+      const target_file_path = target_dir.path_join(file_name);
+      const target_file = FileAccess.open(target_file_path, FileAccess.WRITE);
+      if (target_file === null) {
+        const message = `[Kirie][export] iOS web bundle file not writable: ${target_file_path}`;
+        push_error(message);
+        assert(false, message);
+        return false;
+      }
+
+      target_file.store_buffer(source_file.get_buffer(source_file.get_length()));
+    }
+
+    for (const directory_name of DirAccess.get_directories_at(source_dir)) {
+      if (
+        !this._copy_directory_recursive(
+          source_dir.path_join(directory_name),
+          target_dir.path_join(directory_name),
+        )
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   _add_ios_native_plugin(is_debug: boolean): void {
@@ -433,6 +655,9 @@ export class _ExportPlugin extends EditorExportPlugin {
 export namespace _ExportPlugin {
   export const PLUGIN_NAME = "Kirie";
   export const DEFAULT_WEB_ROOT = "res://src-web/dist";
+  export const WEBVIEW_PLUGIN_ID = "webview";
+  export const PLUGINS_ARG = "--kirie-plugins";
+  export const WEB_DIST_ARG = "--kirie-web-dist";
   export const OPTION_ENABLE_WEB_INSPECTOR = "kirie/debug/enable_web_inspector";
   export const OPTION_ALLOW_TLS_BYPASS = "kirie/debug/allow_tls_bypass";
   export const ANDROID_MAVEN_LOCAL_ARG = "--kirie-android-maven-local";

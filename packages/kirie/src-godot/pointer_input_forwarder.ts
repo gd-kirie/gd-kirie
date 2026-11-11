@@ -57,6 +57,7 @@ export class _PointerInputForwarder extends RefCounted {
     value: unknown,
     enabled: boolean,
     cef_control: Control | null = null,
+    parent_node: Node | null = null,
   ): boolean {
     if (!(value instanceof Dictionary)) {
       return false;
@@ -81,7 +82,7 @@ export class _PointerInputForwarder extends RefCounted {
       return true;
     }
 
-    const event = this._create_event(input_candidate, cef_control);
+    const event = this._create_event(input_candidate, cef_control, parent_node);
     if (event === null) {
       return true;
     }
@@ -90,7 +91,11 @@ export class _PointerInputForwarder extends RefCounted {
     return true;
   }
 
-  _create_event(input: Dictionary, cef_control: Control | null): InputEvent | null {
+  _create_event(
+    input: Dictionary,
+    cef_control: Control | null,
+    parent_node: Node | null = null,
+  ): InputEvent | null {
     const normalized_x = input.get("normalized_x", NAN);
     const normalized_y = input.get("normalized_y", NAN);
     const pointer_id_value = input.get("pointer_id", 0);
@@ -119,7 +124,7 @@ export class _PointerInputForwarder extends RefCounted {
     }
 
     normalized_position = normalized_position.clamp(Vector2.ZERO, Vector2.ONE);
-    const position = this._resolve_window_position(normalized_position, cef_control);
+    const position = this._resolve_window_position(normalized_position, cef_control, parent_node);
     const pointer_id = int(pointer_id_value);
     const phase = `${input.get("phase", "")}`;
     if (phase !== "down" && phase !== "move" && phase !== "up" && phase !== "cancel") {
@@ -247,8 +252,21 @@ export class _PointerInputForwarder extends RefCounted {
     return button;
   }
 
-  _resolve_window_position(normalized_position: Vector2, cef_control: Control | null): Vector2 {
+  _resolve_window_position(
+    normalized_position: Vector2,
+    cef_control: Control | null,
+    parent_node: Node | null = null,
+  ): Vector2 {
     if (cef_control === null) {
+      const viewport = this._resolve_active_viewport(parent_node);
+      if (viewport !== null) {
+        const viewport_size = viewport.get_visible_rect().size;
+        if (viewport_size.x > 0.0 && viewport_size.y > 0.0) {
+          const viewport_position = gd.ops.mul(normalized_position, viewport_size);
+          return gd.ops.mul(viewport.get_final_transform(), viewport_position);
+        }
+      }
+
       return gd.ops.mul(normalized_position, Vector2(DisplayServer.window_get_size()));
     }
 
@@ -258,6 +276,23 @@ export class _PointerInputForwarder extends RefCounted {
       local_position,
     );
     return gd.ops.mul(cef_control.get_viewport().get_final_transform(), viewport_position);
+  }
+
+  _resolve_active_viewport(parent_node: Node | null = null): Viewport | null {
+    if (parent_node !== null && is_instance_valid(parent_node) && parent_node.is_inside_tree()) {
+      return parent_node.get_viewport();
+    }
+
+    const main_loop = Engine.get_main_loop();
+    if (!(main_loop instanceof SceneTree)) {
+      return null;
+    }
+
+    if (main_loop.current_scene !== null && main_loop.current_scene.is_inside_tree()) {
+      return main_loop.current_scene.get_viewport();
+    }
+
+    return main_loop.root;
   }
 
   _dispatch_event(event: InputEvent, cef_control: Control | null): void {

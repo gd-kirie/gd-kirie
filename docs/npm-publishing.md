@@ -55,10 +55,7 @@ pnpm rewrites them to published version ranges when packing or publishing.
    mise run release
    ```
 
-   `bumpp` updates package versions, including the version used by the
-   `kirie/plugin/core` descriptor, runs a package build and
-   `pnpm publish -r --dry-run`, then creates a local release commit and
-   `v<version>` tag.
+   `bumpp` updates package versions in workspace manifests and in the `kirie/plugin/core` and `kirie/plugin/webview` descriptors. It then runs a package build, runs `pnpm publish -r --dry-run`, and creates a local release commit and `v<version>` tag.
 
 2. Make the release commit reachable from `origin/main`, normally by merging
    the release pull request without pushing the generated tag. If the merge

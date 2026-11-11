@@ -2,12 +2,19 @@ import { type CommandContext, type CommandDef, defineCommand, type ParsedArgs } 
 
 import packageJson from "../../package.json" with { type: "json" };
 import { runBuild, runBuildDotnet, runBuildWeb } from "./build.ts";
+import { assertConfiguredTarget, loadKirieConfig } from "./config.ts";
 import { type DevTarget, runDev } from "./dev.ts";
 import { type DoctorTarget, runDoctor } from "./doctor/index.ts";
 import { runExport } from "./export.ts";
 import { runInit } from "./init.ts";
 import { exportIosApp } from "./ios.ts";
-import { isIosSimulatorDevice, runAndroid, runDesktop, runIos } from "./run.ts";
+import {
+  isIosSimulatorDevice,
+  runAndroid,
+  runAutoTarget,
+  runDesktop,
+  runIos,
+} from "./run.ts";
 
 const exportArgs = {
   build: { description: "Build local inputs before export.", type: "boolean" },
@@ -24,7 +31,7 @@ const projectArgs = {
 const doctorArgs = {
   ...projectArgs,
   target: {
-    description: "Optional target: web or plugin:<id>.",
+    description: "Optional target: desktop, ios, android, web, or plugin:<id>.",
     required: false,
     type: "positional",
   },
@@ -112,7 +119,18 @@ const iosDevArgs = {
   app: { description: "iOS simulator .app output path.", type: "string" },
 } as const;
 
-type DevCommandArgs = Partial<ParsedArgs<typeof androidDevArgs> & ParsedArgs<typeof iosDevArgs>>;
+const allDevArgs = {
+  ...androidDevArgs,
+  ...iosDevArgs,
+} as const;
+
+const allRunArgs = {
+  ...desktopRunArgs,
+  ...androidRunArgs,
+  ...iosRunArgs,
+} as const;
+
+type DevCommandArgs = Partial<ParsedArgs<typeof allDevArgs>>;
 
 function parseUserArgs(rawArgs: string[]): string[] {
   const separatorIndex = rawArgs.indexOf("--");
@@ -121,6 +139,36 @@ function parseUserArgs(rawArgs: string[]): string[] {
   }
 
   return rawArgs.slice(separatorIndex + 1);
+}
+
+function firstPositionalBeforeDoubleDash(
+  args: { _?: string[] },
+  rawArgs: string[],
+): string | undefined {
+  const separatorIndex = rawArgs.indexOf("--");
+  const trailingCount = separatorIndex >= 0
+    ? rawArgs.length - separatorIndex - 1
+    : 0;
+  const allPositionals = args._ ?? [];
+  const beforeDashCount = Math.max(0, allPositionals.length - trailingCount);
+  return beforeDashCount > 0
+    ? allPositionals[0]
+    : undefined;
+}
+
+function runDesktopExportCommand({
+  args,
+  rawArgs,
+}: CommandContext<typeof exportArgs>): Promise<void> {
+  return runExport({
+    build: args.build !== false,
+    cwd: args.project,
+    output: args.output,
+    platform: "desktop",
+    preset: args.preset,
+    release: args.release,
+    userArgs: parseUserArgs(rawArgs),
+  });
 }
 
 function runAndroidExportCommand({
@@ -150,8 +198,31 @@ function runWebExportCommand({ args, rawArgs }: CommandContext<typeof exportArgs
   });
 }
 
-async function runIosExportCommand({ args }: CommandContext<typeof iosExportArgs>): Promise<void> {
-  const targetIsSimulator = !args.device || (await isIosSimulatorDevice(args.device, args.project));
+async function runIosExportCommand({
+  args,
+  rawArgs,
+}: CommandContext<typeof iosExportArgs>): Promise<void> {
+  const config = await loadKirieConfig({
+    command: "build",
+    cwd: args.project,
+  });
+  const iosTarget = assertConfiguredTarget(config, "ios", "kirie export ios");
+  const userArgs = parseUserArgs(rawArgs);
+
+  if (iosTarget.host === "native" && !iosTarget.project) {
+    await runExport({
+      build: args.build !== false,
+      config,
+      output: args.output,
+      platform: "ios",
+      preset: args.preset,
+      release: args.release,
+      userArgs,
+    });
+    return;
+  }
+
+  const targetIsSimulator = !args.device || (await isIosSimulatorDevice(args.device, config.cwd));
   const configuration = args.release ? "release" : "debug";
 
   await exportIosApp({
@@ -161,17 +232,26 @@ async function runIosExportCommand({ args }: CommandContext<typeof iosExportArgs
         ? `dist/kirie/ios/${configuration}.app`
         : `dist/kirie/ios/device_${configuration}.app`),
     build: args.build !== false,
-    cwd: args.project,
+    config,
+    cwd: config.cwd,
     device: args.device,
     preset: args.preset,
     release: args.release,
     target: targetIsSimulator ? "simulator" : "device",
+    userArgs,
   });
 }
 
-function runDevCommand(target: DevTarget) {
-  return ({ args, rawArgs }: { args: DevCommandArgs; rawArgs: string[] }) =>
-    runDev({
+function runDevCommand(target: DevTarget | undefined) {
+  return ({ args, rawArgs }: { args: DevCommandArgs; rawArgs: string[] }): Promise<void> => {
+    const unknownTarget = target === undefined
+      ? firstPositionalBeforeDoubleDash(args, rawArgs)
+      : undefined;
+    if (unknownTarget) {
+      throw new Error(`Unknown dev target: ${unknownTarget}`);
+    }
+
+    return runDev({
       appPath: args.app,
       clearData: args["clear-data"],
       clearLogcat: args["clear-logcat"],
@@ -190,11 +270,12 @@ function runDevCommand(target: DevTarget) {
       target,
       terminateExisting: args["terminate-existing"],
     });
+  };
 }
 
-function parseLaunchOptions(rawOption: string | undefined): Record<string, string> {
+function parseLaunchOptions(rawOption: string | undefined): Record<string, string> | undefined {
   if (!rawOption) {
-    return {};
+    return undefined;
   }
 
   const separatorIndex = rawOption.indexOf("=");
@@ -259,7 +340,12 @@ export function parseDoctorTarget(
   if (!rawTarget) {
     return undefined;
   }
-  if (rawTarget === "web") {
+  if (
+    rawTarget === "desktop" ||
+    rawTarget === "ios" ||
+    rawTarget === "android" ||
+    rawTarget === "web"
+  ) {
     return rawTarget;
   }
   if (rawTarget.startsWith("plugin:") && rawTarget.length > "plugin:".length) {
@@ -276,32 +362,47 @@ export const mainCommand: CommandDef = defineCommand({
   },
   subCommands: {
     build: defineCommand({
+      args: projectArgs,
       default: "all",
       meta: { description: "Build local Kirie project inputs.", name: "build" },
       subCommands: {
         all: defineCommand({
+          args: projectArgs,
           meta: { hidden: true, name: "all" },
-          run: () => runBuild(),
+          run: ({ args, rawArgs }) => {
+            const unknownTarget = firstPositionalBeforeDoubleDash(args, rawArgs);
+            if (unknownTarget) {
+              throw new Error(`Unknown build target: ${unknownTarget}`);
+            }
+            return runBuild({ cwd: args.project });
+          },
         }),
         dotnet: defineCommand({
+          args: projectArgs,
           meta: { description: "Build the Godot C#/.NET project.", name: "dotnet" },
-          run: () => runBuildDotnet(),
+          run: ({ args }) => runBuildDotnet({ cwd: args.project }),
         }),
         web: defineCommand({
+          args: projectArgs,
           meta: { description: "Build the Vite web output.", name: "web" },
-          run: () => runBuildWeb(),
+          run: ({ args }) => runBuildWeb({ cwd: args.project }),
         }),
       },
     }),
     dev: defineCommand({
-      args: devArgs,
-      default: "desktop",
-      meta: { description: "Start Vite and launch Godot for development.", name: "dev" },
+      args: allDevArgs,
+      default: "auto",
+      meta: { description: "Start development runtime for a configured Kirie target.", name: "dev" },
       subCommands: {
+        auto: defineCommand({
+          args: allDevArgs,
+          meta: { hidden: true, name: "auto" },
+          run: runDevCommand(undefined),
+        }),
         android: defineCommand({
           args: androidDevArgs,
           meta: {
-            description: "Export, install, and launch Android with Vite dev.",
+            description: "Export, install, and launch Android for development.",
             name: "android",
           },
           run: runDevCommand("android"),
@@ -309,7 +410,7 @@ export const mainCommand: CommandDef = defineCommand({
         desktop: defineCommand({
           args: devArgs,
           meta: {
-            description: "Start Vite and launch Godot for desktop development.",
+            description: "Launch Godot desktop for development.",
             name: "desktop",
           },
           run: runDevCommand("desktop"),
@@ -317,7 +418,7 @@ export const mainCommand: CommandDef = defineCommand({
         ios: defineCommand({
           args: iosDevArgs,
           meta: {
-            description: "Export, install, and launch iOS with Vite dev.",
+            description: "Export, install, and launch iOS for development.",
             name: "ios",
           },
           run: runDevCommand("ios"),
@@ -358,16 +459,21 @@ export const mainCommand: CommandDef = defineCommand({
       },
     }),
     export: defineCommand({
-      meta: { description: "Export a Kirie project through Godot.", name: "export" },
+      meta: { description: "Export a Kirie project for a configured target.", name: "export" },
       subCommands: {
         android: defineCommand({
           args: exportArgs,
-          meta: { description: "Export the Android Godot preset.", name: "android" },
+          meta: { description: "Export the Android target.", name: "android" },
           run: runAndroidExportCommand,
+        }),
+        desktop: defineCommand({
+          args: exportArgs,
+          meta: { description: "Export the Desktop target.", name: "desktop" },
+          run: runDesktopExportCommand,
         }),
         ios: defineCommand({
           args: iosExportArgs,
-          meta: { description: "Build an installable iOS app.", name: "ios" },
+          meta: { description: "Export the iOS target.", name: "ios" },
           run: runIosExportCommand,
         }),
         web: defineCommand({
@@ -378,10 +484,36 @@ export const mainCommand: CommandDef = defineCommand({
       },
     }),
     run: defineCommand({
-      args: desktopRunArgs,
-      default: "desktop",
+      args: allRunArgs,
+      default: "auto",
       meta: { description: "Launch a Kirie project or exported app.", name: "run" },
       subCommands: {
+        auto: defineCommand({
+          args: allRunArgs,
+          meta: { hidden: true, name: "auto" },
+          run: ({ args, rawArgs }) => {
+            const unknownTarget = firstPositionalBeforeDoubleDash(args, rawArgs);
+            if (unknownTarget) {
+              throw new Error(`Unknown run target: ${unknownTarget}`);
+            }
+            const userArgs = parseUserArgs(rawArgs);
+            return runAutoTarget({
+              appArgs: userArgs,
+              appPath: args.app,
+              attachLogcat: !args["no-logcat"],
+              clearData: args["clear-data"],
+              clearLogcat: args["clear-logcat"],
+              cwd: args.project,
+              device: args.device,
+              forceStop: args["force-stop"],
+              godotArgs: userArgs,
+              godotCommand: args.godot,
+              launchOptions: parseLaunchOptions(args["launch-option"]),
+              skipInstall: args["skip-install"],
+              terminateExisting: args["terminate-existing"],
+            });
+          },
+        }),
         android: defineCommand({
           args: androidRunArgs,
           meta: { description: "Install and launch an Android export.", name: "android" },

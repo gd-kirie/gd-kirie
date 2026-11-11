@@ -25,9 +25,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="contentFiles/**/*.cs" />
+    <Compile Remove="content/**/*.cs" />
     <None Include="README.md" Pack="true" PackagePath="\" />
-    <None Include="contentFiles/cs/any/GdKirie.EventaAdapter/*.cs" Pack="true" PackagePath="contentFiles/cs/any/GdKirie.EventaAdapter" BuildAction="Compile" />
+    <None Include="content/KirieClientEventaBridge.cs" Pack="true" PackagePath="content/KirieClientEventaBridge.cs" />
+    <None Include="buildTransitive/GdKirie.EventaAdapter.targets" Pack="true" PackagePath="build;buildTransitive" />
   </ItemGroup>
 
 </Project>

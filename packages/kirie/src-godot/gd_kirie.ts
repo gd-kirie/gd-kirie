@@ -37,6 +37,7 @@ export class GdKirie extends GodotObject {
   }
 
   _plugin_singleton: TSOnly<GodotObject> | null = null;
+  _parent_node: Node | null = null;
   _view_id = this.get_instance_id();
   _pointer_input_forwarder = new _PointerInputForwarder();
 
@@ -90,6 +91,7 @@ export class GdKirie extends GodotObject {
       return;
     }
 
+    this._parent_node = parent_node;
     if (this._web_backend !== null) {
       this._web_backend.create_webview(initial_url, this._webview_visible);
       return;
@@ -136,6 +138,7 @@ export class GdKirie extends GodotObject {
   }
 
   destroy_webview(): void {
+    this._parent_node = null;
     if (this._web_backend !== null) {
       this._web_backend.destroy_webview();
       return;
@@ -728,6 +731,7 @@ export class GdKirie extends GodotObject {
         value,
         this.pointer_input_forwarding_enabled && this._webview_visible,
         cef_control,
+        this._parent_node,
       )
     ) {
       return;

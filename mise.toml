@@ -52,7 +52,7 @@ depends = ["build:packages"]
 usage = '''
 arg "<godot_project_dir>" help="Godot project directory to install the addon into"
 '''
-run = 'pnpm exec kirie doctor --fix plugin:core --project "${usage_godot_project_dir?}"'
+run = 'pnpm exec kirie doctor --fix plugin:webview --project "${usage_godot_project_dir?}"'
 
 [tasks."build:native-artifacts"]
 description = "Build Kirie addon native artifacts"

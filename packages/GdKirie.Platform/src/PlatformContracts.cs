@@ -5,22 +5,6 @@ namespace GdKirie.Platform;
 
 internal sealed record EmptyPayload;
 
-internal sealed record PointerPositionPayload(
-    int X,
-    int Y,
-    bool Inside);
-
-internal sealed record BoundsPayload(
-    int X,
-    int Y,
-    int Width,
-    int Height);
-
-internal sealed record WindowStatePayload(
-    bool Focused,
-    bool Minimized,
-    bool Visible);
-
 internal sealed record GlobalShortcutPayload(
     long Keycode,
     bool ShiftPressed,
@@ -48,22 +32,22 @@ internal static class PlatformEvents
     public static readonly InvokeEventDefinition<EmptyPayload, EmptyPayload> Center =
         new($"{HostWindowPrefix}:center");
 
-    public static readonly InvokeEventDefinition<BoundsPayload, EmptyPayload> GetBounds =
+    public static readonly InvokeEventDefinition<KirieWindowBounds, EmptyPayload> GetBounds =
         new($"{HostWindowPrefix}:get-bounds");
 
-    public static readonly InvokeEventDefinition<BoundsPayload, EmptyPayload> GetCurrentDisplayBounds =
+    public static readonly InvokeEventDefinition<KirieWindowBounds, EmptyPayload> GetCurrentDisplayBounds =
         new($"{HostWindowPrefix}:get-current-display-bounds");
 
-    public static readonly InvokeEventDefinition<PointerPositionPayload, EmptyPayload> GetPointerPosition =
+    public static readonly InvokeEventDefinition<KiriePointerPosition, EmptyPayload> GetPointerPosition =
         new($"{HostWindowPrefix}:get-pointer-position");
 
-    public static readonly EventDefinition<PointerPositionPayload> PointerPositionChanged =
+    public static readonly EventDefinition<KiriePointerPosition> PointerPositionChanged =
         new($"{HostWindowPrefix}:pointer-position-changed");
 
-    public static readonly InvokeEventDefinition<WindowStatePayload, EmptyPayload> GetState =
+    public static readonly InvokeEventDefinition<KirieWindowState, EmptyPayload> GetState =
         new($"{HostWindowPrefix}:get-state");
 
-    public static readonly EventDefinition<WindowStatePayload> StateChanged =
+    public static readonly EventDefinition<KirieWindowState> StateChanged =
         new($"{HostWindowPrefix}:state-changed");
 
     public static readonly InvokeEventDefinition<EmptyPayload, bool> SetAlwaysOnTop =
@@ -95,9 +79,9 @@ internal static class PlatformEvents
 [JsonSerializable(typeof(EmptyPayload))]
 [JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(string))]
-[JsonSerializable(typeof(PointerPositionPayload))]
-[JsonSerializable(typeof(BoundsPayload))]
-[JsonSerializable(typeof(WindowStatePayload))]
+[JsonSerializable(typeof(KiriePointerPosition))]
+[JsonSerializable(typeof(KirieWindowBounds))]
+[JsonSerializable(typeof(KirieWindowState))]
 [JsonSerializable(typeof(GlobalShortcutPayload))]
 [JsonSerializable(typeof(GlobalShortcutKeyEventPayload))]
 internal sealed partial class PlatformJsonContext : JsonSerializerContext;

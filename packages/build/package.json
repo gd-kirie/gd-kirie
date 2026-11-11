@@ -17,6 +17,9 @@
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -34,6 +37,11 @@
   },
   "peerDependencies": {
     "vite": "^7.0.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public",

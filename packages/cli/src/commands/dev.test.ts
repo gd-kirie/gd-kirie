@@ -5,7 +5,13 @@ import { execa } from "execa";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWebDevHostUrl, resolveAndroidReverseWebUrl, runDev } from "./dev.ts";
-import { createKirieDevLaunchOptions, runIosSimulator } from "./run.ts";
+import {
+  createKirieDevLaunchOptions,
+  parseAaptBadgingOutput,
+  readIosAppBundleId,
+  runAndroid,
+  runIosSimulator,
+} from "./run.ts";
 import {
   createCliProjectTracker,
   installGodotCefFixture,
@@ -51,6 +57,7 @@ describe("runDev", () => {
     await runDev({
       cwd: project,
       godotArgs: ["--verbose"],
+      target: "desktop",
     });
 
     const realProject = await fs.realpath(project);
@@ -78,6 +85,126 @@ describe("runDev", () => {
     ]);
     expect(devRun?.argv[4]).toMatch(/^--kirie-web-url=http:\/\/127\.0\.0\.1:\d+\/$/);
     expect(devRun?.argv[5]).toBe("--verbose");
+  });
+
+  it("runs WebView-less desktop dev without Vite or Godot CEF", async () => {
+    const project = await projects.copy();
+    await installProjectFixture(project, "fake-godot.js");
+    await fs.rm(path.join(project, "src-web"), { force: true, recursive: true });
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+export default {
+  godot: {
+    args: ["fake-godot.js"],
+    command: process.execPath,
+  },
+  plugins: [core],
+  targets: {
+    desktop: { host: "godot" },
+  },
+};
+`,
+    );
+
+    await execa(process.execPath, [cliPath, "dev", "--project", project], {
+      cwd: path.dirname(project),
+      stdio: "inherit",
+    });
+
+    const [prepareRun, devRun] = await readFakeGodotInvocations(project);
+    expect(prepareRun.argv).toEqual([
+      "--headless",
+      "--path",
+      project,
+      "--import",
+    ]);
+    expect(devRun.argv).toEqual(["--path", project]);
+  });
+
+  it("throws when multiple targets are configured and bare kirie dev or kirie run omits <target>", async () => {
+    const project = await projects.copy();
+    await installProjectFixture(project, "fake-godot.js");
+    await installKirieConfigFixture(project, "dev-fake-godot.kirie.config.ts");
+
+    const devResult = await execa(
+      process.execPath,
+      [cliPath, "dev", "--project", project],
+      {
+        cwd: path.dirname(project),
+        reject: false,
+      },
+    );
+    expect(devResult.exitCode).toBe(1);
+    expect(devResult.stderr).toContain(
+      "Multiple targets configured (desktop, ios, android, web); specify a target: kirie dev <target>",
+    );
+
+    const runResult = await execa(
+      process.execPath,
+      [cliPath, "run", "--project", project],
+      {
+        cwd: path.dirname(project),
+        reject: false,
+      },
+    );
+    expect(runResult.exitCode).toBe(1);
+    expect(runResult.stderr).toContain(
+      "Multiple targets configured (desktop, ios, android, web); specify a target: kirie run <target>",
+    );
+  });
+
+  it("auto-selects the sole configured target on bare kirie dev and kirie run", async () => {
+    const project = await projects.copy();
+    await installProjectFixture(project, "fake-godot.js");
+    await installGodotCefFixture(project);
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+import webview from "kirie/plugin/webview";
+export default {
+  godot: {
+    args: ["fake-godot.js"],
+    command: process.execPath,
+  },
+  plugins: [core, webview({ root: "./src-web", vite: { logLevel: "silent" } })],
+  targets: {
+    desktop: { host: "godot" },
+  },
+};
+`,
+    );
+
+    await execa(process.execPath, [cliPath, "dev", "--project", project], {
+      cwd: path.dirname(project),
+      stdio: "inherit",
+    });
+
+    const [, devRun] = await readFakeGodotInvocations(project, 2);
+    expect(devRun?.argv.slice(0, 4)).toEqual([
+      "--path",
+      project,
+      "--",
+      "--kirie-dev=1",
+    ]);
+
+    await execa(
+      process.execPath,
+      [
+        cliPath,
+        "run",
+        "--project",
+        project,
+        "--",
+        "--headless",
+      ],
+      {
+        cwd: path.dirname(project),
+        stdio: "inherit",
+      },
+    );
+    const invocations = await readFakeGodotInvocations(project, 3);
+    expect(invocations[2]?.argv).toEqual(["--path", project, "--headless"]);
   });
 
   it("creates typed Kirie dev launch options", () => {
@@ -139,7 +266,7 @@ describe("runDev", () => {
     );
   });
 
-  it("requires Android internet permission for Android dev", async () => {
+  it("requires Android internet permission for Android dev when webview is active", async () => {
     const project = await projects.copy();
     const exportPresetsPath = path.join(project, "export_presets.cfg");
     const exportPresets = await fs.readFile(exportPresetsPath, "utf8");
@@ -160,7 +287,7 @@ describe("runDev", () => {
     );
   });
 
-  it("requires project-only iOS export for iOS dev", async () => {
+  it("requires project-only iOS export for Godot-hosted iOS dev", async () => {
     const project = await projects.copy();
     const exportPresetsPath = path.join(project, "export_presets.cfg");
     const exportPresets = await fs.readFile(exportPresetsPath, "utf8");
@@ -184,7 +311,36 @@ describe("runDev", () => {
     );
   });
 
-  it("runs Android dev through adb reverse and loopback launch options", async () => {
+  it("fails fast on host: native Artifact mode (omitted project) for dev and run", async () => {
+    const project = await projects.copy();
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+export default {
+  plugins: [core],
+  targets: {
+    android: { host: "native" },
+    ios: { host: "native" },
+  },
+};
+`,
+    );
+
+    await expect(runDev({ cwd: project, target: "ios" })).rejects.toThrow(
+      "kirie dev ios requires targets.ios.project when host is \"native\"",
+    );
+    await expect(runDev({ cwd: project, target: "android" })).rejects.toThrow(
+      "kirie dev android requires targets.android.project when host is \"native\"",
+    );
+    await expect(runAndroid({ cwd: project })).rejects.toThrow(
+      "kirie run android requires targets.android.project when host is \"native\"",
+    );
+    await expect(runIosSimulator({ cwd: project })).rejects.toThrow(
+      "kirie run ios requires targets.ios.project when host is \"native\"",
+    );
+  });
+
+  it("runs Android dev through adb reverse, builds missing web dist, and passes loopback launch options", async () => {
     const project = await projects.copy();
 
     await installProjectFixture(project, "fake-godot.js");
@@ -201,6 +357,10 @@ describe("runDev", () => {
     } finally {
       process.env.PATH = originalPath;
     }
+
+    await expect(fs.access(path.join(project, "src-web", "dist", "index.html"))).resolves.toBe(
+      undefined,
+    );
 
     const adbInvocations = await readFakeAdbInvocations(project);
     const waitForDeviceRun = adbInvocations.findIndex(
@@ -222,26 +382,64 @@ describe("runDev", () => {
     expect(launchRun?.argv).toContain(`http://127.0.0.1:${reverseRun?.argv[1].slice(4)}/`);
   });
 
-  it("keeps the CLI dev command defaulting to desktop", async () => {
-    const project = await projects.copy();
-
-    await installProjectFixture(project, "fake-godot.js");
-    await installKirieConfigFixture(project, "dev-fake-godot.kirie.config.ts");
-    await installGodotCefFixture(project);
-
-    await execa(process.execPath, [cliPath, "dev", "--project", project], {
-      cwd: path.dirname(project),
-      stdio: "inherit",
+  it("resolves native Android launcher activity and iOS app Info.plist CFBundleIdentifier", async () => {
+    expect(
+      parseAaptBadgingOutput(
+        "package: name='com.example.host' versionCode='1'\nlaunchable-activity: name='.MainActivity' label='Host'\n",
+      ),
+    ).toEqual({
+      activityComponent: "com.example.host/com.example.host.MainActivity",
+      packageName: "com.example.host",
     });
 
-    const [, devRun] = await readFakeGodotInvocations(project);
+    const project = await projects.copy();
+    const appDir = path.join(project, "dist", "kirie", "ios", "debug.app");
+    await fs.mkdir(appDir, { recursive: true });
+    await fs.writeFile(
+      path.join(appDir, "Info.plist"),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.example.nativeios</string>
+</dict>
+</plist>
+`,
+    );
+    await expect(readIosAppBundleId(appDir)).resolves.toBe("com.example.nativeios");
 
-    expect(devRun?.argv.slice(0, 4)).toEqual([
-      "--path",
-      project,
-      "--",
-      "--kirie-dev=1",
-    ]);
+    const hostDir = path.join(project, "android-host", "app");
+    await fs.mkdir(hostDir, { recursive: true });
+    await fs.writeFile(
+      path.join(hostDir, "build.gradle.kts"),
+      "android {\n  defaultConfig {\n    applicationId = \"com.example.nativeandroid\"\n  }\n}\n",
+    );
+    await fs.writeFile(
+      path.join(project, "kirie.config.ts"),
+      `import core from "kirie/plugin/core";
+export default {
+  plugins: [core],
+  targets: {
+    android: {
+      host: "native",
+      module: ":app",
+      project: "./android-host",
+    },
+  },
+};
+`,
+    );
+    await installFakeAdb(project, "com.example.nativeandroid/.CardHostActivity");
+
+    vi.stubEnv("PATH", `${path.join(project, "fake-bin")}${path.delimiter}${process.env.PATH ?? ""}`);
+    await runAndroid({
+      attachLogcat: false,
+      cwd: project,
+    });
+
+    const adbInvocations = await readFakeAdbInvocations(project);
+    const startRun = adbInvocations.find((inv) => inv.argv.includes("start"));
+    expect(startRun?.argv).toContain("com.example.nativeandroid/.CardHostActivity");
   });
 
   it.each([
@@ -395,7 +593,7 @@ describe("runDev", () => {
       runDev({
         cwd: project,
       }),
-    ).rejects.toThrow("web.vite.server.port is owned by Kirie");
+    ).rejects.toThrow("webview.vite.server.port is owned by Kirie");
   });
 
   it("fails clearly when src-web/index.html is missing", async () => {
@@ -407,16 +605,17 @@ describe("runDev", () => {
     await expect(
       runDev({
         cwd: project,
+        target: "desktop",
       }),
     ).rejects.toThrow(/Kirie dev requires .*index\.html/);
   });
 
-  it("requires Godot CEF before starting desktop dev", async () => {
+  it("requires Godot CEF before starting desktop dev when webview is configured", async () => {
     const project = await projects.copy();
     await installKirieConfigFixture(project, "dev-log-silent.kirie.config.ts");
 
-    await expect(runDev({ cwd: project })).rejects.toThrow(
-      "Run: pnpm kirie doctor --fix plugin:core",
+    await expect(runDev({ cwd: project, target: "desktop" })).rejects.toThrow(
+      "Run: pnpm kirie doctor --fix plugin:webview",
     );
 
     await expect(fs.stat(path.join(project, FAKE_GODOT_INVOCATIONS_FILE))).rejects.toMatchObject({
@@ -436,7 +635,10 @@ async function readFakeGodotInvocations(
   return invocations;
 }
 
-async function installFakeAdb(project: string): Promise<void> {
+async function installFakeAdb(
+  project: string,
+  resolvedActivity = "org.gd_kirie.cli_test/com.godot.game.GodotAppLauncher",
+): Promise<void> {
   const fakeBinDir = path.join(project, "fake-bin");
   const fakeAdbPath = path.join(fakeBinDir, "adb");
 
@@ -452,6 +654,10 @@ const argv = process.argv.slice(2);
 
 invocations.push({ argv, cwd: process.cwd() });
 writeFileSync(file, JSON.stringify(invocations));
+
+if (argv.includes("resolve-activity")) {
+  process.stdout.write("priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true\\n${resolvedActivity}\\n");
+}
 
 if (argv.includes("pidof")) {
   process.stdout.write("123\\n");

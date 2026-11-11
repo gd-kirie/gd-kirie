@@ -1,35 +1,21 @@
 # Architecture Notes
 
-Kirie is evolving into an application framework with an embeddable low-level
-Godot plugin and IPC core. The repository scope is still intentionally
-constrained, but the constraint now applies to where higher-level behavior
-belongs, not to limiting the whole project to a minimum plugin shape.
+Kirie is an application framework built around a low-level Godot WebView addon, a typed IPC core, and optional native mobile shell integration. Projects can run as Godot-owned applications (`host: "godot"`) or inside SwiftUI and Android host applications (`host: "native"`) that embed Godot. Higher-level protocols, host capabilities, and CLI workflows live in packages above the low-level core.
 
-The low-level plugin and IPC core provide:
+The low-level addon and IPC core provide:
 
-- a Godot-facing Kirie service
-- a scene-friendly KirieNode node
-- a thin C# KirieClient wrapper for .NET projects
+- a Godot-facing `GdKirie` service
+- a scene-tree `KirieNode` owner
+- a thin C# `KirieClient` wrapper for .NET projects
 - Android and iOS native WebView implementations
-- a desktop Godot CEF backend, starting with macOS
+- a desktop Godot CEF backend
 - an iframe backend for Godot Web exports
-- packaged `res://` web resource loading for native exported apps
-- a repo-level platform integration test project
+- packaged `res://` web resource loading for exported applications
+- a repository-level platform integration test project
 
-Application-framework behavior such as CLI workflows, host-window
-capabilities, routing, export orchestration, and mobile development sessions
-belongs above that core. The current `@gd-kirie/ipc` package is intentionally
-only a browser-side transport wrapper on top of the platform bridge, including
-same-origin iframe messages on Web. Eventa
-adapters and Platform capability packages live above Kirie and use that
-low-level text transport.
+Application-framework behavior such as CLI workflows, host capabilities, export orchestration, native mobile embedding, and mobile development sessions lives above that core. `@gd-kirie/ipc` wraps the browser-side platform bridge across mobile WebViews, desktop Godot CEF, and same-origin Web iframes. Eventa adapters and Platform capability packages sit above Kirie and use its text IPC transport or the native `KirieHost` bridge.
 
-The mobile IPC experiment keeps Kirie core byte-oriented and CBOR-based while
-preserving separate text, binary, and data lanes. Higher-level protocols,
-including Eventa adapters, remain above Kirie. Android carries CBOR packets
-through AndroidX WebKit ArrayBuffer message channels. iOS carries CBOR packets
-as base64 strings through WKWebView script messages and keeps native
-serialization coverage for the same lane payload contract.
+Mobile WebView IPC keeps Kirie core byte-oriented and CBOR-based across explicit `text`, `binary`, and `data` lanes. Android carries CBOR packets through AndroidX WebKit ArrayBuffer message channels. iOS carries CBOR packets as base64 strings through WKWebView script messages with matching lane payload semantics.
 
 ## Current Godot API direction
 
@@ -117,52 +103,36 @@ BrowserWindow facade or add these capabilities to GDScript.
 
 ## Platform capability layer
 
-The Platform layer exposes confirmed host-owned capabilities that ordinary Web
-APIs cannot provide. Its dependency direction is:
+The Platform layer exposes host-owned capabilities that standard Web APIs do not provide. Its dependency direction is:
 
 ```text
 @gd-kirie/platform -> @gd-kirie/ipc-eventa -> @gd-kirie/ipc
 GdKirie.Platform -> GdKirie.EventaAdapter
 ```
 
-The browser client borrows the application's existing `KirieEventaContext`.
-The Godot host registers the matching Eventa contract against that context and
-binds its lifetime to one explicit `Window`; neither package creates a second
-IPC owner.
+The browser client borrows an application-owned `KirieEventaContext`. `GdKiriePlatform.Attach(context, hostWindow, windowBackend)` registers the matching Eventa contract on that context and binds its lifetime to one explicit Godot `Window`. Neither package creates a competing IPC owner.
+
+`GdKirie.Platform` separates window-owned operations behind `IKirieWindowBackend`. When `windowBackend` is `null` and `!hostWindow.IsEmbedded()`, `Attach` creates the internal `GodotWindowBackend`. When `hostWindow.IsEmbedded()` is `true` and `windowBackend` is `null`, `Attach` still succeeds and registers operating-system, Back, and shortcut capabilities. Window-owned invokes throw `PlatformNotSupportedException` on an embedded window unless the caller supplies an `IKirieWindowBackend` implementation.
+
+Host-owned mobile shells (`host: "native"`) can run Eventa RPC without a WebView. `KirieHostTextTransport` in `GdKirie.Platform` implements `IKirieTextTransport` over the native `KirieHost` Godot singleton. It listens to the `host_message_received` signal and marshals `SendText` calls to `send_to_host` on the Godot main thread.
 
 The implemented Platform capabilities are:
 
 - opening absolute HTTP and HTTPS URLs with the system browser
-- opening the current application's data directory
+- opening the active Godot user data directory
 - host-window bounds snapshots in screen coordinates
 - current-display bounds snapshots in screen coordinates
-- unscaled pixel position snapshots and change events relative to the host window
+- unscaled pixel pointer snapshots and change events relative to the host window
 - pointer passthrough
 - native move and resize gestures
-- always-on-top
+- always-on-top state
 - centering on the current display
 - system-wide global shortcuts on macOS and Windows
 - [Android system Back requests](decisions/0005-add-android-system-back-to-the-platform-layer.md)
 
-Global shortcuts use Godot logical keys and explicit register/unregister
-operations. The browser receives pressed and released states through one
-`onKeyEvent` handler, including while the Godot window is hidden or unfocused.
-The registration lifetime belongs to `GdKiriePlatformHost`. macOS uses Carbon
-hot-key registration. Windows shares one lazy `WH_KEYBOARD_LL` hook across
-Platform hosts, filters it to host-owned registrations, and posts accepted
-state changes to Godot's main thread. The Windows choice and its non-exclusive
-conflict semantics are recorded in
-[ADR-0003](decisions/0003-use-a-low-level-keyboard-hook-for-windows-global-shortcuts.md).
-Linux global-shortcut backends remain pending work rather than excluded
-platforms.
+Global shortcuts use Godot logical keys with explicit register and unregister calls. The browser receives `pressed` and `released` states through one `onKeyEvent` handler while the Godot window is hidden or unfocused. Registration lifetime belongs to `GdKiriePlatformHost`. macOS uses Carbon hot-key registration, and Windows shares one lazy `WH_KEYBOARD_LL` hook across Platform hosts, as recorded in [ADR-0003](decisions/0003-use-a-low-level-keyboard-hook-for-windows-global-shortcuts.md). Platform does not yet implement a Linux global-shortcut backend.
 
-Android system Back is forwarded from the bound window's
-`Window.GoBackRequested` signal. The browser subscribes to the exported
-`backRequested` contract and decides whether it changes the route or closes the
-application. The application keeps Godot's `SceneTree.quit_on_go_back`
-disabled while it handles Back; the Platform host does not change that setting.
-The choice is recorded in
-[ADR-0005](decisions/0005-add-android-system-back-to-the-platform-layer.md).
+Android system Back forwards `Window.GoBackRequested` from the bound window. Browser code subscribes to the exported `backRequested` contract and decides whether Back changes the route or closes the application. If the application handles Back, set `SceneTree.quit_on_go_back` to `false`, as recorded in [ADR-0005](decisions/0005-add-android-system-back-to-the-platform-layer.md).
 
 ## Tray plugin
 
@@ -250,37 +220,22 @@ resources. The current native resolvers can serve packaged `res://` paths. The
 Kirie CLI app layout standardizes production web content at
 `res://src-web/dist/index.html`, as described below.
 
-## Runtime debug configuration
+## Runtime debug configuration and export flags
 
-Debug behavior that affects exported applications is controlled by Godot export
-preset options, not by automatically detecting whether the export itself is a
-debug build.
-
-The current export preset options are:
+Godot export preset flags control debug behavior in exported WebView applications:
 
 - `kirie/debug/enable_web_inspector`
 - `kirie/debug/allow_tls_bypass`
 
-On Android, the export plugin writes these values as application manifest
-metadata for the native plugin to read at runtime. On iOS, it writes matching
-Info.plist values. The iOS ATS widening plist block is injected only when
-`kirie/debug/allow_tls_bypass` is enabled.
+On Android, the export plugin writes these flags as application manifest metadata for the native plugin. On iOS, the export plugin writes matching `Info.plist` entries and injects App Transport Security overrides only when `kirie/debug/allow_tls_bypass` is `true`.
 
-Android exports use `moe.gdkirie.kirie:core:<version>` from Maven Central by
-default. Local testing publishes `<version>-local` to Maven Local (`mise run build:android-aar`)
-and selects it via `-- --kirie-android-maven-local`.
+Android WebView exports resolve `moe.gdkirie.kirie:core:<version>` from Maven Central by default. Run `mise run build:android-aar` to publish `<version>-local` to Maven Local, and pass `-- --kirie-android-maven-local` to select that local artifact. Pass `-- --kirie-android-extra-args=<arguments>` to override `command_line/extra_args` for a single Android export without modifying `export_presets.cfg`.
 
-Android application command line arguments are part of the export preset. A
-single export can replace them by passing
-`-- --kirie-android-extra-args=<arguments>` to the Godot export command, which
-the export plugin applies through Godot's `command_line/extra_args` Android
-export option. Use this to keep environment-specific arguments, such as an
-emulator renderer override, out of the shared preset.
+The CLI also passes two user flags to the Kirie `EditorExportPlugin` during headless Godot exports. `--kirie-plugins=<comma-separated-ids>` tells the export plugin which Kirie plugins are active. When `--kirie-plugins` omits `webview`, the export plugin skips all WebView native dependencies, C++ glue, `Info.plist` keys, and web asset staging. Omitting `--kirie-plugins` during Godot Editor GUI exports preserves WebView export behavior. `--kirie-web-dist=<path>` overrides the built Vite asset directory packed or staged into `res://src-web/dist`.
 
 ## Kirie app layout and CLI direction
 
-The Kirie application shape is a Godot project with a Vite web frontend beside
-the Godot source:
+A Kirie project combines a Godot project with `kirie.config.ts` and an optional Vite frontend:
 
 ```text
 kirie.config.ts
@@ -299,255 +254,134 @@ addons/
   kirie/
   godot_cef/
   others/
+.kirie/
+  embed/
 ```
 
-Directory responsibilities are:
+Directory and package responsibilities are:
 
-- `src-godot`: Godot host application source.
-- `src-web`: Vite web UI source and production build output.
-- `addons`: Godot plugins. Kirie remains installed as `addons/kirie`, and Godot
-  CEF remains installed as `addons/godot_cef`.
-- `kirie.config.ts`: Kirie CLI configuration for coordinating Godot, Vite, and
-  local build inputs.
-- `@gd-kirie/build`: publishable JavaScript API for build and export automation
-  that can be used without the Kirie CLI.
+- `src-godot`: Godot scene and script sources
+- `src-web`: optional Vite frontend source and `dist` build output when `webview(...)` is active
+- `addons`: Godot plugins such as `addons/kirie` and desktop `addons/godot_cef`
+- `.kirie`: Git-ignored CLI staging output for `host: "native"` mobile embed builds
+- `kirie.config.ts`: mandatory project configuration for all CLI commands except `kirie init`
+- `@gd-kirie/build`: programmatic build, export, and native-embed staging API usable without the CLI
 
-Kirie does not own native platform project directories. Do not introduce
-Capacitor-style `ios/` or `android/` project trees into Kirie user projects.
-Native capabilities should be provided by Godot plugins.
+Godot-owned targets (`host: "godot"`) keep native code inside Godot plugins under `addons/` and never generate Capacitor-style `ios/` or `android/` trees inside the Godot project. Native-shell targets (`host: "native"` on `ios` and `android`) reference a user-owned Xcode or Gradle application through `targets.<platform>.project` while Kirie stages generated Godot artifacts under `.kirie/embed/`.
 
-The Kirie CLI surface is intentionally small. The current implemented subset
-covers desktop development, local build inputs, platform export, and mobile
-install-and-launch flows:
+### Configuration and built-in plugins
+
+Every CLI command except `kirie init` loads `kirie.config.ts` through Node.js 24 native TypeScript `import()`. Configuration files can export an object, a `Promise`, or a `({ command, mode }) => ...` factory with `defineKirieConfig` from `kirie`. Only `godot`, `plugins`, and required `targets` are valid top-level keys. Legacy top-level `web` fails fast with a migration hint to `webview({ root })` from `kirie/plugin/webview`.
+
+```ts
+import { defineKirieConfig } from "kirie";
+import core from "kirie/plugin/core";
+import webview from "kirie/plugin/webview";
+
+export default defineKirieConfig({
+  plugins: [
+    core,
+    webview({ root: "./src-web" }),
+  ],
+  targets: {
+    desktop: { host: "godot" },
+    ios: { host: "godot" },
+  },
+});
+```
+
+Built-in plugin responsibilities split cleanly between C# host packages and WebView assets:
+
+- `kirie/plugin/core` (`id: "core"`): declares the `GdKirie.EventaAdapter` and `GdKirie.Platform` NuGet packages, which `kirie doctor` skips when the Godot project has no `.csproj` file
+- `kirie/plugin/webview` (`id: "webview"`): accepts `webview({ root, vite })`, configures the Vite frontend, and declares `addons/kirie` plus `addons/godot_cef` (scoped to `targets: ["desktop"]`)
+
+`vite` is an optional peer dependency of both `kirie` and `@gd-kirie/build`. The CLI imports `vite` dynamically only when `webview(...)` is present in `plugins`, so WebView-free projects run without `vite` installed.
+
+### Shell modes and native mobile embed pipeline
+
+Each configured entry in `targets` (`desktop`, `ios`, `android`, `web`) requires an explicit `host` mode. `desktop` and `web` support `host: "godot"` with an optional `preset` name. `ios` and `android` support both `host: "godot"` and `host: "native"`.
+
+In `host: "godot"` mode, Godot owns the exported application shell. In `host: "native"` mode, `@gd-kirie/build` stages an embeddable Godot bundle in `.kirie/embed/<ios|android>/<debug|release>/` without touching `<godot.project>/android/build`:
+
+- `.kirie/embed/ios/<mode>/`: stages `ios-*` `.xcframework` bundles in `Frameworks/`, `Resources/<Executable>.pck`, `Sources/KirieGodotPlugins.mm`, `Sources/KirieHostBridge.mm`, `Sources/KirieGodotView.swift`, and `KirieEmbed.xcconfig` (`WebKit` links only when `Kirie.framework` is staged)
+- `.kirie/embed/android/<mode>/`: stages `godot-embed-<mode>.aar` (with `org.godotengine.godot` resources, manifest providers, and `.NET 10` runtime `.so` and `.jar` files), `libs/`, `Sources/`, and `godot-build/`
+- `KirieHostBridge.mm` (via ClassDB on iOS) and `KirieHostPlugin.kt` (via `GodotPlugin` on Android): register the `KirieHost` singleton (`send_to_host` and `host_message_received`) for `KirieHostTextTransport`
+
+Native mobile targets support App mode and Artifact mode through `targets.<platform>.project`. In App mode, `project` is set on `targets.ios` (with optional `scheme`) or `targets.android` (with optional `module`, `:app` by default). `kirie dev` and `kirie export` stage `.kirie/embed/...` and build the native host application through incremental `xcodebuild -derivedDataPath` or Gradle `assemble<Mode>`. `kirie dev` and `kirie run` resolve `CFBundleIdentifier` or the launcher `Activity` from the built output to install and launch the host application.
+
+In Artifact mode, `project` is omitted on `targets.ios` or `targets.android`. `kirie export ios` and `kirie export android` copy the staged embed bundle and `kirie-embed-manifest.json` to `dist/kirie/<platform>/<mode>/` for external build systems. `kirie dev` and `kirie run` reject Artifact mode because no host application project is configured.
+
+### CLI commands and target selection
+
+The public CLI exposes six top-level commands (`init`, `doctor`, `build`, `dev`, `export`, `run`):
 
 ```sh
-kirie dev
-kirie dev desktop
-kirie dev android
-kirie dev ios
-kirie dev web
-kirie build
-kirie build web
-kirie build dotnet
-kirie export android
-kirie export ios
-kirie export web
-kirie doctor
-kirie run
-kirie run desktop
-kirie run android
-kirie run ios
+kirie init <dir> <template> [--overwrite]
+kirie doctor [desktop|ios|android|web|plugin:<id>] [--fix]
+kirie build [web|dotnet]
+kirie dev [desktop|android|ios|web]
+kirie export <desktop|android|ios|web>
+kirie run [desktop|android|ios]
 ```
 
-`kirie run` and `kirie run desktop` launch the Godot project on desktop. Both
-commands accept raw Godot arguments after `--`.
-
-`kirie run android` installs the exported APK by default. Its `--skip-install`
-option launches an already-installed APK, as used by platform integration CI.
-
-The broader application workflow should keep these command semantics. The
-`--mode <mode>` option is supported by `kirie dev`; public `--mode` support for
-`build`, `export`, and `run` is still planned:
-
-```sh
-kirie build [--mode <mode>]
-kirie export [--mode <mode>]
-kirie run [--mode <mode>] [--export]
-kirie dev
-kirie init
-kirie doctor
-kirie doctor [target]
-kirie doctor --fix
-kirie doctor --fix [target]
-```
+When `targets` declares one target, bare `kirie dev` and `kirie run` select that sole target automatically. When `targets` declares two or more targets, bare `kirie dev` and `kirie run` fail fast and require an explicit target name such as `kirie dev desktop` or `kirie run desktop`. `kirie export` always requires a platform subcommand (`desktop`, `android`, `ios`, or `web`).
 
 ```mermaid
 flowchart TD
     Command["User command"] --> Which{"Which command?"}
 
-    Which --> Build["kirie build\n--mode <mode>\ndefault: production"]
-    Build --> BuildInputs["Prepare local inputs"]
+    Which --> Build["kirie build"]
+    Build --> BuildInputs["Build configured Vite and .NET inputs"]
     BuildInputs --> BuildDone["Finish"]
 
-    Which --> Export["kirie export\n--mode <mode>\ndefault: production"]
-    Export --> ExportBuild["Prepare local inputs"]
-    ExportBuild --> Package["Produce platform package"]
+    Which --> Export["kirie export <target>"]
+    Export --> ExportBuild["Build local inputs unless --no-build"]
+    ExportBuild --> Package["Export Godot shell, native host app, or embed artifact"]
     Package --> ExportDone["Finish"]
 
-    Which --> Run["kirie run\n--mode <mode>\ndefault: production"]
-    Run --> RunBuild["Prepare local inputs"]
-    RunBuild --> RunExport{"--export?"}
-    RunExport -->|yes| RunPackage["Produce platform package"]
-    RunPackage --> RunPackageTarget["Run exported package"]
-    RunExport -->|no| RunDirect["Direct run / deploy built outputs"]
+    Which --> Run["kirie run [target]"]
+    Run --> RunTarget{"Desktop or mobile?"}
+    RunTarget -->|desktop| RunDesktop["Launch Godot desktop project"]
+    RunTarget -->|mobile| RunMobile["Install and launch exported APK or .app"]
 
-    Which --> Dev["kirie dev"]
-    Dev --> DevServer["Start Vite hot-reload server"]
-    DevServer --> DevDotnet["Build C#/.NET if configured"]
-    DevDotnet --> DevTarget{"Target requires deploy package?"}
-    DevTarget -->|desktop no| DevDesktop["Run Godot project directly"]
-    DevTarget -->|mobile/deploy yes| DevPackage["Produce development package"]
-    DevPackage --> DevDeploy["Install / launch / attach logs"]
+    Which --> Dev["kirie dev [target]"]
+    Dev --> DevServer["Start Vite server when webview is configured"]
+    DevServer --> DevDotnet["Build C#/.NET when present"]
+    DevDotnet --> DevTarget{"Desktop or deploy target?"}
+    DevTarget -->|desktop| DevDesktop["Run Godot --import and launch desktop"]
+    DevTarget -->|ios / android / web| DevDeploy["Export debug target, deploy, and stream logs"]
 ```
 
-In this model, `build` prepares local inputs, `export` packages those inputs,
-`run` runs or deploys the built inputs without exporting by default, and `dev`
-runs a hot-reload development session. `run --export` is the explicit form for
-exporting before running; users may also run `kirie export && kirie run` when
-they want the steps separated. For exported mobile targets, `run` is an
-install-and-launch command: Android `run` installs the default APK before
-starting the app, and iOS `run` installs the selected `.app` before launching
-it. `kirie export ios` first asks Godot for the Xcode project and then invokes
-`xcodebuild` to produce an installable `.app`; without `--device` it builds for
-the iOS Simulator, while `--device <UDID>` selects a physical-device build
-and lets Xcode use the local Apple Development signing configuration.
-Simulator runs stream Godot's file log from the app's data container.
-See [platform integration tests](platform-integration-tests.md#ios) for the
-log lifecycle and upstream reference.
+`kirie init <target> <template> [--overwrite]` scaffolds a project from `templates/<template>` at the pinned `moeru-ai/kirie-templates` commit in `packages/cli/src/commands/init.ts`. It updates `package.json.name` and, when `src-web/index.html` exists, sets `<title>`. After initialization, run `pnpm install` and `pnpm kirie doctor --fix`.
 
-`build`, `export`, and `run` default to `production` mode and
-should accept `--mode <mode>` for `development`, `staging`, or other
-user-defined modes once that option is implemented. `dev` should never run the
-production web build because it owns the Vite hot-reload server; desktop
-development can run without exporting, while mobile or deploy-style development
-may use a development export path. `dev` may still build the Godot C#/.NET
-project when one is configured.
+`kirie doctor` runs read-only environment, target, and plugin diagnostics. `kirie doctor [desktop|ios|android|web]` scopes diagnostics to one configured target, and `kirie doctor plugin:<id>` scopes diagnostics to one configured plugin. Passing `--fix` installs missing Godot addons and NuGet packages and repairs supported `export_presets.cfg` fields through a headless Godot `ConfigFile` script rather than text patching:
 
-`@gd-kirie/build` owns explicit-input programmatic build and export primitives.
-The package exports the .NET builder, Vite builder, Vite configuration
-factory, Godot exporter, and export-preset reader. The CLI owns the Godot
-import step that prepares a fresh project.
-Development sessions, mobile device selection, install, launch, launch-option
-injection, log streaming, and watch policy stay in `kirie`.
+| Diagnostic item | Purpose | Required behavior |
+| --- | --- | --- |
+| Kirie plugin dependencies | Match configured Godot addons and .NET packages against plugin descriptors. | Fail when a required dependency is missing or mismatched, and suggest `kirie doctor --fix plugin:<id>`. |
+| Godot command | Run the configured Godot executable and detect its version. | Probe `--version` and report the detected version or execution error. |
+| Godot export templates | Locate installed export templates for the detected Godot version. | Inspect the Godot template directory without downloading engine templates automatically. |
+| Target prerequisites | Inspect Android SDK, Java path, Xcode schemes, Gradle wrappers, and presets for configured targets. | Report missing SDKs, presets, or required preset flags for each active target. |
 
-The `kirie` package exports `defineKirieConfig` and `KirieConfig` for
-configuration files. Command implementations are internal to the CLI.
+`kirie build` builds configured Vite web assets (when `webview(...)` is active) and compiles the Godot C# project when a `.csproj` file exists. `kirie build web` builds only Vite output and fails if `webview(...)` is absent. `kirie build dotnet` builds only the C# project and fails if no `.csproj` file exists.
 
-`kirie dev` starts a Vite development server and reads the actual resolved URL
-after Vite listens. Desktop development launches Godot as a child process and
-passes the dev launch options as Godot user arguments:
+`kirie export <desktop|android|ios|web>` builds local inputs unless `--no-build` is set, then packages the selected target (`debug` by default, or `release` with `--release`). On `ios` (`host: "godot"` or `host: "native"` App mode), `kirie export ios` builds a simulator `.app` by default or a signed device `.app` when `--device <UDID>` selects a physical device. On `web`, `kirie export web` exports the Godot Web preset and copies the Vite `dist` tree to sibling `src-web/dist`.
+
+`kirie run` launches Godot directly on `desktop` and forwards user arguments after `--`. On `android` and `ios`, `kirie run` installs and launches the exported APK or `.app` (`--skip-install` on Android skips reinstallation).
+
+`kirie dev` runs headless `godot --import` first so fresh checkouts register `class_name` scripts before scene parsing. When `webview(...)` is configured, `kirie dev` starts the Vite server and injects launch arguments:
 
 ```text
 --kirie-dev=1
 --kirie-web-url=http://127.0.0.1:<actual-port>/
 ```
 
-Applications with packaged content select the injected `kirie-web-url` when it
-is present and otherwise use their production resource path. This selection
-does not depend on a debug build or require the separate `kirie-dev` option.
+On Android, `kirie dev android` runs `adb reverse tcp:<actual-port> tcp:<actual-port>` and passes those keys as intent extras (`permissions/internet=true` is required when `host: "godot"` uses `webview`). On iOS Simulator, `kirie dev ios` passes them as `simctl` process arguments and streams `tmp/kirie.log`. On a physical iOS device (`kirie dev ios --device <UDID>`), Vite binds to `0.0.0.0` and injects a LAN URL. When `webview(...)` is omitted, `kirie dev` skips Vite and launches the Godot or native mobile host directly.
 
-Android development exports and installs the debug APK, runs
-`adb reverse tcp:<actual-port> tcp:<actual-port>`, then passes the same
-hyphenated keys as Android intent extras. The Android app receives
-`kirie-web-url` as a device-local loopback URL, such as
-`http://127.0.0.1:<actual-port>/`, so it does not depend on the phone or
-emulator reaching the host machine through the LAN. Because Android WebView
-still opens a network socket for the loopback HTTP connection, `kirie dev
-android` requires the Android export preset to enable
-`permissions/internet=true`; runtime commands must fail on a wrong preset rather
-than rewriting it. iOS development currently targets the simulator path: it
-exports the Xcode project, builds a simulator `.app`, installs and launches it
-through `simctl`, and passes the same keys as process arguments. Web development
-exports the Godot host once, serves it from the Vite origin, and passes the Vite
-URL through the same launch options. C# Web development requires the
-experimental toolchain installed by `kirie doctor --fix web`.
-
-Before launching the development session, `kirie dev` runs Godot in headless
-import mode for the project. Use Godot's `--import` command-line option for this
-prepare step rather than hand-rolling editor flags; the Godot command-line
-reference defines `--import` as starting the editor, waiting for resources to be
-imported, and then quitting. This is a CLI fresh-project concern: ordinary Godot
-addon usage normally passes through the editor or project manager first, while a
-one-command `kirie dev` run may otherwise parse the main scene before Godot has
-registered addon `class_name` scripts such as `GdKirie` in the global script
-class cache. See `docs/references.md` for the Godot command-line and GDScript
-named-class references.
-
-The CLI does not support Finder, Dock, or other non-CLI launched macOS app
-processes. It only supports development sessions that the CLI starts and owns.
-
-`kirie build` builds local intermediate artifacts needed by a runnable or
-exportable Godot project, but it does not produce platform application packages.
-It should build every configured or clearly discovered input. `kirie build web`
-builds only the Vite web output. `kirie build dotnet` builds only the Godot
-C#/.NET project and fails when no project or solution is present. If no C#
-project is configured or discovered, the aggregate `kirie build` command may
-skip the `.NET` step; if a C# project is present, C# build failure must fail the
-command.
-
-`kirie export` means a complete platform export workflow: build local inputs
-first, then call Godot's export flow for the selected platform or preset.
-For Web, it verifies `src-web/dist/index.html`, exports Godot, and replaces the
-sibling `src-web/dist` tree with the current Vite build. The copy occurs only
-after Godot export succeeds. `--no-build` requires an existing Vite build and
-fails before Godot starts when the entry file is missing.
-`kirie run` should build local inputs first, then directly run the scene or
-deploy the built outputs by default. For Android exports, deploy means
-installing the default `kirie export android` output before launching the Godot
-activity. It should only run an export workflow when the user passes
-`--export`. Neither command should silently create or repair project
-configuration.
-
-`kirie init <target> <template> [--overwrite]` initializes a new project from
-the named folder under `templates/` in the pinned `moeru-ai/kirie-templates`
-commit in `packages/cli/src/commands/init.ts`. It sets `package.json.name` and the
-`src-web/index.html` title, preserving template-owned Godot configuration.
-After initialization, run `pnpm install` and `pnpm kirie doctor --fix` to
-install addons. The command is non-interactive and does not migrate or repair
-existing projects. `kirie doctor` is read-only
-diagnostics and `kirie doctor --fix` may apply supported repairs. Repair writes
-to Godot-owned configuration files, including `project.godot` and
-`export_presets.cfg`, must go through Godot itself, for example a headless
-helper script using
-`ProjectSettings` or `ConfigFile`. JavaScript code must not patch existing
-Godot configuration text directly.
-
-`kirie doctor` is the read-only environment and project prerequisite check. It
-does not build local inputs, run exports, install SDK packages, download export
-templates, or mutate project files. It should report one diagnostic row per
-check, include the detected value when one exists, include a concise fix hint
-when a required check fails, and exit non-zero when any required check fails.
-The check implementation should preserve enough failure detail for diagnostics;
-avoid generic boolean helpers that collapse missing paths, wrong file types,
-permission failures, and command failures into the same result.
-
-Optional prerequisites are reported as warnings and do not make an unscoped
-`kirie doctor` invocation fail. `kirie doctor plugin:<id>` limits diagnosis to
-one explicitly configured Kirie plugin, while a bare `kirie doctor --fix`
-applies every supported automatic repair. System SDKs and tools remain
-user-managed.
-
-`kirie.config.ts` lists active plugin descriptors in its `plugins` array.
-The `kirie/plugin/core` descriptor declares the required Kirie addon, the
-optional desktop Godot CEF addon, and the `GdKirie.EventaAdapter` and
-`GdKirie.Platform` NuGet packages. The Kirie addon is downloaded from the
-GitHub Release; Godot CEF is pinned by URL and SHA-256.
-`packages/cli/src/commands/doctor/addons.ts` validates either source before atomically
-replacing an installation. Doctor skips plugin .NET dependencies when the
-Godot project has no `.csproj`.
-
-The initial `kirie doctor` check matrix is:
-
-| Check | Purpose | Required behavior |
-| --- | --- | --- |
-| Kirie plugin dependencies | Confirm configured Godot addons and .NET packages match their descriptors. | Fail when a required dependency is missing or incompatible, and offer `kirie doctor --fix plugin:<id>`. |
-| Godot command | Confirm the configured Godot executable can be launched and identify its version. | Run the configured command with a version probe and report the detected version or command failure. |
-| Godot export templates | Confirm export templates exist for the detected Godot version. | Check the template location matching Godot's version string and report missing or empty template directories without installing templates. |
-| Android SDK | Confirm Android export prerequisites can find an SDK. | Prefer `ANDROID_HOME`, accept compatible existing environments, and report whether the SDK directory exists. |
-| Android Java path | Confirm Godot's Android editor settings point at a usable Java/JDK. | Read Godot `EditorSettings`, check the Android Java SDK path, and report missing, invalid, or non-executable Java configuration. |
-| Android export preset | Confirm the project export preset contains required Android options for Kirie workflows. | Inspect `export_presets.cfg` through a structured parser and report missing presets or required option mismatches without rewriting the file. |
-
-Later doctor checks may cover the iOS toolchain and Godot C#/.NET setup. Add
-those checks only when the corresponding Kirie workflow is implemented enough
-that a failed prerequisite can be explained with a concrete fix path.
-
-Kirie enforces Vite as the web toolchain. Users should not hand-write a fixed
-development URL. The CLI should let Vite handle port conflicts, then pass the
-resolved URL to Godot. Advanced Vite configuration belongs under
-`web.vite` in `kirie.config.ts`; Kirie owns the base Vite invariants:
+`webview({ root, vite })` owns the base Vite invariants while letting `vite` extend plugins, aliases, defines, CSS, Rollup configuration, and server proxies:
 
 ```text
-root = web.root
+root = webview.root
 base = "./"
 server.host = "127.0.0.1"
 server.port = 5173
@@ -556,77 +390,13 @@ server.open = false
 build.outDir = "dist"
 ```
 
-User-supplied `web.vite` may extend Vite for plugins, aliases, defines, CSS,
-JSON, extra assets, proxying, headers, HMR details, Rollup options, and
-dependency optimization. It must not override Kirie-owned invariants such as
-`root`, `base`, `server.host`, `server.port`, `server.open`, or
-`build.outDir`. Explicit command-line flags may override runtime server values
-for a single invocation.
-
-Kirie command-line flags are Kirie API, not an implicit promise to support the
-entire Vite CLI surface. The current `kirie dev` flags are:
-
-```text
---project <dir>       Godot project directory, defaulting to the current project.
---host <host>         Vite dev server host override.
---port <number>       Vite dev server port override.
---strict-port         Fail if the requested Vite port is unavailable.
---mode <mode>         Vite mode.
---force               Force Vite dependency pre-bundling.
---log-level <level>   Vite log level: info, warn, error, or silent.
---clear-screen        Allow Vite to clear the terminal.
---no-clear-screen     Prevent Vite from clearing the terminal.
-```
-
-Kirie must either parse and map Vite-shaped flags explicitly to Vite's public
-JavaScript API or proxy them to the real Vite CLI. Unknown flags must fail
-instead of being silently ignored. Arguments after `--` on `kirie dev` are
-reserved for desktop Godot user arguments:
-
-```sh
-kirie dev --host 0.0.0.0 --port 5173 --mode staging -- --verbose
-```
-
-`--open` is intentionally not part of `kirie dev` because Kirie launches Godot
-instead of opening a browser. `--base`, `--outDir`, and Vite's own `--config`
-are also not part of the `kirie dev` surface because Kirie owns those values
-through `kirie.config.ts` and the app layout. A Kirie `--config <path>` override
-remains planned.
-
-Host-window capabilities remain outside the CLI workflow and are composed by
-application code through the Platform packages.
-
-Mobile development targets use one platform command with unified device
-selection: `kirie dev ios --device <selector>` and
-`kirie dev android --device <selector>`. iOS export and run support both
-simulators and physical devices behind the same selector; Kirie may still use
-different launch backends internally for simulators, real devices, Android
-emulators, and Android devices.
+User `vite` configuration in `webview({ root, vite })` cannot override `root`, `base`, `server.host`, `server.port`, `server.open`, or `build.outDir`. Single-run CLI flags on `kirie dev` (`--project`, `--godot`, `--host`, `--port`, `--strict-port`, `--mode`, `--force`, `--log-level`, `--clear-screen`, `--no-clear-screen`, `--device`, and arguments after `--`) supply runtime overrides.
 
 ## Packaged web resource loading
 
-`res://` web loading is scoped to resources that are exported with the
-application package itself.
+`res://` web loading serves resources packaged inside the exported application. Android resolves `res://` URLs against APK or AAB assets, and iOS resolves `res://` URLs against the `.app` bundle. Runtime-mounted Godot packs are outside this path, and `http://`, `https://`, and `file://` URLs use default platform WebView loading.
 
-For Android, Kirie should resolve `res://` web URLs against files exported into
-the APK/AAB assets. For iOS, Kirie should resolve `res://` web URLs against
-files exported into the app bundle. Runtime-mounted Godot packs are explicitly
-out of scope for this path.
-
-When loading `http://`, `https://`, or `file://` URLs, Kirie should keep using
-the platform WebView's default loading behavior instead of intercepting or
-rewriting those URLs.
-
-The Kirie CLI app layout uses `res://src-web/dist/index.html` as the default
-production entry. The addon export plugin packages `res://src-web/dist` for
-Android and iOS exports and fails export when `res://src-web/dist/index.html` is
-missing. For Web exports, `kirie export web` copies that build beside the Godot
-HTML output at `src-web/dist`; the iframe backend maps only this resource root
-to the sibling same-origin tree. The previous `res://web` behavior is not preserved as a compatibility
-layer. Users should continue to use Godot's official export preset flow by
-default. Kirie may diagnose export preset issues, and explicit setup or repair
-commands may write supported preset changes through Godot, but normal run,
-build, and export commands must not silently mutate export presets.
+Production web content lives at `res://src-web/dist/index.html`. When `webview` is active, the addon export plugin stages `res://src-web/dist` (or `--kirie-web-dist`) into Desktop, Android, and iOS exports. The export fails if `index.html` is missing. On Web exports, `kirie export web` copies the Vite output beside the Godot HTML page at `src-web/dist`, where the iframe backend maps `res://src-web/dist` to that same-origin path. Legacy `res://web` paths are not supported, and runtime `build`, `export`, and `run` commands never mutate `export_presets.cfg`.
 
 ## Desktop Godot CEF direction
 
@@ -676,36 +446,21 @@ documents renderer-side IPC globals such as `window.sendIpcMessage`,
 `window.sendIpcBinaryMessage`, and `window.sendIpcData`, but not a stable
 platform-information object.
 
-Desktop Godot CEF binaries are external downloaded artifacts, not part of the
-`kirie` npm package. The core plugin descriptor owns the pinned Godot CEF version
-and artifact checksum. `kirie doctor` reports
-a missing Godot CEF addon as an optional warning. Desktop run or export flows
-require it;
-if it is missing, fail before export or run and print
-`pnpm kirie doctor --fix plugin:core`. Android and iOS workflows must not require
-a Godot CEF download.
+Desktop Godot CEF binaries are external downloaded artifacts rather than files bundled inside the `kirie` npm package. The `kirie/plugin/webview` descriptor owns the pinned Godot CEF version and SHA-256 checksum, scoped to `targets: ["desktop"]`. When `desktop` and `webview` are active and `addons/godot_cef` is missing, desktop `dev` and `export` fail before running Godot and print `pnpm kirie doctor --fix plugin:webview`. Android, iOS, and Web workflows do not require Godot CEF.
 
-Downloaded Godot CEF addons should use the standard Godot addon layout:
+Downloaded Godot CEF addons install into the standard Godot addon path:
 
 ```text
 addons/godot_cef/
 ```
 
-This lets Godot load the Godot CEF GDExtension normally. Project instances of
-that directory should be ignored and not committed. The CLI downloads the
-pinned release with progress reporting and checksum verification, verifies the
-archive layout, and only then installs it. After installation, the CLI writes
-the verified archive checksum to `.godot/kirie/godot-cef.sha256`. This cache is
-local to the Godot project. `kirie doctor` compares it with the checksum pinned
-in the CLI without another download. The fixer replaces the installation
-target when the checksum is missing or different. The public installer command is:
+Godot loads the Godot CEF GDExtension from that path, and Git ignores project instances of `addons/godot_cef/`. The CLI downloads the pinned archive, makes sure that its SHA-256 checksum and archive layout match, installs it atomically, and records the checksum in `.godot/kirie/godot-cef.sha256`. `kirie doctor` compares that local cache against the pinned checksum without downloading again, and `--fix` replaces the addon when the checksum differs:
 
 ```sh
-pnpm kirie doctor --fix plugin:core
+pnpm kirie doctor --fix plugin:webview
 ```
 
-The repository root declares `kirie` for integration fixtures. Its
-mise wrapper runs that root-local binary against the selected Godot project:
+In this repository, the root mise task runs that command against a target Godot project directory:
 
 ```sh
 mise run install:godot-cef <godot-project-dir>
@@ -915,24 +670,10 @@ Godot CEF is a learning reference and future compatibility target because it
 separates `ipc_message`, `ipc_binary_message`, and `ipc_data_message`, with its
 data lane documented as CBOR-backed.
 
-Eventa remains above Kirie. `@gd-kirie/ipc-eventa` and
-`GdKirie.EventaAdapter` support event emission and unary request/response RPC
-over Kirie text IPC. Their JSON messages are adapter encodings, not Kirie core
-payload types. Treat `moeru-ai/eventa` and `moeru-ai/eventa.net` as the upstream
-Eventa projects; do not change those projects unless an adapter exposes a real
-design issue. The .NET adapter lives under `packages/GdKirie.EventaAdapter`,
-uses the root `GdKirie.slnx`, and provides a NuGet source bridge for connecting
-to addon-shipped `KirieClient.cs` without putting Eventa files in
-`addons/kirie`.
+Eventa remains above Kirie. `@gd-kirie/ipc-eventa` and `GdKirie.EventaAdapter` support event emission and unary request-response RPC over Kirie text IPC. Their JSON messages are adapter encodings rather than Kirie core payload types. Treat `moeru-ai/eventa` and `moeru-ai/eventa.net` as upstream Eventa projects, and do not modify them unless an adapter exposes an upstream defect.
 
-`GdKirie.EventaAdapter` is `net10.0` only. Projects targeting `net8.0` or
-`net9.0` are expected to fail restore or build when they reference it. Do not
-copy Eventa protocol logic into Kirie to bypass the upstream Eventa .NET target
-framework.
+`GdKirie.EventaAdapter` lives under `packages/GdKirie.EventaAdapter` in `GdKirie.slnx`. Its NuGet package packs `content/KirieClientEventaBridge.cs` together with `build/GdKirie.EventaAdapter.targets` and `buildTransitive/GdKirie.EventaAdapter.targets`. When `$(MSBuildProjectDirectory)/addons/kirie/csharp/KirieClient.cs` exists in a direct or transitive consumer (or when `EnableKirieClientEventaBridge` is `true`), MSBuild compiles `KirieClientTextTransport` and `KirieClient.CreateEventaContext(...)` without putting Eventa files inside `addons/kirie`. WebView-free C# projects and class libraries without `KirieClient.cs` (or with `EnableKirieClientEventaBridge=false`) compile without bridge errors.
 
-The Eventa adapter should gain a binary or structured transport after the text
-transport proves the event and unary RPC shape. Prefer an explicit opt-in entry
-point, such as a data-lane context, before changing the default transport. The
-binary transport should use Kirie's CBOR-backed data or binary lane directly
-instead of layering another JSON string over it, and it should document any
-payload restrictions that come from Kirie's cross-platform data subset.
+`GdKirie.EventaAdapter` targets `net10.0` only. Projects that target `net8.0` or `net9.0` fail during restore or build when they reference it. Do not copy Eventa protocol logic into Kirie to bypass the upstream Eventa .NET target framework.
+
+Any future binary or structured Eventa transport must start as an explicit opt-in entry point before changing the default text transport. That transport must use the CBOR-backed `data` or `binary` lane directly instead of wrapping another JSON string. It must also document payload restrictions from the cross-platform data subset.

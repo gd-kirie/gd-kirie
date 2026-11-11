@@ -229,10 +229,10 @@ export async function tryExportDotnetWeb(options: DotnetWebExportOptions): Promi
   const temporaryDir = await fs.mkdtemp(path.join(os.tmpdir(), "kirie-dotnet-web-export-"));
   const publishDir = path.join(temporaryDir, "publish");
   try {
-    if (options.build) {
+    if (options.build && options.config.web) {
       await runBuildWeb({ cwd: options.config.cwd, mode: options.config.mode });
     }
-    if (options.includeWebContent !== false) {
+    if (options.includeWebContent !== false && options.config.web) {
       assertViteWebOutput(options.config.web.root);
     }
 
@@ -262,7 +262,7 @@ export async function tryExportDotnetWeb(options: DotnetWebExportOptions): Promi
         : checked.toolchain.debugTemplatePath,
     });
     await patchDotnetWebExport(options.outputPath);
-    if (options.includeWebContent !== false) {
+    if (options.includeWebContent !== false && options.config.web) {
       copyViteWebOutput({
         outputDir: path.dirname(options.outputPath),
         webRoot: options.config.web.root,
