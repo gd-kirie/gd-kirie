@@ -925,8 +925,8 @@ uses the root `GdKirie.slnx`, and provides a NuGet source bridge for connecting
 to addon-shipped `KirieClient.cs` without putting Eventa files in
 `addons/kirie`.
 
-`GdKirie.EventaAdapter` is `net10.0` only. Projects targeting `net8.0` or
-`net9.0` are expected to fail restore or build when they reference it. Do not
+`GdKirie.EventaAdapter` is `net11.0` only. Projects targeting `net10.0` or
+older are expected to fail restore or build when they reference it. Do not
 copy Eventa protocol logic into Kirie to bypass the upstream Eventa .NET target
 framework.
 
