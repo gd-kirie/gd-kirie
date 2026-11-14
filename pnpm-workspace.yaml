@@ -21,7 +21,7 @@ catalog:
   cborg: ^4.5.8
   citty: ^0.2.2
   execa: 9.6.1
-  eslint: ^10.14.0
+  eslint: ^10.15.0
   eslint-plugin-format: ^2.0.1
   ini: ^7.0.0
   tsdown: ^0.23.7
@@ -52,6 +52,8 @@ minimumReleaseAgeExclude:
   - "@rolldown/binding-win32-arm64-msvc@1.2.18"
   - "@rolldown/binding-win32-x64-msvc@1.2.18"
   - rolldown@1.2.18
+  - eslint@10.15.0
+  - "@eslint/config-array@0.23.6"
 
 overrides:
   argparse: 3.0.3
