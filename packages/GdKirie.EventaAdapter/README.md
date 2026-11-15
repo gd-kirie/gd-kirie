@@ -2,9 +2,10 @@
 
 Eventa adapter for Kirie C# projects over Kirie text IPC.
 
-This package targets `net10.0` only because the upstream `Eventa` package
-targets `net10.0`. Projects targeting `net8.0` or `net9.0` should expect restore
-or build failures when referencing this package.
+This package targets `net11.0` only. The upstream `Eventa` package targets
+`net10.0`, which a `net11.0` project can reference. Projects targeting
+`net10.0` or older should expect restore or build failures when referencing this
+package.
 
 ## Usage
 

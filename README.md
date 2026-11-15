@@ -117,7 +117,7 @@ example, and regression-test areas:
   install, and launch workflows
 - [`@gd-kirie/vitest`](packages/vitest/README.md): ViDot launch adapter for
   Kirie desktop, Android, and iOS tests
-- `packages/GdKirie.EventaAdapter`: .NET 10 Eventa adapter over Kirie text IPC
+- `packages/GdKirie.EventaAdapter`: .NET 11 Eventa adapter over Kirie text IPC
 - [`GdKirie.Platform`](packages/GdKirie.Platform/README.md): Godot host for the
   Platform Eventa contract
 - [`kirie-plugins`](https://github.com/gd-kirie/kirie-plugins): optional Tray,
@@ -144,7 +144,7 @@ The plugin and IPC layers are intended to stay low-level WebView and IPC
 surfaces. A small `@gd-kirie/ipc` browser package exists as a convenience
 transport wrapper. Eventa adapters live above that bridge:
 `@gd-kirie/ipc-eventa` for browser pages, and `GdKirie.EventaAdapter` for
-.NET 10 C# projects. The C# surface is a thin `KirieClient` wrapper over the
+.NET 11 C# projects. The C# surface is a thin `KirieClient` wrapper over the
 same platform singleton used by GDScript, with C# events for the current Kirie
 signals.
 
@@ -160,7 +160,7 @@ Desktop compatibility starts with Godot CEF as Kirie's desktop WebView backend,
 with macOS as the first target. Scope and runtime-injection details live in
 [docs/architecture.md](docs/architecture.md).
 
-`GdKirie.EventaAdapter` intentionally targets `net10.0` because the upstream
-Eventa .NET package targets `net10.0`, and .NET 8 LTS reaches end of support on
-2026-11-10. Godot C# projects targeting `net8.0` or `net9.0` should expect
-restore or build failures when referencing the adapter.
+`GdKirie.EventaAdapter` targets `net11.0`. The upstream Eventa .NET package
+still targets `net10.0`, which a `net11.0` project can reference. Godot C#
+projects targeting `net10.0` or older should expect restore or build failures
+when referencing the adapter.

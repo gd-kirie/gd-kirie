@@ -7,11 +7,11 @@ The Tray, Notifications, and QR hosts are published from
 [kirie-plugins](https://github.com/gd-kirie/kirie-plugins/blob/main/docs/nuget-publishing.md).
 This flow is separate from addon zip and npm publishing.
 
-Both packages target `net10.0` because the upstream Eventa .NET package
-targets `net10.0`. Projects targeting `net8.0` or `net9.0` should expect
-restore or build failures when referencing the adapter. .NET 8 LTS reaches end
-of support on 2026-11-10, so Kirie does not add a compatibility layer that
-copies Eventa protocol logic around the upstream target framework.
+Both packages target `net11.0`. The upstream Eventa .NET package targets
+`net10.0`, which a `net11.0` project can reference. Projects targeting `net10.0`
+or older should expect restore or build failures when referencing the adapter.
+Kirie does not add a compatibility layer that copies Eventa protocol logic
+around the upstream target framework.
 
 ## Local Validation
 
@@ -45,7 +45,7 @@ addon-shipped `KirieClient.cs` to the adapter without placing Eventa source in
 
 The repository `global.json` opts `dotnet test` into
 Microsoft.Testing.Platform, which is required for this xUnit v3 test project on
-.NET 10 SDKs.
+.NET 10 and newer SDKs.
 
 ## GitHub Actions Publishing
 
