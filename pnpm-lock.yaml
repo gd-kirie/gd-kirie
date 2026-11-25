@@ -52,8 +52,8 @@ catalogs:
       specifier: ^6.0.3
       version: 6.0.3
     typescript-to-gdscript:
-      specifier: ^0.1.13
-      version: 0.1.13
+      specifier: ^0.1.14
+      version: 0.1.14
     vite:
       specifier: ^8.3.8
       version: 8.3.8
@@ -224,7 +224,7 @@ importers:
         version: 6.0.3
       typescript-to-gdscript:
         specifier: 'catalog:'
-        version: 0.1.13(typescript@6.0.3)
+        version: 0.1.14(typescript@6.0.3)
 
   packages/platform:
     dependencies:
@@ -249,7 +249,7 @@ importers:
     dependencies:
       '@vidot/vitest':
         specifier: ^0.2.0
-        version: 0.2.0(@types/node@26.6.6)(typescript-to-gdscript@0.1.13(typescript@6.0.3))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+        version: 0.2.0(@types/node@26.6.6)(typescript-to-gdscript@0.1.14(typescript@6.0.3))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
       execa:
         specifier: 'catalog:'
         version: 9.6.1
@@ -293,13 +293,13 @@ importers:
         version: 26.6.6
       '@vidot/vitest':
         specifier: ^0.2.0
-        version: 0.2.0(@types/node@26.6.6)(typescript-to-gdscript@0.1.13(typescript@6.0.3))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+        version: 0.2.0(@types/node@26.6.6)(typescript-to-gdscript@0.1.14(typescript@6.0.3))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       typescript-to-gdscript:
         specifier: 'catalog:'
-        version: 0.1.13(typescript@6.0.3)
+        version: 0.1.14(typescript@6.0.3)
       vitest:
         specifier: 4.1.12
         version: 4.1.12(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
@@ -3123,8 +3123,8 @@ packages:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
 
-  typescript-to-gdscript@0.1.13:
-    resolution: {integrity: sha512-Sp4vhWjIvr7YWn4M0X1/0/nMz0kt5Ud949w3AKoiJv7HsRY2e6V2uGvUR/HktuNm9gDPQX1KWgcetgfPYaz+5g==}
+  typescript-to-gdscript@0.1.14:
+    resolution: {integrity: sha512-/bljZ5+L1wFMI9vrG9va2JNNyPvxqnOHfr6ZZoO0LqcykokLOgqG1NdJclEictgFv45s28s+8ij2CAyn9yMXLw==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -4317,12 +4317,12 @@ snapshots:
     dependencies:
       valibot: 1.4.2(typescript@6.0.3)
 
-  '@vidot/vitest@0.2.0(@types/node@26.6.6)(typescript-to-gdscript@0.1.13(typescript@6.0.3))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))':
+  '@vidot/vitest@0.2.0(@types/node@26.6.6)(typescript-to-gdscript@0.1.14(typescript@6.0.3))(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@vitest/runner': 4.1.12
       execa: 10.0.1
       typescript: 5.9.3
-      typescript-to-gdscript: 0.1.13(typescript@6.0.3)
+      typescript-to-gdscript: 0.1.14(typescript@6.0.3)
       vitest: 4.1.12(@types/node@26.6.6)(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
     transitivePeerDependencies:
       - '@edge-runtime/vm'
@@ -6378,7 +6378,7 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
 
-  typescript-to-gdscript@0.1.13(typescript@6.0.3):
+  typescript-to-gdscript@0.1.14(typescript@6.0.3):
     dependencies:
       chokidar: 4.0.3
       commander: 13.1.0
