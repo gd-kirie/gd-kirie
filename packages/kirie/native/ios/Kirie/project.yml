@@ -13,7 +13,7 @@ configs:
 packages:
   SwiftCBOR:
     url: https://github.com/valpackett/SwiftCBOR.git
-    branch: master
+    exactVersion: 0.7.0
 
 targets:
   Kirie:

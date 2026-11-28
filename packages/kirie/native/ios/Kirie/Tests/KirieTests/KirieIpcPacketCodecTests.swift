@@ -33,13 +33,43 @@ final class KirieIpcPacketCodecTests: XCTestCase {
 
         XCTAssertEqual(
             packet.kirieHexString,
-            "886a6b697269652d63626f72182af6a1646c616e656464617461fb3ff8000000000000f5f420"
+            "886a6b697269652d63626f72182af6a1646c616e656464617461f93e00f5f420"
         )
         XCTAssertEqual(try KirieIpcPacketCodec.decodeData(packet), value)
+    }
+
+    func testDataLaneEncodesFloatsInShortestExactForm() {
+        XCTAssertEqual(KirieIpcPacketCodec.encodeData(.double(1.5)).kirieHexString, "f93e00")
+        XCTAssertEqual(KirieIpcPacketCodec.encodeData(.double(100_000)).kirieHexString, "fa47c35000")
+        XCTAssertEqual(KirieIpcPacketCodec.encodeData(.double(0.1)).kirieHexString, "fb3fb999999999999a")
+    }
+
+    func testDataLaneDecodesEveryFloatWidth() throws {
+        // The web side (cborg with float64) always sends 8-byte doubles.
+        for hex in ["f93e00", "fa3fc00000", "fb3ff8000000000000"] {
+            XCTAssertEqual(try KirieIpcPacketCodec.decodeData(Data(kirieHex: hex)), .double(1.5), hex)
+        }
+    }
+
+    func testDataLaneRejectsTrailingBytes() {
+        XCTAssertThrowsError(try KirieIpcPacketCodec.decodeData(Data(kirieHex: "fb3ff800000000000000"))) { error in
+            XCTAssertEqual(error as? KirieCborError, .trailingBytes)
+        }
     }
 }
 
 private extension Data {
+    init(kirieHex hex: String) {
+        var bytes: [UInt8] = []
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            bytes.append(UInt8(hex[index ..< next], radix: 16) ?? 0)
+            index = next
+        }
+        self.init(bytes)
+    }
+
     var kirieHexString: String {
         map { String(format: "%02x", $0) }.joined()
     }

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const cliTestFixturesDir = fileURLToPath(import.meta.resolve("../../test-fixtures"));
 const kirieAddonDir = fileURLToPath(import.meta.resolve("../../../kirie/addon/addons/kirie"));
 const repositoryTmpDir = fileURLToPath(import.meta.resolve("../../../../.tmp"));
-const godotCefSha256 = "a966363e0835e727ffae182a222d577b42057db41368a7b82cf618d1cd47eb4e";
+const godotCefSha256 = "d4fee44698591e42ce05f743ccd080b88ca36263d8d0e1b3b7ae00f85a6becba";
 
 async function copyCliProject(prefix: string): Promise<string> {
   await fs.mkdir(repositoryTmpDir, { recursive: true });

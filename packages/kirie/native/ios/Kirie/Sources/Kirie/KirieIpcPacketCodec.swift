@@ -64,7 +64,8 @@ enum KirieIpcPacketCodec {
                 ? .unsignedInt(UInt64(integerValue))
                 : .negativeInt(UInt64(-(integerValue + 1)))
         case let .double(doubleValue):
-            // Always use the 8-byte double encoding (0xfb prefix).
+            // SwiftCBOR encodes doubles in RFC 8949 preferred (shortest exact)
+            // form, so 1.5 becomes a half-precision float (0xf9 prefix).
             return .double(doubleValue)
         case let .string(stringValue):
             return .utf8String(stringValue)
@@ -160,21 +161,53 @@ enum KirieIpcPacketCodec {
 
     /// Decodes exactly one CBOR data item from `packet`, rejecting trailing bytes.
     private static func decodeSingleCBOR(_ packet: Data) throws -> CBOR {
-        let bytes = [UInt8](packet)
-        let decoder = CBORDecoder(input: bytes)
+        let stream = KirieCborInputStream(bytes: [UInt8](packet))
+        let decoder = CBORDecoder(stream: stream)
 
         guard let cbor = try decoder.decodeItem() else {
             // Empty input — no item to decode.
             throw KirieCborError.unexpectedType
         }
 
-        // Detect trailing bytes: a well-formed single item re-encodes to the
-        // same byte count as the original packet.
-        guard cbor.encode().count == bytes.count else {
+        // Count consumed bytes instead of re-encoding: peers may send floats
+        // in a different width than SwiftCBOR's shortest-form encoding.
+        guard stream.isAtEnd else {
             throw KirieCborError.trailingBytes
         }
 
         return cbor
+    }
+}
+
+/// Byte stream that remembers how far the decoder has read.
+private final class KirieCborInputStream: CBORInputStream {
+    private let bytes: [UInt8]
+    private var offset = 0
+
+    init(bytes: [UInt8]) {
+        self.bytes = bytes
+    }
+
+    var isAtEnd: Bool {
+        offset == bytes.count
+    }
+
+    func popByte() throws -> UInt8 {
+        guard offset < bytes.count else {
+            throw CBORError.unfinishedSequence
+        }
+        let byte = bytes[offset]
+        offset += 1
+        return byte
+    }
+
+    func popBytes(_ count: Int) throws -> ArraySlice<UInt8> {
+        guard count >= 0, bytes.count - offset >= count else {
+            throw CBORError.unfinishedSequence
+        }
+        let slice = bytes[offset ..< offset + count]
+        offset += count
+        return slice
     }
 }
 

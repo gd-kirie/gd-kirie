@@ -65,7 +65,7 @@ describe("runBuildDotnet", () => {
       `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
   </PropertyGroup>
 </Project>
 `,
@@ -73,7 +73,7 @@ describe("runBuildDotnet", () => {
 
     await runBuildDotnet({ cwd: project });
 
-    await expect(fs.access(path.join(project, "bin", "Debug", "net10.0"))).resolves.toBe(undefined);
+    await expect(fs.access(path.join(project, "bin", "Debug", "net11.0"))).resolves.toBe(undefined);
   });
 
   it("fails when dotnet reports no project or solution", async () => {
